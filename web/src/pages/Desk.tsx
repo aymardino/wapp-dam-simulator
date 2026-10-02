@@ -15,7 +15,7 @@ export default function Desk() {
   const [s, setS] = useState<Settings | null>(null)
   const [ntc, setNtc] = useState<Record<string, number>>({})
   const [hour, setHour] = useState(19)
-  const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null); const [savedAt, setSavedAt] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -30,7 +30,10 @@ export default function Desk() {
   if (!token) return <div className="p-10 text-lg">{t('desk')} : <a className="text-accent font-medium" href="/">{t('back')}</a></div>
   const cur = s?.currency || 'USD'; const unit = `${cur}/MWh`
 
-  const saveSettings = async () => { if (!s) return; setErr(null); try { setS(await api.settings(code, token, s)) } catch (ex: any) { setErr(ex.message) } }
+  const patchSettings = async (patch: Partial<Settings>) => {
+    setS(prev => (prev ? { ...prev, ...patch } : prev)); setErr(null)
+    try { setS(await api.settings(code, token, patch)); setSavedAt(new Date().toLocaleTimeString()) } catch (ex: any) { setErr(ex.message) }
+  }
   const saveNtc = async () => { setErr(null); try { setNtc(await api.ntc(code, token, ntc)) } catch (ex: any) { setErr(ex.message) } }
   const resetNtc = async () => { setErr(null); try { setNtc(await api.resetNtc(code, token)) } catch (ex: any) { setErr(ex.message) } }
   const togglePhase = async () => { if (!room) return; try { setRoom(await api.phase(code, token, room.phase === 'submission' ? 'cleared' : 'submission')) } catch (ex: any) { setErr(ex.message) } }
@@ -60,6 +63,7 @@ export default function Desk() {
           <div className="flex flex-col gap-5">
             <Panel title={t('run_clearing')}>
               <p className="text-ink-2 mb-3">{t('run_hint')}</p>
+              {s && <label className="flex items-center gap-2 mb-3 text-base text-ink cursor-pointer"><input type="checkbox" className="h-4 w-4" checked={s.fill_missing} onChange={e => patchSettings({ fill_missing: e.target.checked })} />{t('fill_missing')}</label>}
               <p className="mb-4"><span className="font-mono font-medium">{coveredZones.size}</span> {t('with_orders')} · <span className="font-mono font-medium">{nZones - coveredZones.size}</span> {t('without_orders')}, {s?.fill_missing ? t('will_fill') : t('will_ignore')}</p>
               <div className="flex items-center gap-3">
                 <Button primary onClick={clear} disabled={busy}>{busy ? t('running') : t('run_clearing')}</Button>
@@ -76,18 +80,17 @@ export default function Desk() {
                 </tbody></table>}
             </Panel>
 
-            {s && <Panel title={t('settings')} right={<Button small onClick={saveSettings}>{t('save')}</Button>}>
+            {s && <Panel title={t('settings')} right={<span className="text-sm text-ink-3">{savedAt ? `${t('saved_at')} ${savedAt}` : t('autosave')}</span>}>
               <div className="grid grid-cols-2 gap-4">
                 <Field label={t('horizon')}>
-                  <select value={s.hours.length === 24 ? '24' : 'one'} onChange={e => setS({ ...s, hours: e.target.value === '24' ? Array.from({ length: 24 }, (_, i) => i) : [19] })}>
+                  <select value={s.hours.length === 24 ? '24' : 'one'} onChange={e => patchSettings({ hours: e.target.value === '24' ? Array.from({ length: 24 }, (_, i) => i) : [19] })}>
                     <option value="24">{t('hours24')}</option><option value="one">{t('one_hour')}</option>
                   </select>
                 </Field>
-                {s.hours.length !== 24 ? <Field label={t('hour')}><input type="number" min={0} max={23} value={s.hours[0]} onChange={e => setS({ ...s, hours: [+e.target.value] })} /></Field> : <Field label={t('currency')}><input value={s.currency} onChange={e => setS({ ...s, currency: e.target.value })} /></Field>}
-                <Field label={t('pricing')}><select value={s.pricing} onChange={e => setS({ ...s, pricing: e.target.value })}>{(ref?.rules.pricing || ['complete', 'l2']).map(x => <option key={x}>{x}</option>)}</select></Field>
-                <Field label={t('pab')}><select value={s.pab_rule} onChange={e => setS({ ...s, pab_rule: e.target.value })}>{(ref?.rules.pab_rule || ['euphemia']).map(x => <option key={x}>{x}</option>)}</select></Field>
-                <Field label={t('tie')}><select value={s.tie_rule} onChange={e => setS({ ...s, tie_rule: e.target.value })}>{(ref?.rules.tie_rule || ['prorata']).map(x => <option key={x}>{x}</option>)}</select></Field>
-                <label className="flex items-center gap-2 self-end h-9 text-base text-ink"><input type="checkbox" className="h-4 w-4" checked={s.fill_missing} onChange={e => setS({ ...s, fill_missing: e.target.checked })} />{t('fill_missing')}</label>
+                {s.hours.length !== 24 ? <Field label={t('hour')}><input type="number" min={0} max={23} value={s.hours[0]} onChange={e => patchSettings({ hours: [+e.target.value] })} /></Field> : <Field label={t('currency')}><input value={s.currency} onChange={e => setS({ ...s, currency: e.target.value })} onBlur={e => patchSettings({ currency: e.target.value })} /></Field>}
+                <Field label={t('pricing')}><select value={s.pricing} onChange={e => patchSettings({ pricing: e.target.value })}>{(ref?.rules.pricing || ['complete', 'l2']).map(x => <option key={x}>{x}</option>)}</select></Field>
+                <Field label={t('pab')}><select value={s.pab_rule} onChange={e => patchSettings({ pab_rule: e.target.value })}>{(ref?.rules.pab_rule || ['euphemia']).map(x => <option key={x}>{x}</option>)}</select></Field>
+                <Field label={t('tie')}><select value={s.tie_rule} onChange={e => patchSettings({ tie_rule: e.target.value })}>{(ref?.rules.tie_rule || ['prorata']).map(x => <option key={x}>{x}</option>)}</select></Field>
               </div>
             </Panel>}
 

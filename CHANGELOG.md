@@ -5,6 +5,16 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Correctif — réglages du formateur enregistrés immédiatement
+
+- La case « Compléter les zones sans soumission » n'était prise en compte qu'après un clic sur « Enregistrer » ;
+  l'annonce sous le bouton reflétait la case, le clearing utilisait le réglage enregistré, d'où un welfare de
+  référence malgré une case décochée. Tous les réglages du poste du formateur sont désormais enregistrés dès
+  le changement, et la case est placée à côté du bouton de lancement.
+- Frontières des pays en noir sur la carte.
+- Rappel de développement : l'API doit être relancée (ou lancée avec `--reload`) après une modification du
+  code Python ; le front compilé, lui, est relu à chaque requête.
+
 ### Étape 7 — Carte géographique et lisibilité du mode démonstration
 
 **Ajouté**

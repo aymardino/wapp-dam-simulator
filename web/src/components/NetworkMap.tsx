@@ -35,7 +35,7 @@ export default function NetworkMap({ prices, flows, ntc, hour, selected, unit }:
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img">
       <title>Réseau WAPP, prix et flux à {`H${h.padStart(2, '0')}`}</title>
       <rect x="0" y="0" width={W} height={H} fill="#DCE7EE" />
-      {paths.map(p => <path key={p.id} d={p.d} fill={p.member ? '#F3F2EC' : '#E6E4DC'} stroke="#FFFFFF" strokeWidth={0.9} />)}
+      {paths.map(p => <path key={p.id} d={p.d} fill={p.member ? '#F6F5EF' : '#E8E6DF'} stroke="#1B1B19" strokeWidth={p.member ? 0.8 : 0.5} strokeOpacity={p.member ? 0.9 : 0.5} />)}
       {LINES.map(([u, v]) => {
         const key = `${u}->${v}`; const f = flows[key]?.[h] ?? 0; const cap = ntc[key] || 1
         const [x1, y1] = pos[u], [x2, y2] = pos[v]

@@ -51,6 +51,7 @@ const STR: Record<string, [string, string]> = {
   demo_badge: ['Démonstration : aucune offre de participant, les 14 zones viennent des données de référence', 'Demonstration: no participant order, all 14 zones come from reference data'],
   with_orders: ['zone(s) avec ordres', 'zone(s) with orders'], without_orders: ['sans soumission', 'without submission'],
   will_fill: ['complétée(s) par les données de référence', 'filled with reference data'], will_ignore: ['ignorée(s)', 'ignored'],
+  autosave: ['Enregistré automatiquement', 'Saved automatically'],
   order_book_hint: ['Vos ordres sont remplacés à chaque enregistrement.', 'Your orders are replaced on each save.'],
 }
 
