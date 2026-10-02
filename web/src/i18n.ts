@@ -61,6 +61,7 @@ const STR: Record<string, [string, string]> = {
   fill_actors_hint: ['Tous les acteurs du scénario restent, sauf ceux qu\u2019un participant remplace par son nom ou ses ordres.', 'All scenario actors stay, except those a participant replaces by name or by orders.'],
   fill_zones_hint: ['Une zone avec au moins un ordre ne contient que les ordres des participants ; les autres sont complétées.', 'A zone with at least one order contains only participants\u2019 orders; the others are filled.'],
   fill_none_hint: ['Seuls les ordres des participants comptent.', 'Only participants\u2019 orders count.'],
+  about: ['À propos', 'About'],
   autosave: ['Enregistré automatiquement', 'Saved automatically'],
   order_book_hint: ['Vos ordres sont remplacés à chaque enregistrement.', 'Your orders are replaced on each save.'],
 }

@@ -1,5 +1,15 @@
-# Remplacer par votre nom de domaine ; Caddy obtient le certificat HTTPS tout seul.
-wapp-dam-simulator.org {
-    reverse_proxy api:8000
+# Le domaine vient de la variable DOMAIN du fichier .env ; Caddy obtient et renouvelle le certificat HTTPS tout seul.
+{$DOMAIN:wapp-dam-simulator.org} {
     encode gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+    reverse_proxy api:8000
+}
+
+www.{$DOMAIN:wapp-dam-simulator.org} {
+    redir https://{$DOMAIN:wapp-dam-simulator.org}{uri} permanent
 }

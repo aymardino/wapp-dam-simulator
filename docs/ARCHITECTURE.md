@@ -85,3 +85,11 @@ Purge des salles sans activité depuis `WAPP_ROOM_TTL_DAYS` jours (30), au plus 
 ## Ce qui reste
 
 Tests de bout en bout du front, chargement différé d'ECharts pour alléger le premier affichage, bac à sable pédagogique à deux pays, site vitrine, licence et nom public.
+
+## Site vitrine et point de démonstration (étape 12)
+
+- `GET /api/v1/demo` renvoie le clearing du scénario Référence 2024 (prix, flux, NTC, welfare, volume, lignes
+  saturées, temps de calcul), calculé au premier appel et conservé en mémoire du processus.
+- `web/src/pages/Landing.tsx` (route `/`) consomme ce point pour la carte animée et le graphique des prix ; le
+  hall des salles est à `/app`. Les liens publics (dépôt, note technique, documentation) sont dans `web/src/links.ts`.
+- Production : `docker-compose.yml` (image `Dockerfile.app` + Caddy), variables dans `.env`, scripts dans `deploy/`.

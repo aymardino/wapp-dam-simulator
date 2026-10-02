@@ -74,6 +74,26 @@ def reference():
     return service.reference()
 
 
+_demo_cache: dict = {}
+
+
+@app.get(API + '/demo', summary="Clearing de démonstration (scénario Référence 2024, 24 h), mis en cache pour le site")
+def demo():
+    if 'result' not in _demo_cache:
+        from engine.clearing import run_clearing
+        from engine.scenarios import scenario_rows
+        sup, dem, ntc = scenario_rows('reference_2024')
+        res = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc)
+        s = res['summary']
+        _demo_cache['result'] = {
+            'scenario': 'reference_2024', 'hours': s['hours'], 'prices': res['prices'], 'flows': res['flows'],
+            'ntc': s['rules']['ntc'], 'welfare': res['welfare'], 'volume': res['volume'],
+            'net_pos': s['net_pos'], 'saturated_lines': sum(1 for l in s['lines'].values() if l['saturated_hours'] > 0),
+            'elapsed': s['elapsed'], 'solver': s['solver'],
+        }
+    return _demo_cache['result']
+
+
 @app.get(API + '/scenarios', summary="Scénarios pédagogiques disponibles")
 def scenarios(lang: str = 'fr'):
     return service.scenario_list(lang if lang in ('fr', 'en') else 'fr')

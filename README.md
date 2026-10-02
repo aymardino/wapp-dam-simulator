@@ -134,7 +134,7 @@ python -m engine.cli --reference --hours 19 --out resultat.json
 
 Le formateur dispose de cinq scénarios pédagogiques (référence, sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande) qui remplacent les données de référence pour la démonstration et la complétion des zones.
 
-Le nouveau front (React, dossier `web/`) se compile avec Node : `cd web && npm install && npm run build`, puis l'API le sert à la racine. Détails dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Le nouveau front (React, dossier `web/`) se compile avec Node : `cd web && npm install && npm run build`, puis l'API le sert : site vitrine à `/`, hall des salles à `/app`, guides à `/guide/formateur` et `/guide/trader`. Détails dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ; mise en ligne (nom de domaine, serveur, Docker, HTTPS) dans [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md). Site public : https://wapp-dam-simulator.org.
 
 ## Tests
 
@@ -150,6 +150,7 @@ Vingt et un tests reproduisent les valeurs du Livrable 2 (welfare 22 317 910 et 
 - Les NTC et les profils horaires de référence sont des valeurs types estimées pour la formation, pas des données opérationnelles du WAPP. Ils se remplacent depuis la page Administration (NTC) et par les offres des participants.
 - Tout fonctionne en local ; la base SQLite reste sur la machine hôte. Ne jamais publier le dossier `data/`.
 - Monnaie : libellé paramétrable (USD par défaut), sans effet sur le calcul.
+- Le dépôt ne contient ni le logo du WAPP ni la carte du réseau de Tractebel/CEDEAO du Livrable 3 : l'interface utilise une marque neutre (`assets/mark.svg`) et une carte générée à partir de Natural Earth (`assets/network_map.png`, domaine public).
 
 ## Auteurs
 

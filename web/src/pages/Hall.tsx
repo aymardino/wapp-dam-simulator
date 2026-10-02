@@ -29,7 +29,7 @@ export default function Hall() {
 
   return (
     <div className="min-h-screen">
-      <header className="bg-brand text-white"><div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16"><div className="flex items-center gap-3"><img src="/wapp_logo.png" alt="" className="h-9 w-9 rounded-full bg-white/90 p-0.5" /><span className="font-semibold text-lg">WAPP · Day-Ahead Market</span></div><div className="flex items-center gap-5 text-sm"><Link to="/guide/formateur" className="text-brand-ink hover:text-white">{t('guide_trainer')}</Link><Link to="/guide/trader" className="text-brand-ink hover:text-white">{t('guide_trader')}</Link><LangToggle dark /></div></div></header>
+      <header className="bg-brand text-white"><div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16"><Link to="/" className="flex items-center gap-3"><img src="/mark.svg" alt="" className="h-9 w-9" /><span className="font-semibold text-lg">WAPP DAM Simulator</span></Link><div className="flex items-center gap-5 text-sm"><Link to="/" className="text-brand-ink hover:text-white">{t('about')}</Link><Link to="/guide/formateur" className="text-brand-ink hover:text-white">{t('guide_trainer')}</Link><Link to="/guide/trader" className="text-brand-ink hover:text-white">{t('guide_trader')}</Link><LangToggle dark /></div></div></header>
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="max-w-3xl mb-10">
           <h1 className="text-3xl">{t('app_title')}</h1>

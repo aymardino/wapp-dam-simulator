@@ -26,16 +26,18 @@ def inject_css():
 
 
 def logo_b64():
-    return _file_b64('wapp_logo.png')
+    """Marque neutre du simulateur (SVG) : le logo du WAPP n'est pas utilisé, le projet n'y est pas affilié."""
+    return _file_b64('mark.svg')
 
 
 def map_b64():
-    return _file_b64('wapp_map.png')
+    """Carte du réseau simplifié sur fond Natural Earth (domaine public), générée par le projet."""
+    return _file_b64('network_map.png')
 
 
 def header(title, subtitle_html, height=50):
     st.markdown(
-        f'<div class="wapp-header"><img src="data:image/png;base64,{logo_b64()}" height="{height}"/>'
+        f'<div class="wapp-header"><img src="data:image/svg+xml;base64,{logo_b64()}" height="{height}"/>'
         f'<div><h1>{title}</h1><div class="subtitle">{subtitle_html}</div></div></div>',
         unsafe_allow_html=True)
 

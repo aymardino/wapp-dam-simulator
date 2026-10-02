@@ -5,6 +5,33 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 12 — Site vitrine, kit de mise en ligne, nettoyage avant publication
+
+**Ajouté**
+- Page d'accueil publique bilingue (`web/src/pages/Landing.tsx`, route `/` ; le hall des salles passe à `/app`) :
+  présentation, carte vivante du cas de référence 2024 calculée par le moteur (heure animée, prix et flux,
+  welfare, volume, lignes saturées, temps de calcul), prix horaires des 14 zones, les trois programmes
+  P1 / P1bis / P2 en langage courant, contenu du simulateur, publics visés, section « ouvert et vérifiable »,
+  avertissements (simulateur indépendant non affilié au WAPP, données reconstituées et NTC estimées), auteurs,
+  liens vers les guides, le dépôt et la note technique (`web/src/links.ts`, à renseigner à la publication).
+- `GET /api/v1/demo` : clearing du scénario Référence 2024 mis en cache pour le site (test `test_demo_endpoint_is_cached`).
+- Kit de mise en ligne : `.env.example` (domaine, CORS, purge, quota), `deploy/setup_server.sh` (installation
+  d'un serveur Ubuntu : Docker, pare-feu, clone, démarrage), `deploy/update.sh`, `deploy/backup.sh` ;
+  `Caddyfile` paramétré par `DOMAIN` avec en-têtes de sécurité et redirection www ; image `Dockerfile.app`
+  sans privilèges (utilisateur dédié), contrôle de santé, en-têtes de proxy ; `docs/DEPLOIEMENT.md` réécrit
+  (achats, publication GitHub, installation, exploitation, liste de contrôle avant annonce).
+- Intégration continue : compilation du front (Node 20) en plus des tests Python.
+- Métadonnées de la page (titre, description, Open Graph) pour le référencement et les partages.
+
+**Modifié**
+- Marque neutre `mark.svg` à la place du logo du WAPP dans le front et dans l'application Streamlit ; carte du
+  réseau `assets/network_map.png` générée à partir de Natural Earth (domaine public) à la place de la carte
+  Tractebel/CEDEAO du Livrable 3. Les deux fichiers d'origine sont retirés du dépôt et de son historique, le
+  projet n'étant pas affilié au WAPP et ces images n'étant pas libres de droits.
+- Historique git réécrit avant publication : l'ancien mot de passe administrateur du Livrable 3, présent dans
+  les deux premiers commits (`pages/3_Admin.py`, `README.md`, `Dockerfile`), est remplacé par un texte neutre.
+- Suite : 65 tests.
+
 ### Étape 11 — Guides, mode « acteurs de fond », nom de domaine
 
 **Ajouté**

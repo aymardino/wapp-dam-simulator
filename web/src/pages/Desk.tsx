@@ -37,7 +37,7 @@ export default function Desk() {
   useEffect(() => { api.scenarios(lang).then(setScenarios).catch(() => {}) }, [lang])
   useRoomEvents(code, () => { setLive(true); load() })
 
-  if (!token) return <div className="p-10 text-lg">{t('desk')} : <a className="text-accent font-medium" href="/">{t('back')}</a></div>
+  if (!token) return <div className="p-10 text-lg">{t('desk')} : <a className="text-accent font-medium" href="/app">{t('back')}</a></div>
   const cur = s?.currency || 'USD'; const unit = `${cur}/MWh`
 
   const patchSettings = async (patch: Partial<Settings>) => {

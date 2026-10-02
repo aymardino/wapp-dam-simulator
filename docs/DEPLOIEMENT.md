@@ -1,75 +1,133 @@
-# Exécuter et héberger le simulateur
+# Mettre en ligne wapp-dam-simulator.org
 
-*Guide pratique, 2 octobre 2026. Trois niveaux : sur votre poste, sur un réseau de formation, sur Internet.*
+*Guide pratique, 2 octobre 2026. Quatre parties : ce qu'il faut acheter, publier le dépôt, installer le serveur, exploiter. Les sections sur l'exécution locale et en salle de formation sont à la fin.*
 
-## 1. Sur votre poste (développement et démonstration)
+## 1. Architecture en production
 
-Prérequis : Python 3.10 ou plus récent, Node 20 ou plus récent (pour le nouveau front seulement).
+```
+Internet ──HTTPS 443──▶ Caddy (certificat Let's Encrypt automatique, redirection www → apex)
+                           │
+                           └──HTTP 8000──▶ api (uvicorn) : site vitrine + application + API REST
+                                              └── volume wapp-data : data/rooms.db (salles, ordres, clearings)
+```
+
+Une seule image Docker (`Dockerfile.app`) compile le front React et emballe l'API ; `docker-compose.yml` l'assemble avec Caddy. Le site vitrine est servi à `/`, l'application (hall des salles) à `/app`, l'API à `/api/v1`, sa documentation à `/docs`.
+
+## 2. Ce qu'il faut acheter
+
+| Poste | Choix recommandé | Ordre de prix |
+|---|---|---|
+| Nom de domaine | `wapp-dam-simulator.org` chez un registrar (Gandi, OVH, Infomaniak, Namecheap) | 12 à 20 € par an |
+| Serveur virtuel | Hetzner CX22, OVH VPS, Scaleway DEV1-S : 2 vCPU, 4 Go, Ubuntu 24.04 | 4 à 8 € par mois |
+
+Dimensionnement : un clearing de référence prend 0,5 s, un cas de formation avec blocs quelques secondes ; une salle de 20 participants tient sans difficulté sur 2 vCPU. Le disque nécessaire est de quelques dizaines de Mo.
+
+Alternative institutionnelle : un sous-domaine de l'école ou de SENELEC (par exemple `wapp-dam.mines-paristech.fr`) se fait par un enregistrement CNAME vers le serveur, ou par un relais de la DSI vers le port 443 ; la variable `DOMAIN` du fichier `.env` prend alors ce nom.
+
+## 3. Publier le dépôt sur GitHub
+
+Le serveur se déploie depuis le dépôt git ; la publication est aussi la condition de l'accès ouvert (licence Apache 2.0).
+
+1. Créer sur github.com un dépôt public vide nommé `wapp-dam-simulator` (sans README ni licence : ils existent déjà).
+2. Depuis le dossier du projet :
 
 ```bash
-# une seule fois
+git remote add origin https://github.com/<compte>/wapp-dam-simulator.git
+git push -u origin main
+```
+
+3. Mettre l'adresse réelle du dépôt dans `web/src/links.ts` (site vitrine) et dans `README.md`, puis recompiler et pousser.
+4. Vérifier que l'action « tests » passe sur GitHub (moteur, API et compilation du front).
+
+Avant le premier push, vérifications faites le 2 octobre 2026 et à refaire après toute modification :
+
+- `data/`, `*.db`, `.env`, `.venv/`, `web/node_modules`, `web/dist` sont ignorés (`.gitignore`) ;
+- aucun mot de passe dans le code ni dans l'historique (`git log -p -S'mot_de_passe' --all` ne doit rien renvoyer ; l'ancien mot de passe administrateur du Livrable 3 a été retiré de l'historique) ;
+- le logo du WAPP et la carte Tractebel/CEDEAO du Livrable 3 ne sont pas dans le dépôt (marque neutre `mark.svg`, carte Natural Earth générée) ;
+- `LICENSE`, `NOTICE` et la mention de non-affiliation sont présents.
+
+## 4. Installer le serveur (une fois)
+
+1. Chez le registrar, créer deux enregistrements DNS vers l'adresse IPv4 du serveur : `A @` et `A www`. Compter jusqu'à une heure de propagation.
+2. Se connecter au serveur et lancer le script d'installation (il installe Docker et le pare-feu, clone le dépôt, crée `.env`, démarre les services) :
+
+```bash
+ssh root@<adresse-du-serveur>
+curl -fsSL https://raw.githubusercontent.com/<compte>/wapp-dam-simulator/main/deploy/setup_server.sh -o setup_server.sh
+bash setup_server.sh https://github.com/<compte>/wapp-dam-simulator.git wapp-dam-simulator.org
+```
+
+3. Vérifier : `https://wapp-dam-simulator.org` affiche le site, `https://wapp-dam-simulator.org/api/v1/health` répond `{"status":"ok", …}`, `https://www.wapp-dam-simulator.org` redirige vers l'apex. Le certificat est obtenu au premier accès (quelques secondes).
+4. Créer une salle, la rejoindre depuis un téléphone, lancer un clearing.
+
+Le fichier `/opt/wapp/app/.env` contient les réglages (modèle dans `.env.example`) :
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `DOMAIN` | nom servi par Caddy | wapp-dam-simulator.org |
+| `WAPP_CORS_ORIGINS` | origines autorisées pour l'API | https://wapp-dam-simulator.org |
+| `WAPP_ROOM_TTL_DAYS` | purge des salles inactives | 30 |
+| `WAPP_MAX_ROOMS_PER_IP_PER_DAY` | quota de création de salles | 20 |
+
+## 5. Exploiter
+
+| Besoin | Commande (sur le serveur, dans `/opt/wapp/app`) |
+|---|---|
+| Mettre à jour après un `git push` | `deploy/update.sh` |
+| Sauvegarder les salles | `deploy/backup.sh` (archives dans `/opt/wapp/backups`, 14 jours) |
+| Sauvegarde automatique chaque nuit | `echo '0 3 * * * /opt/wapp/app/deploy/backup.sh' \| crontab -` |
+| Journaux | `docker compose logs -f api` |
+| État des services | `docker compose ps` |
+| Redémarrer | `docker compose restart` |
+| Repartir de zéro (efface les salles) | `docker compose down -v && docker compose up -d` |
+
+Le serveur ne demande aucune maintenance quotidienne : Caddy renouvelle le certificat, l'API purge les salles inactives, Docker redémarre les services après un redémarrage de la machine. Prévoir `apt upgrade` de temps en temps.
+
+### Plateformes gérées (sans serveur à administrer)
+
+Render, Fly.io ou Railway déploient directement depuis GitHub avec `Dockerfile.app` ; prévoir un disque persistant monté sur `/app/data` (ou `WAPP_API_DATABASE_URL` vers un Postgres géré, avec `psycopg[binary]` dans l'image) et définir `WAPP_CORS_ORIGINS`. Le nom de domaine se rattache depuis leur console. Streamlit Community Cloud ne convient pas (il n'héberge que des applications Streamlit).
+
+## 6. Avant d'annoncer le site
+
+- `web/src/links.ts` : adresse du dépôt, de la note technique quand elle paraît.
+- Tester depuis un téléphone : page d'accueil, création d'une salle, dépôt d'ordres, clearing.
+- Les textes d'avertissement (simulateur indépendant, NTC estimées) sont sur la page d'accueil et dans `NOTICE`.
+- Une sauvegarde a été faite et restaurée au moins une fois.
+
+## 7. Sur votre poste (développement et démonstration)
+
+Prérequis : Python 3.10 ou plus récent, Node 20 ou plus récent (pour le front).
+
+```bash
 python -m venv .venv && source .venv/bin/activate      # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
 cd web && npm install && npm run build && cd ..          # compile le front dans web/dist
-
-# à chaque session
-uvicorn api.main:app --port 8000
+uvicorn api.main:app --reload --port 8000
 ```
 
-Ouvrez `http://localhost:8000` : le hall permet de créer une salle (formateur) ou d'en rejoindre une (trader). La documentation de l'API est sur `http://localhost:8000/docs`.
+Ouvrez `http://localhost:8000` (site vitrine), `http://localhost:8000/app` (salles) et `http://localhost:8000/docs` (API). Pour développer le front avec rechargement à chaud : `cd web && npm run dev`, puis `http://localhost:5173` (les appels `/api` sont relayés vers le port 8000). L'application Streamlit historique reste disponible : `streamlit run app.py`.
 
-Pour développer le front avec rechargement à chaud, lancez en plus `cd web && npm run dev` et ouvrez `http://localhost:5173` (les appels `/api` sont relayés vers le port 8000).
+Données : l'API écrit `data/rooms.db` (SQLite). Pour repartir de zéro, supprimez ce fichier. Base Postgres : `export WAPP_API_DATABASE_URL=postgresql+psycopg://user:mdp@hote/base`.
 
-L'application Streamlit historique reste disponible : `streamlit run app.py`.
-
-Données : l'API écrit `data/rooms.db` (SQLite). Pour repartir de zéro, supprimez ce fichier. Pour une base Postgres : `export WAPP_API_DATABASE_URL=postgresql+psycopg://user:mdp@hote/base` (installer `psycopg[binary]`).
-
-## 2. Sur un réseau de formation (salle, hotspot)
-
-Même commande, en écoutant sur toutes les interfaces :
-
-```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-```
-
-Les participants ouvrent `http://<adresse-IP-du-formateur>:8000` et saisissent le code de la salle. Si le pare-feu de l'établissement bloque le port, un point d'accès Wi-Fi depuis un téléphone ou un tunnel (`ssh -R 80:localhost:8000 nokey@localhost.run`) contourne la difficulté, comme avec Streamlit.
-
-## 3. Sur Internet (démo publique, formations à distance)
-
-### Image Docker (recommandé, identique partout)
-
-`Dockerfile.app` compile le front et emballe l'API dans une seule image :
+Image Docker locale, identique à la production :
 
 ```bash
 docker build -f Dockerfile.app -t wapp-simulator .
 docker run -d --name wapp -p 8000:8000 -v wapp-data:/app/data wapp-simulator
 ```
 
-Le volume `wapp-data` conserve les salles entre deux redémarrages.
-
-### Serveur virtuel avec HTTPS et nom de domaine (recommandé pour le site public)
-
-1. Louer un petit serveur (OVH, Hetzner, Scaleway : 1 vCPU et 2 Go suffisent, 5 à 10 € par mois) sous Ubuntu, et y installer Docker.
-2. Acheter le nom de domaine choisi et faire pointer un enregistrement A vers l'adresse du serveur.
-3. Copier le dépôt sur le serveur et lancer `docker compose up -d` avec le fichier `docker-compose.yml` fourni : il démarre l'API et un serveur Caddy qui obtient et renouvelle le certificat HTTPS automatiquement. Remplacer `wapp-dam-simulator.org` dans `Caddyfile` par votre domaine.
-4. Mises à jour : `git pull && docker compose up -d --build`.
-5. Sauvegardes : copier régulièrement le volume `wapp-data` (une commande `docker run --rm -v wapp-data:/data -v $PWD:/backup alpine tar czf /backup/wapp-data.tgz /data`).
-
-### Plateformes gérées (plus simple, moins de contrôle)
-
-Render, Railway ou Fly.io déploient directement depuis GitHub avec `Dockerfile.app` ; prévoir un disque persistant pour `/app/data` ou une base Postgres gérée. Streamlit Community Cloud ne convient pas à l'API (il n'héberge que des applications Streamlit).
-
-## 4. Avant une mise en ligne publique
-
-- Définir `WAPP_CORS_ORIGINS` sur le domaine du site (par défaut toutes les origines sont acceptées, pratique en développement).
-- Ajouter une expiration des salles inactives et une limite de création par adresse (prévu, pas encore fait).
-- Afficher l'avertissement sur les données de référence (NTC estimées) sur la page d'accueil du site vitrine.
-- Choisir la licence du code et le nom public, et vérifier l'usage du logo WAPP.
-- Surveiller les journaux : `docker compose logs -f api`.
-
-## 5. Vérifier que tout fonctionne
+## 8. Sur un réseau de formation (salle, hotspot)
 
 ```bash
-pytest -q                                   # 27 tests : moteur, base, API, ligne de commande
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+Les participants ouvrent `http://<adresse-IP-du-formateur>:8000/app` et saisissent le code de la salle. Si le pare-feu de l'établissement bloque le port, un point d'accès Wi-Fi depuis un téléphone ou un tunnel (`ssh -R 80:localhost:8000 nokey@localhost.run`) contourne la difficulté. Avec le site en ligne, le plus simple reste d'utiliser `https://wapp-dam-simulator.org/app`.
+
+## 9. Vérifier que tout fonctionne
+
+```bash
+pytest -q                                   # moteur, base, API, ligne de commande, cas aléatoires
 curl http://localhost:8000/api/v1/health    # {"status":"ok", ...}
+curl http://localhost:8000/api/v1/demo      # clearing de démonstration du site vitrine (mis en cache)
 ```

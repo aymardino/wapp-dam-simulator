@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DAM simulator">
+  <circle cx="32" cy="32" r="32" fill="#0F6E56"/>
+  <g stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" fill="none">
+    <path d="M17 42 L31 21 L45 42"/><path d="M17 42 L45 42"/><path d="M31 21 L31 42"/>
+  </g>
+  <g fill="#FFFFFF"><circle cx="17" cy="42" r="4.5"/><circle cx="31" cy="21" r="4.5"/><circle cx="45" cy="42" r="4.5"/><circle cx="31" cy="42" r="3.2"/></g>
+</svg>

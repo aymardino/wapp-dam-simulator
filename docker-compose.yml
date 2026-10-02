@@ -6,8 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.app
     restart: unless-stopped
-    environment:
-      WAPP_CORS_ORIGINS: "https://wapp-dam-simulator.org"
+    env_file: .env
     volumes:
       - wapp-data:/app/data
     expose:
@@ -18,6 +17,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-wapp-dam-simulator.org}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
