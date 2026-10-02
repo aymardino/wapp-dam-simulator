@@ -48,6 +48,10 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   Livrable 2 ; ce dernier, renommé « Jeu de test (Livrable 2) », est masqué des listes proposées aux
   formateurs (`scenario_list(include_hidden=True)` pour l'obtenir) et reste le jeu des tests de non-régression.
 
+- Carte de chaleur des prix (`web/src/components/PriceHeatmap.tsx`) : une ligne par zone triée par prix
+  moyen, une colonne par heure, couleur = prix, trait entre les groupes de prix, zone cliquable ; remplace les
+  quatorze courbes superposées sur la page d'accueil et précède les courbes dans l'onglet Prix des salles.
+
 **Corrigé**
 - Graphiques ECharts (`Chart`) : l'instance était détruite et recréée à chaque rendu du parent, d'où un
   graphique vide jusqu'au survol sur la page d'accueil (rendu toutes les 1,5 s) ; une seule instance par

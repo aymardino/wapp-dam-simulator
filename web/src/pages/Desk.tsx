@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api, fmt, session, type OrderBook, type Participant, type Reference, type RoomInfo, type Run, type Scenario, type Settings } from '../api'
 import { useLang } from '../i18n'
 import { PriceChart, DispatchChart, FlowChart } from '../components/Charts'
+import PriceHeatmap from '../components/PriceHeatmap'
 import { useRoomEvents } from '../hooks'
 import { useT } from '../i18n'
 import { Badge, Button, Empty, ErrorBox, Field, Header, Kpi, Panel, Tabs } from '../components/ui'
@@ -137,7 +138,7 @@ export default function Desk() {
                   <select value={hour} onChange={e => setHour(+e.target.value)} className="h-8 font-mono">{(run.result.summary.hours as number[]).map(h => <option key={h} value={h}>{`H${String(h).padStart(2, '0')}`}</option>)}</select></div>}
                 <div className="rounded-lg bg-panel p-2 mb-4">
                   {view === 'map' && <NetworkMap prices={run.result.prices} flows={run.result.flows} ntc={room?.ntc || {}} hour={hour} unit={unit} />}
-                  {view === 'prices' && <PriceChart prices={run.result.prices} hours={run.result.summary.hours} unit={unit} />}
+                  {view === 'prices' && <><PriceHeatmap prices={run.result.prices} hours={run.result.summary.hours} unit={unit} lang={lang} /><div className="mt-6"><PriceChart prices={run.result.prices} hours={run.result.summary.hours} unit={unit} /></div></>}
                   {view === 'dispatch' && <DispatchChart dispatch={run.result.dispatch} hours={run.result.summary.hours} label={k => t('p_' + k)} />}
                   {view === 'flows' && <FlowChart flows={run.result.flows} hours={run.result.summary.hours} ntc={room?.ntc || {}} corridors={CORRIDORS} />}
                 </div>

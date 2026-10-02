@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, fmt, session, zoneDefaults, type Block, type Demand, type Mic, type MyResult, type OrderBook, type Participant, type Reference, type RoomInfo, type Run, type Supply } from '../api'
-import { useT } from '../i18n'
+import { useT, useLang } from '../i18n'
 import { Badge, Bars, Button, Empty, ErrorBox, Header, Kpi, Panel, Tabs } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
 import { PriceChart, DispatchChart, FlowChart } from '../components/Charts'
+import PriceHeatmap from '../components/PriceHeatmap'
 import { useRoomEvents } from '../hooks'
 
 const PROFILES = ['baseload', 'hydro', 'solar', 'peaker', 'flat']
@@ -15,7 +16,7 @@ const CORRIDORS = ['NGA->BEN', 'NGA->NER', 'GHA->CIV', 'GHA->BFA', 'CIV->BFA', '
 const hh = (h: number) => `H${String(h).padStart(2, '0')}`
 
 export default function Room() {
-  const { code = '' } = useParams(); const t = useT()
+  const { code = '' } = useParams(); const t = useT(); const { lang } = useLang()
   const members = session.members(code); const [memberId, setMemberId] = useState<string | null>(session.current(code)?.id ?? null)
   const token = members.find(m => m.id === memberId)?.token ?? session.token(code, 'member'); const trainerToken = session.token(code, 'trainer')
   const [room, setRoom] = useState<RoomInfo | null>(null)
@@ -153,7 +154,7 @@ export default function Room() {
             <Tabs tabs={[{ key: 'map', label: t('tab_map') }, { key: 'prices', label: t('tab_prices') }, { key: 'dispatch', label: t('tab_dispatch') }, { key: 'flows', label: t('tab_flows') }]} active={view} onChange={setView} />
             <div className="rounded-lg bg-panel p-2 mb-4">
               {view === 'map' && <NetworkMap prices={prices} flows={flows} ntc={room?.ntc || {}} hour={hour} selected={me?.zone} unit={unit} />}
-              {view === 'prices' && <PriceChart prices={prices} hours={hours} highlight={me?.zone} unit={unit} />}
+              {view === 'prices' && <><PriceHeatmap prices={prices} hours={hours} highlight={me?.zone} unit={unit} lang={lang} /><div className="mt-6"><PriceChart prices={prices} hours={hours} highlight={me?.zone} unit={unit} /></div></>}
               {view === 'dispatch' && <DispatchChart dispatch={run.result.dispatch} hours={hours} label={k => t('p_' + k)} />}
               {view === 'flows' && <FlowChart flows={flows} hours={hours} ntc={room?.ntc || {}} corridors={CORRIDORS} />}
             </div>

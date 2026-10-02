@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { useLang, type Lang } from '../i18n'
 import { LangToggle } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
-import { PriceChart } from '../components/Charts'
+import PriceHeatmap from '../components/PriceHeatmap'
 import { LINKS } from '../links'
 
 type SupRow = { zone: string; actor: string; segment: number; quantity: number; price: number; profile?: string }
@@ -35,7 +35,7 @@ const L = {
     ex_lead: 'Les ordres du scénario de démonstration (centrales et demande de la zone, données 2024 reconstituées) forment une courbe d’offre et une courbe de demande. Le prix zonal ne se lit pas à leur croisement : le réseau déplace l’équilibre par les importations et les exportations.',
     ex_supply: 'Offre (centrales)', ex_demand: 'Demande (charge)', ex_price: 'prix zonal', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Ordres de la zone à l’heure choisie', ex_accepted: 'retenu', ex_marginal: 'marginal', ex_rejected: 'hors marché',
-    ex_prices_title: 'Les quatorze prix sur vingt-quatre heures', ex_prices_hint: 'Prix simulés sur le scénario de démonstration, pas des prix observés. La zone choisie est en trait épais ; les prix ne divergent qu’entre zones séparées par une ligne saturée.',
+    ex_prices_title: 'Les quatorze prix sur vingt-quatre heures', ex_prices_hint: 'Prix simulés sur le scénario de démonstration, pas des prix observés. Une ligne par zone, une colonne par heure : les zones de même couleur partagent le même prix, un trait sépare les groupes isolés par une ligne saturée. Cliquez une zone pour l’explorer.',
     m_kicker: 'Le moteur', m_title: 'Trois questions, trois programmes, dans cet ordre',
     m_lead: 'Un couplage de marché répond chaque jour à trois questions. Le moteur les prend l’une après l’autre, comme un algorithme de bourse, mais à livre ouvert : les règles sont dans le code et dans la documentation.',
     steps: [
@@ -100,7 +100,7 @@ const L = {
     ex_lead: 'The demonstration scenario’s orders (the zone’s plants and demand, reconstructed 2024 data) form a supply curve and a demand curve. The zonal price is not read at their crossing: the network shifts the balance through imports and exports.',
     ex_supply: 'Supply (plants)', ex_demand: 'Demand (load)', ex_price: 'zonal price', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Orders of the zone at the chosen hour', ex_accepted: 'accepted', ex_marginal: 'marginal', ex_rejected: 'out of market',
-    ex_prices_title: 'Fourteen prices over twenty-four hours', ex_prices_hint: 'Simulated prices on the demonstration scenario, not observed prices. The chosen zone is drawn thicker; prices only diverge between zones separated by a saturated line.',
+    ex_prices_title: 'Fourteen prices over twenty-four hours', ex_prices_hint: 'Simulated prices on the demonstration scenario, not observed prices. One row per zone, one column per hour: zones sharing a colour share a price, a rule separates groups isolated by a saturated line. Click a zone to explore it.',
     m_kicker: 'The engine', m_title: 'Three questions, three programs, in that order',
     m_lead: 'A market coupling answers three questions every day. The engine takes them one after the other, like an exchange algorithm, but with the book open: the rules are in the code and in the documentation.',
     steps: [
@@ -364,7 +364,7 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
         </div>
         <div className="mt-14 border-t border-line pt-8">
           <div className="flex items-center justify-between flex-wrap gap-3"><span className="font-display text-2xl flex items-center gap-3">{s.ex_prices_title} <SimBadge label={s.sim_badge} /></span><span className="text-sm text-ink-3 max-w-xl">{s.ex_prices_hint}</span></div>
-          <div className="mt-4"><PriceChart prices={demo.prices} hours={demo.hours} highlight={zone} unit="$/MWh" /></div>
+          <div className="mt-5"><PriceHeatmap prices={demo.prices} hours={demo.hours} highlight={zone} unit="$/MWh" lang={lang} onSelect={setZone} /></div>
         </div>
       </div>
     </section>
