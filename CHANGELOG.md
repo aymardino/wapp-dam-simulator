@@ -5,6 +5,18 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 9 — Données de référence sourcées et valeurs par défaut réalistes
+
+**Ajouté**
+- Scénario `reference_2024` « Référence 2024 (sources publiques) » : capacités disponibles, pointes de demande,
+  coûts par technologie et capacités des lignes d'après des sources publiques 2023-2025, documentés chiffre par
+  chiffre dans `docs/DONNEES_DE_REFERENCE.md` avec les estimations signalées. Le jeu du Livrable 2 reste le
+  défaut des tests jusqu'à validation par SENELEC et le centre de coordination du WAPP.
+- Dans la salle de marché, les quantités et prix proposés pour un nouvel ordre sont tirés des tailles types des
+  centrales de la zone (quelques dizaines de MW au Togo ou en Gambie, plusieurs centaines au Nigeria) au lieu
+  de 100 MW partout.
+- Test de plausibilité du jeu 2024 (36 tests au total).
+
 ### Étape 8 — Scénarios, temps réel, export et garde-fous (API et moteur)
 
 **Ajouté**

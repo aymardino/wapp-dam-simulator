@@ -1,0 +1,63 @@
+# Données de référence : sources et hypothèses
+
+*Jeu « Référence 2024 (sources publiques) », scénario `reference_2024` dans `engine/scenarios.py`. Version du 2 octobre 2026. Le jeu du Livrable 2 (`reference`) reste le jeu par défaut des tests ; celui-ci est à valider avec SENELEC et le centre de coordination du WAPP avant de devenir le défaut.*
+
+**Principe.** Chaque zone offre ses centrales disponibles par technologie (quantité en MW disponible, prix en USD/MWh proche du coût variable) et demande sa pointe (quantité en MW à la pointe, modulée par le profil de charge horaire ; prix d'achat décroissants par tranche : 220 à 230 pour la base, 160 à 180 pour la tranche suivante, 110 à 130 pour la dernière, sous le plafond de 500). Les valeurs sans source directe sont marquées **(est.)**.
+
+## 1. Capacités et pointes par pays
+
+| Zone | Capacité installée | Disponible retenue | Pointe retenue | Principales unités du jeu | Sources |
+|------|-------------------:|-------------------:|---------------:|---------------------------|---------|
+| NGA | 13 625 MW (NERC) | 5 750 MW | 5 800 MW | hydro Kainji-Jebba-Shiroro-Zungeru, Egbin, Azura-Edo, Okpai, NIPP et autres gaz | pointe livrée 5 801,84 MW le 4 mars 2025 (TCN) ; capacité NERC 13 625 MW : [Channels TV](https://www.channelstv.com/2025/03/06/tcn-announces-peak-in-power-generation-to-5801-84mw), [Leadership](https://leadership.ng/transmission-not-nigerias-power-constraint-tcn/) |
+| GHA | 5 260 MW, 4 856 MW garantis (nov. 2024) | 4 740 MW | 3 200 MW | Akosombo-Kpong-Bui, CCGT (TICO, Cenpower, Amandi), Sunon Asogli, AKSA et OCGT, Karpowership, solaire | [Trade.gov, Ghana energy sector](https://www.trade.gov/country-commercial-guides/ghana-energy-sector), [Ghanaian Times](https://ghanaiantimes.com.gh/averting-power-crisis-govt-eyes-1200-megawatt-gas-fired-plant/amp/) |
+| CIV | 2 907 MW (fin 2023) | 2 660 MW | 2 200 MW (est.) | hydro CI-Energies, Azito, CIPREL, Atinkou, HFO, solaire | capacité et production 13 343 GWh : [economie-ivoirienne.ci](https://economie-ivoirienne.ci/activites-sectorielles/electricite.html) ; pointe estimée depuis la production annuelle et un facteur de charge de 0,7 |
+| SEN | 1 960 MW (2023) | 1 440 MW | 1 250 MW (est.) | OMVS (part), solaire, éolien Taïba N'Diaye, charbon Sendou, CCGT gaz, HFO | [Rapport annuel Senelec 2023](https://www.senelec.sn/media/rapports/pdf/rapport-annuel-senelec-2023-vf-ok1745314522.pdf) ; HFO 70 % de la production 2022 : [IEA Senegal 2023](https://iea.blob.core.windows.net/assets/b80ed5fc-7483-4b65-ae73-d39d5b2de40d/Senegal2023.pdf) |
+| BFA | 684 MW (fin 2025 ; 61 % thermique, 34 % solaire, 5 % hydro), 220 à 300 MW importés | 635 MW | 600 MW (est.) | solaire (Zagtouli, Nagréongo, Kodeni, Zina), Bagré-Kompienga, HFO SONABEL | [Sidwaya](https://www.sidwaya.info/delestage-au-burkina-faso-la-demande-depasse-loffre-directeur-general-sonabel-souleymane-ouedraogo/), [Burkina24](https://burkina24.com/?p=59904), [Horonya finance](https://www.horonyafinance.com/burkina-deficit-energetique-400-milliards-fcfa-necessaires-a-la-sonabel-pour-combler-un-gap-de-400-megawatts/) |
+| MLI | ≈ 310 MW en réseau + importations (chiffre ancien) ; 500 M de litres de carburant en 2024 | 650 MW | 650 MW (est.) | OMVS-Sélingué (part), solaire, HFO/diesel EDM-SA | [DLA Piper, power reforms](https://www.dlapiperafrica.com/en/africa-wide/insights/africa-connected/issue-03/power-reforms-in-west-africa.html), [Bamada](https://bamada.net/besoins-energetiques-du-mali-en-2024-500-millions-de-litres-de-carburant-pour-309-milliards-de-fcfa) |
+| NER | Gorou Banda diesel 80 MW, solaire 30 MW et plus, importation contractuelle 120 MW | 258 MW | 330 MW (est.) | solaire, charbon Anou Araren, diesel/HFO NIGELEC | [PV Magazine](https://www.pv-magazine.com/2023/07/19/niger-commissions-30-mw-solar-plant/), [Banque mondiale, Niger PAD](https://documents1.worldbank.org/curated/en/630161534524243997/pdf/NIGER-ELECTRICITY-PAD-08142018.pdf), [AllAfrica, fourniture réduite à 46 MW](https://allafrica.com/stories/202504180380.html) |
+| BEN | Maria-Gléta 127 MW, Illoulofin 25 MW, importation contractuelle 260 MW (200 MW échangés) ; pointe projetée 700 MW en 2030 | 237 MW | 400 MW (est.) | solaire, Nangbéto (part), Maria-Gléta, location | [BIDC](https://www.bidc-ebid.org/en/?p=139903), [Illoulofin](https://en.wikipedia.org/wiki/Illoulofin_Solar_Power_Station), [AfDB, CEB-NEPA](https://www.afdb.org/fileadmin/uploads/afdb/Documents/Environmental-and-Social-Assessments/ADF-BD-IF-2002-128-EN-NIGERIA-BENIN-TOGO-EIA-CEB-NEPA-330KV-POWER-INTERCONNEXION-PROJECT.PDF) |
+| TGO | 327 à 330 MW (2023-2024 ; gaz 52 %, solaire 22 %), Nangbéto 65 MW, ContourGlobal 100 MW, achat ≈ 75 MW au Nigeria | 270 MW | 310 MW (est.) | solaire (Blitta, Dapaong), Nangbéto (part), Kékéli, ContourGlobal | [Climatescope Togo](https://global-climatescope.org/markets/togo), [The Global Economy](https://www.theglobaleconomy.com/Togo/electricity_production_capacity/), [Arise](https://www.arise.tv/togo-seeks-increased-electricity-supply-from-nigeria/) |
+| GIN | 1 410 MW installés, 1 035 MW disponibles (Souapiti 450, Kaleta 240) | 1 070 MW | 850 MW (est.) | hydro Souapiti-Kaleta-Garafiri, HFO Tombo-Kipé | [Banque mondiale, Guinée](https://documents1.worldbank.org/curated/en/099050925174542646/pdf/P511453-12d6c125-5ec9-4fd2-874e-9a1685585cee.pdf), [Rapport EDG 2023](https://edg.com.gn/wp-content/uploads/2025/02/RAPPORT-ACTIVITES-EDG-SA-Excercice-2023.pdf) |
+| SLE | 494 MW (GEM, locations comprises) ; pointe observée 85 MW (2020), demande non contrainte 105 MW (2022) | 135 MW | 115 MW | Bumbuna, Karpowership, thermique EDSA | [Banque mondiale, Sierra Leone PAD](https://documents1.worldbank.org/curated/en/099050123103517589/pdf/BOSIB02d6608d80d80a8c80311ab3b789a5.pdf), [GEM](https://www.gem.wiki/Power_Sector_Transition_in_the_West_African_Power_Pool) |
+| LBR | 126 MW (88 hydro + 38 thermique), pointe 85 MW | 115 MW | 90 MW | Mount Coffee, Bushrod | [AfDB blog](https://blogs.afdb.org/economic-growth/the-liberian-model-smart-hydropower-and-regional-trade-reshaping-west-african-energy), [Mount Coffee](https://en.wikipedia.org/wiki/Mount_Coffee_Hydropower_Project) |
+| GMB | ≈ 78 MW disponibles, pointe 106 à 140 MW | 110 MW | 125 MW | HFO Brikama-Kotu, solaire Jambur | [The Point](https://thepoint.gm/africa/gambia/headlines/nawec-announces-load-shedding-as-power-demand-hits-140mw), [Kerr Fatou](https://www.kerrfatou.com/gambia-faces-26-megawatt-power-shortfall-as-nawec-urges-conservation/) |
+| GNB | ≈ 30 MW installés, pointe 63 MW | 28 MW | 63 MW | Karpowership | [Banque mondiale, Guinée-Bissau](https://documents1.worldbank.org/curated/en/629941622730511131/pdf/Concept-Project-Information-Document-PID-Guinea-Bissau-Solar-Energy-Scale-up-and-Access-Project-P174576.pdf) |
+
+Capacités par pays en exploitation selon Global Energy Monitor (recoupement) : [GEM, Power Sector Transition in the WAPP](https://www.gem.wiki/Power_Sector_Transition_in_the_West_African_Power_Pool). Pointe régionale et mix : [ESMAP, hydropower in WAPP](https://www.esmap.org/sites/default/files/2022/Hydropower%20Uganda/05%20PPT_ESMAP%20-%20HYDRO%202023%20-%20WAPP_Last%20Version.pdf).
+
+## 2. Interconnexions
+
+| Ligne du modèle | Ouvrage | Capacité retenue | Source ou hypothèse |
+|-----------------|---------|-----------------:|---------------------|
+| NGA→BEN | 330 kV Ikeja–Sakété | 200 MW | 260 MW contractuels, 200 MW échangés en pratique à cause de la contrainte de la ligne : [AfDB, projet CEB-NEPA](https://www.afdb.org/fileadmin/uploads/afdb/Documents/Environmental-and-Social-Assessments/ADF-BD-IF-2002-128-EN-NIGERIA-BENIN-TOGO-EIA-CEB-NEPA-330KV-POWER-INTERCONNEXION-PROJECT.PDF) ; renforcement en cours : [WAPP](https://www.ecowapp.org/en/news/strengthening-330-kv-nigeria%E2%80%93benin-interconnection-wapp-project-recognized-internationally) |
+| NGA→NER | 132 kV Birnin Kebbi–Niamey | 120 MW | capacité contractuelle 120 MW : [Banque mondiale, Niger PAD](https://documents1.worldbank.org/curated/en/630161534524243997/pdf/NIGER-ELECTRICITY-PAD-08142018.pdf) ; la dorsale Nord 330 kV (600 MW) est en achèvement : [VON](https://von.gov.ng/electricity-wapp-north-core-project-nears-completion/) |
+| BEN→TGO | réseau CEB 161 kV et 330 kV Sakété–Lomé | 300 MW (est.) | ouvrage décrit sans capacité publiée : [AfDB, Ghana-Togo-Bénin](https://www.afdb.org/fileadmin/uploads/afdb/Documents/Environmental-and-Social-Assessments/ADF-BD-IF-2006-245-EN-MULTINATIONAL-GHANA-TOGO-BENIN-POWER-INTERCONNECTION-PROJECT-VRA-CEB-SUMMARY-REPORT.PDF) |
+| TGO→GHA | 330 kV Volta–Lomé C et 161 kV | 300 MW (est.) | idem |
+| GHA→CIV | 225 kV Prestea–Riviera (1983) | 200 MW (est.) | ligne 225 kV simple terne ; renforcement 330 kV signé en 2025 : [AU-PIDA](https://map.au-pida.org/projects/show/20050001) |
+| GHA→BFA | 225 kV Bolgatanga–Ouagadougou | 100 MW | [EIB](https://www.eib.org/en/projects/pipelines/all/20100346), [Graphic](https://www.graphic.com.gh/news/general-news/ghana-to-increase-power-supply-to-burkina-faso.html) |
+| CIV→BFA | 225 kV Ferkessédougou–Bobo-Dioulasso | 100 MW | [Oxford Business Group](https://oxfordbusinessgroup.com/reports/cote-divoire/2015-report/economy/doing-its-share-regional-exchanges-offer-an-efficient-way-to-extend-and-improve-access-to-power-supplies) |
+| CIV→MLI | 225 kV Ferkessédougou–Sikasso–Ségou | 200 MW (est.) | ligne dimensionnée pour 400 MW ([Bamada](https://bamada.net/interconnexion-electrique-mali-cote-divoire-les-installations-ont-ete-inaugurees-a-sikasso)) ; capacité d'échange retenue prudemment à la moitié |
+| CIV→LBR, LBR→SLE, SLE→GIN | CLSG 225 kV double terne | 290 MW | capacité de transfert totale 290 MW : [GI Hub](https://cdn.gihub.org/umbraco/media/2519/gih-showcase-projects-2019-cslg-interconnector-project-art-web.pdf) |
+| GIN→GNB, GNB→GMB, GMB→SEN | boucle OMVG 225 kV | 300 MW (est.) par tronçon | boucle conçue pour 800 MW : [Banque mondiale, OMVG](https://documents1.worldbank.org/curated/en/442701468194079362/pdf/895940PAD0P146010Box391424B00OUO090.pdf) |
+| SEN→MLI | réseau OMVS 225 kV (Manantali 200 MW, Félou 60 MW) | 150 MW (est.) | [ESMAP, Manantali](https://www.esmap.org/sites/esmap.org/files/BN004-10_REISP-CD_Manantali-Generation.pdf) ; pas de capacité d'échange publiée |
+
+La contrainte d'interdépendance α = 0,7 sur GHA→BFA et CIV→BFA est conservée telle quelle (Livrable 2).
+
+## 3. Coûts par technologie (prix des offres de vente)
+
+| Technologie | Prix retenu (USD/MWh) | Justification |
+|-------------|----------------------:|---------------|
+| Hydraulique | 12 à 36 | valeur de l'eau, coût variable quasi nul ; échelonné pour refléter la gestion des réserves |
+| Solaire, éolien | 4 à 8 | coût marginal nul, offert en premier (must-run) |
+| Gaz Nigeria | 24 à 55 | gaz à 2,42 $/MMBtu pour le secteur électrique en 2024 ([Premium Times](https://www.premiumtimesng.com/business/business-news/682642-nigerian-petroleum-agency-announces-new-gas-price-for-strategic-sector.html)) : combustible ≈ 17 $/MWh en cycle combiné, 25 en cycle ouvert, plus exploitation |
+| Gaz Ghana | 68 à 125 | coût moyen pondéré du gaz 8,12 $/MMBtu en 2024 ([PURC](https://www.purc.com.gh/attachment/315187-20240410010442.pdf)) ; coût de production dans le tarif 81 $/MWh en 2023 ([LinkedIn, N. D. Asante](https://www.linkedin.com/pulse/tariff-insights-ghana-power-costs-1-generation-nii-darko-asante)) |
+| Gaz Côte d'Ivoire | 46 à 62 | gaz domestique moins cher que l'importé ; tarif ivoirien environ moitié du sénégalais ([Energy Capital & Power](https://energycapitalpower.com/gas-halve-senegal-electricity-prices-2023/)) |
+| Fioul lourd | 125 à 210 | combustible 105 à 150 $/MWh pour un HFO livré entre 550 et 700 $/t ([USPE](https://uspeglobal.com/articles/hfo-power-plant-cost-breakdown/)), plus exploitation ; diesel au-delà |
+| Charbon | 65 à 90 | Sendou (Sénégal), Anou Araren (Niger) ; hypothèse |
+
+## 4. Ce qu'il reste à valider
+
+- Pointes de demande 2023-2024 pour SEN, CIV, BFA, MLI, NER, BEN, TGO, GIN : données des compagnies (rapports annuels) ou du centre de coordination du WAPP.
+- Capacités d'échange réelles des lignes marquées (est.), en particulier le corridor Ghana–Togo–Bénin et la boucle OMVG ; le WAPP calcule les NTC quotidiennement (réunion du 13 février 2026).
+- Coûts variables par centrale (contrats d'achat), si SENELEC et EPEX peuvent les partager sous forme agrégée.
+- Dès validation, faire de `reference_2024` le jeu par défaut et recaler les tests de non-régression.

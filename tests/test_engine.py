@@ -236,7 +236,7 @@ def test_reference_zones_reported(ref):
 
 def test_scenarios_change_outcomes():
     from engine.scenarios import scenario_rows, SCENARIOS, scenario_list
-    assert set(scenario_list('en')[0].keys()) == {'key', 'name', 'description'} and len(SCENARIOS) == 5
+    assert set(scenario_list('en')[0].keys()) == {'key', 'name', 'description'} and len(SCENARIOS) == 6
     base = run_clearing(None, None, horizon=24)
     sup, dem, ntc = scenario_rows('secheresse_hydro')
     dry = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc or None)
@@ -249,3 +249,19 @@ def test_scenarios_change_outcomes():
     one = [dict(zone='SEN', player='x', actor='A', segment=0, quantity=10, price=10, profile='baseload')]
     r = run_clearing(one, [], horizon=1, fill_missing_zones=True, reference_rows=scenario_rows('gaz_cher')[:2])
     assert len(r['summary']['reference_zones']) == 13
+
+
+def test_reference_2024_dataset_is_plausible():
+    from engine.scenarios import scenario_rows, REFERENCE_2024, NTC_2024
+    sup, dem, ntc = scenario_rows('reference_2024')
+    assert set(REFERENCE_2024) == set(C.ZONES) and set(ntc) == set(C.NTC)
+    total_sup = sum(r['quantity'] for r in sup); total_dem = sum(r['quantity'] for r in dem)
+    assert 15000 < total_sup < 22000 and 13000 < total_dem < 20000
+    assert all(C.P_MIN <= r['price'] <= C.P_MAX for r in sup + dem)
+    res = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc)
+    d = res['summary']['diagnostics']
+    assert d['pro'] == 0 and d['pao'] == 0 and d['unsaturated_price_gaps'] == 0
+    assert 0 < res['volume'] < 24 * total_sup
+    # le Togo offre des unités de quelques dizaines de MW, pas de 100 MW par défaut
+    tgo = [r['quantity'] for r in sup if r['zone'] == 'TGO']
+    assert max(tgo) <= 80

@@ -13,7 +13,19 @@ export type Mic = { actor: string; fixed_term: number; variable_term: number }
 export type OrderBook = { supply: Supply[]; demand: Demand[]; blocks: Block[]; mic: Mic[] }
 export type Run = { id: number; run_at: string; welfare: number; volume: number; settings: Settings; result: any }
 export type MyResult = { run_id: number; run_at: string; participant: Participant; zone_prices: Record<string, number>; actors: any[]; blocks: any[]; mic: any[]; hours: number[]; currency: string }
-export type Reference = { zones: string[]; lines: { from: string; to: string; ntc: number }[]; profiles: Record<string, number[]>; price_bounds: number[]; rules: Record<string, string[]> }
+export type RefRow = { zone: string; actor: string; segment: number; quantity: number; price: number; profile?: string }
+export type Reference = { zones: string[]; lines: { from: string; to: string; ntc: number }[]; profiles: Record<string, number[]>; price_bounds: number[]; rules: Record<string, string[]>; reference_supply: RefRow[]; reference_demand: RefRow[] }
+
+/** Valeurs par défaut d'un nouvel ordre, tirées des tailles types de la zone dans les données de référence. */
+export function zoneDefaults(ref: Reference | null, zone: string | null) {
+  const med = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)] }
+  const sup = ref && zone ? ref.reference_supply.filter(r => r.zone === zone) : []
+  const dem = ref && zone ? ref.reference_demand.filter(r => r.zone === zone) : []
+  const q = med(sup.map(r => r.quantity)); const p = med(sup.map(r => r.price))
+  const dq = dem.length ? Math.max(...dem.map(r => r.quantity)) : null; const dp = med(dem.map(r => r.price))
+  const round = (x: number) => Math.max(5, Math.round(x / 5) * 5)
+  return { supplyQty: q ? round(q) : 50, supplyPrice: p ? Math.round(p) : 50, demandQty: dq ? round(dq * 0.6) : 100, demandPrice: dp ? Math.round(dp) : 150, blockQty: q ? round(q / 2) : 25 }
+}
 
 /** Un jeton par salle et par rôle : un formateur peut aussi rejoindre sa propre salle comme trader depuis le même navigateur. */
 export type Role2 = 'trainer' | 'member'

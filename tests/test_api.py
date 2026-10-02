@@ -126,7 +126,9 @@ def test_empty_room_without_fill_is_refused():
 def test_scenarios_and_csv_export(room):
     code, tok = room['code'], room['trainer_token']
     sc = client.get(API + '/scenarios?lang=en').json()
-    assert [x['key'] for x in sc][:2] == ['reference', 'secheresse_hydro'] and sc[1]['name'] == 'Hydro drought'
+    keys = [x['key'] for x in sc]
+    assert keys[0] == 'reference' and 'reference_2024' in keys and 'secheresse_hydro' in keys
+    assert next(x for x in sc if x['key'] == 'secheresse_hydro')['name'] == 'Hydro drought'
     assert client.put(API + f'/rooms/{code}/settings', json={'scenario': 'inconnu'}, headers=_auth(tok)).status_code == 422
     r = client.put(API + f'/rooms/{code}/settings', json={'scenario': 'ligne_nga_ben', 'fill_missing': True}, headers=_auth(tok))
     assert r.status_code == 200 and r.json()['scenario'] == 'ligne_nga_ben'

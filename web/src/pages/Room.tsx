@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { api, fmt, session, type Block, type Demand, type Mic, type MyResult, type OrderBook, type Participant, type RoomInfo, type Run, type Supply } from '../api'
+import { api, fmt, session, zoneDefaults, type Block, type Demand, type Mic, type MyResult, type OrderBook, type Participant, type Reference, type RoomInfo, type Run, type Supply } from '../api'
 import { useT } from '../i18n'
 import { Badge, Bars, Button, Empty, ErrorBox, Header, Kpi, Panel, Tabs } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
@@ -18,6 +18,7 @@ export default function Room() {
   const { code = '' } = useParams(); const t = useT()
   const token = session.token(code, 'member'); const trainerToken = session.token(code, 'trainer')
   const [room, setRoom] = useState<RoomInfo | null>(null)
+  const [ref, setRef] = useState<Reference | null>(null)
   const [me, setMe] = useState<Participant | null>(null)
   const [book, setBook] = useState<OrderBook>(EMPTY)
   const [tab, setTab] = useState<TabKey>('supply')
@@ -43,7 +44,7 @@ export default function Room() {
   useEffect(() => {
     if (!token) return
     api.myOrders(code, token).then(b => { setMe(b.participant); setBook({ supply: b.supply, demand: b.demand, blocks: b.blocks, mic: b.mic }) }).catch(e => setErr(e.message))
-    load()
+    load(); api.reference().then(setRef).catch(() => {})
   }, [code, token, load])
   useRoomEvents(code, () => { setLive(true); load() })
 
@@ -58,12 +59,15 @@ export default function Room() {
   const upd = <K extends TabKey>(k: K, i: number, patch: Partial<OrderBook[K][number]>) =>
     setBook(b => ({ ...b, [k]: (b[k] as any[]).map((row, j) => (j === i ? { ...row, ...patch } : row)) }))
   const del = (k: TabKey, i: number) => setBook(b => ({ ...b, [k]: (b[k] as any[]).filter((_, j) => j !== i) }))
-  const add = (k: TabKey) => setBook(b => ({
-    ...b, [k]: [...(b[k] as any[]), k === 'supply' ? ({ actor: '', segment: 0, quantity: 100, price: 50, profile: 'baseload' } as Supply)
-      : k === 'demand' ? ({ actor: '', segment: 0, quantity: 200, price: 150 } as Demand)
-      : k === 'blocks' ? ({ name: '', side: 'S', quantity: 100, price: 40, h_start: 0, h_end: 23 } as Block)
-      : ({ actor: '', fixed_term: 0, variable_term: 0 } as Mic)],
-  }))
+  const add = (k: TabKey) => {
+    const d = zoneDefaults(ref, me?.zone ?? null)
+    setBook(b => ({
+      ...b, [k]: [...(b[k] as any[]), k === 'supply' ? ({ actor: '', segment: Math.min(b.supply.length, 3), quantity: d.supplyQty, price: d.supplyPrice, profile: 'baseload' } as Supply)
+        : k === 'demand' ? ({ actor: '', segment: Math.min(b.demand.length, 3), quantity: d.demandQty, price: d.demandPrice } as Demand)
+        : k === 'blocks' ? ({ name: '', side: 'S', quantity: d.blockQty, price: d.supplyPrice, h_start: 0, h_end: 23 } as Block)
+        : ({ actor: '', fixed_term: 0, variable_term: 0 } as Mic)],
+    }))
+  }
 
   const summary = run?.result?.summary
   const prices = run?.result?.prices as Record<string, Record<string, number>> | undefined
