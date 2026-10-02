@@ -15,7 +15,7 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 - Dans la salle de marché, les quantités et prix proposés pour un nouvel ordre sont tirés des tailles types des
   centrales de la zone (quelques dizaines de MW au Togo ou en Gambie, plusieurs centaines au Nigeria) au lieu
   de 100 MW partout.
-- Test de plausibilité du jeu 2024 (36 tests au total).
+- Test de plausibilité du jeu 2024 (35 tests au total).
 
 ### Étape 8 — Scénarios, temps réel, export et garde-fous (API et moteur)
 
