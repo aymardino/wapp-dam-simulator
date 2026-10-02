@@ -4,10 +4,14 @@ import { api, fmt, session, type Block, type Demand, type Mic, type MyResult, ty
 import { useT } from '../i18n'
 import { Badge, Bars, Button, Empty, ErrorBox, Header, Kpi, Panel, Tabs } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
+import { PriceChart, DispatchChart, FlowChart } from '../components/Charts'
+import { useRoomEvents } from '../hooks'
 
 const PROFILES = ['baseload', 'hydro', 'solar', 'peaker', 'flat']
 const EMPTY: OrderBook = { supply: [], demand: [], blocks: [], mic: [] }
 type TabKey = 'supply' | 'demand' | 'blocks' | 'mic'
+type ViewKey = 'map' | 'prices' | 'dispatch' | 'flows'
+const CORRIDORS = ['NGA->BEN', 'NGA->NER', 'GHA->CIV', 'GHA->BFA', 'CIV->BFA', 'CIV->MLI', 'CIV->LBR', 'SEN->MLI']
 const hh = (h: number) => `H${String(h).padStart(2, '0')}`
 
 export default function Room() {
@@ -17,6 +21,8 @@ export default function Room() {
   const [me, setMe] = useState<Participant | null>(null)
   const [book, setBook] = useState<OrderBook>(EMPTY)
   const [tab, setTab] = useState<TabKey>('supply')
+  const [view, setView] = useState<ViewKey>('map')
+  const [live, setLive] = useState(false)
   const [run, setRun] = useState<Run | null>(null)
   const [mine, setMine] = useState<MyResult | null>(null)
   const [hour, setHour] = useState<number>(19)
@@ -37,8 +43,9 @@ export default function Room() {
   useEffect(() => {
     if (!token) return
     api.myOrders(code, token).then(b => { setMe(b.participant); setBook({ supply: b.supply, demand: b.demand, blocks: b.blocks, mic: b.mic }) }).catch(e => setErr(e.message))
-    load(); const id = setInterval(load, 10000); return () => clearInterval(id)
+    load()
   }, [code, token, load])
+  useRoomEvents(code, () => { setLive(true); load() })
 
   if (!token) return <div className="p-10 text-lg">{t('join_room')} : <a className="text-accent font-medium" href={`/?code=${code}`}>{code}</a></div>
   const cur = room?.settings.currency || 'USD'; const unit = `${cur}/MWh`
@@ -129,7 +136,7 @@ export default function Room() {
           <p className="text-sm text-ink-3 mt-4">{t('order_book_hint')}</p>
         </Panel>
 
-        <Panel title={`${t('market')} · ${t('last_clearing')}`} right={run && <>{(summary?.reference_zones?.length || 0) > 0 && <Badge tone="warn">{t('reference_badge')} · {summary.reference_zones.length} {t('zones_word')}</Badge>}<span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span></>}>
+        <Panel title={`${t('market')} · ${t('last_clearing')}`} right={<>{live && <Badge tone="up">{t('live')}</Badge>}{run && <>{(summary?.reference_zones?.length || 0) > 0 && <Badge tone="warn">{t('reference_badge')} · {summary.reference_zones.length} {t('zones_word')}</Badge>}<span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span></>}</>}>
           {!run || !prices || !flows ? <Empty>{t('waiting_clearing')}</Empty> : <>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <Kpi label={t('welfare')} value={fmt.money(run.welfare / 1e6, 'M ' + cur)} />
@@ -137,7 +144,13 @@ export default function Room() {
               <div className="bg-panel rounded-lg px-4 py-3"><div className="text-xs uppercase tracking-wide text-ink-3 mb-1">{t('hour')}</div>
                 <select value={hour} onChange={e => setHour(+e.target.value)} className="h-8 w-full font-mono">{hours.map(h => <option key={h} value={h}>{hh(h)}</option>)}</select></div>
             </div>
-            <div className="rounded-lg bg-panel p-2 mb-4"><NetworkMap prices={prices} flows={flows} ntc={room?.ntc || {}} hour={hour} selected={me?.zone} unit={unit} /></div>
+            <Tabs tabs={[{ key: 'map', label: t('tab_map') }, { key: 'prices', label: t('tab_prices') }, { key: 'dispatch', label: t('tab_dispatch') }, { key: 'flows', label: t('tab_flows') }]} active={view} onChange={setView} />
+            <div className="rounded-lg bg-panel p-2 mb-4">
+              {view === 'map' && <NetworkMap prices={prices} flows={flows} ntc={room?.ntc || {}} hour={hour} selected={me?.zone} unit={unit} />}
+              {view === 'prices' && <PriceChart prices={prices} hours={hours} highlight={me?.zone} unit={unit} />}
+              {view === 'dispatch' && <DispatchChart dispatch={run.result.dispatch} hours={hours} label={k => t('p_' + k)} />}
+              {view === 'flows' && <FlowChart flows={flows} hours={hours} ntc={room?.ntc || {}} corridors={CORRIDORS} />}
+            </div>
             <table><thead><tr><th>{t('zone')}</th><th className="text-right">{t('prices_at')} {hh(hour)}</th><th className="text-right">{t('avg24')}</th><th className="text-right">{t('position')} (MWh)</th><th className="w-24">24 h</th></tr></thead><tbody>
               {zones.map(z => {
                 const series = hours.map(h => prices[z][String(h)]); const net = summary.net_pos[z] as number

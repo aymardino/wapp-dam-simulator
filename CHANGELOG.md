@@ -20,6 +20,14 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   par jour (20 par défaut, réponse 429 au-delà).
 - Cinq tests (34 au total).
 
+**Front**
+- Graphiques ECharts (rendu SVG) dans la salle de marché et au poste du formateur : prix horaires par zone
+  (la zone du trader en gras), dispatch empilé par profil avec la demande acceptée, flux horaires des huit
+  corridors principaux avec la NTC en légende. Onglets Carte / Prix / Dispatch / Flux.
+- Temps réel : abonnement au flux d'événements de la salle (badge « En direct »), rechargement à chaque
+  changement d'état ; repli automatique sur un sondage si le navigateur ne gère pas les événements serveur.
+- Sélecteur de scénario avec sa description dans les réglages du formateur ; liens d'export CSV et JSON.
+
 ### Correctif — réglages du formateur enregistrés immédiatement
 
 - La case « Compléter les zones sans soumission » n'était prise en compte qu'après un clic sur « Enregistrer » ;

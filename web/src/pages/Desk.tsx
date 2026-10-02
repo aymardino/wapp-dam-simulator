@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { api, fmt, session, type OrderBook, type Participant, type Reference, type RoomInfo, type Run, type Settings } from '../api'
+import { api, fmt, session, type OrderBook, type Participant, type Reference, type RoomInfo, type Run, type Scenario, type Settings } from '../api'
+import { useLang } from '../i18n'
+import { PriceChart, DispatchChart, FlowChart } from '../components/Charts'
+import { useRoomEvents } from '../hooks'
 import { useT } from '../i18n'
-import { Badge, Button, Empty, ErrorBox, Field, Header, Kpi, Panel } from '../components/ui'
+import { Badge, Button, Empty, ErrorBox, Field, Header, Kpi, Panel, Tabs } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
 
+const CORRIDORS = ['NGA->BEN', 'NGA->NER', 'GHA->CIV', 'GHA->BFA', 'CIV->BFA', 'CIV->MLI', 'CIV->LBR', 'SEN->MLI']
+
 export default function Desk() {
-  const { code = '' } = useParams(); const t = useT()
+  const { code = '' } = useParams(); const t = useT(); const { lang } = useLang()
   const token = session.token(code, 'trainer'); const memberToken = session.token(code, 'member')
   const [room, setRoom] = useState<RoomInfo | null>(null)
   const [ref, setRef] = useState<Reference | null>(null)
@@ -15,6 +20,9 @@ export default function Desk() {
   const [s, setS] = useState<Settings | null>(null)
   const [ntc, setNtc] = useState<Record<string, number>>({})
   const [hour, setHour] = useState(19)
+  const [scenarios, setScenarios] = useState<Scenario[]>([])
+  const [view, setView] = useState<'map' | 'prices' | 'dispatch' | 'flows'>('map')
+  const [live, setLive] = useState(false)
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null); const [savedAt, setSavedAt] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -25,7 +33,9 @@ export default function Desk() {
       if (r.last_run_id) { const lr = await api.latest(code); setRun(lr); const hs: number[] = lr.result.summary.hours; setHour(h => (hs.includes(h) ? h : hs[0])) }
     } catch (ex: any) { setErr(ex.message) }
   }, [code, token])
-  useEffect(() => { api.reference().then(setRef); load(); const id = setInterval(load, 10000); return () => clearInterval(id) }, [load])
+  useEffect(() => { api.reference().then(setRef); load() }, [load])
+  useEffect(() => { api.scenarios(lang).then(setScenarios).catch(() => {}) }, [lang])
+  useRoomEvents(code, () => { setLive(true); load() })
 
   if (!token) return <div className="p-10 text-lg">{t('desk')} : <a className="text-accent font-medium" href="/">{t('back')}</a></div>
   const cur = s?.currency || 'USD'; const unit = `${cur}/MWh`
@@ -91,6 +101,9 @@ export default function Desk() {
                 <Field label={t('pricing')}><select value={s.pricing} onChange={e => patchSettings({ pricing: e.target.value })}>{(ref?.rules.pricing || ['complete', 'l2']).map(x => <option key={x}>{x}</option>)}</select></Field>
                 <Field label={t('pab')}><select value={s.pab_rule} onChange={e => patchSettings({ pab_rule: e.target.value })}>{(ref?.rules.pab_rule || ['euphemia']).map(x => <option key={x}>{x}</option>)}</select></Field>
                 <Field label={t('tie')}><select value={s.tie_rule} onChange={e => patchSettings({ tie_rule: e.target.value })}>{(ref?.rules.tie_rule || ['prorata']).map(x => <option key={x}>{x}</option>)}</select></Field>
+                <div className="col-span-2"><Field label={t('scenario')} hint={scenarios.find(x => x.key === s.scenario)?.description}>
+                  <select value={s.scenario} onChange={e => patchSettings({ scenario: e.target.value })}>{scenarios.map(x => <option key={x.key} value={x.key}>{x.name}</option>)}</select>
+                </Field></div>
               </div>
             </Panel>}
 
@@ -105,7 +118,7 @@ export default function Desk() {
           </div>
 
           <div className="flex flex-col gap-5">
-            <Panel title={t('results')} right={run && <span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span>}>
+            <Panel title={t('results')} right={<>{live && <Badge tone="up">{t('live')}</Badge>}{run && <><a className="text-sm text-accent font-medium" href={api.csvUrl(code, run.id)}>{t('export_csv')}</a><a className="text-sm text-accent font-medium" href={api.jsonUrl(code, run.id)} target="_blank" rel="noreferrer">{t('export_json')}</a><span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span></>}</>}>
               {!run || !d ? <Empty>{t('no_clearing')}</Empty> : <>
                 {refZones.length === nZones && <div className="mb-3 rounded bg-warn-soft text-warn px-4 py-2.5">{t('demo_badge')}</div>}
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -116,9 +129,15 @@ export default function Desk() {
                   {d.prb?.length > 0 && <Badge tone="warn">PRB · {d.prb.join(', ')}</Badge>}
                   {d.mic_withdrawn?.length > 0 && <Badge tone="warn">MIC · {d.mic_withdrawn.join(', ')}</Badge>}
                 </div>
-                <div className="flex items-center justify-between mb-2"><h3>{t('network')} · {t('prices_at')} {`H${String(hour).padStart(2, '0')}`}</h3>
-                  <select value={hour} onChange={e => setHour(+e.target.value)} className="h-8 font-mono">{(run.result.summary.hours as number[]).map(h => <option key={h} value={h}>{`H${String(h).padStart(2, '0')}`}</option>)}</select></div>
-                <div className="rounded-lg bg-panel p-2 mb-4"><NetworkMap prices={run.result.prices} flows={run.result.flows} ntc={room?.ntc || {}} hour={hour} unit={unit} /></div>
+                <Tabs tabs={[{ key: 'map', label: t('tab_map') }, { key: 'prices', label: t('tab_prices') }, { key: 'dispatch', label: t('tab_dispatch') }, { key: 'flows', label: t('tab_flows') }]} active={view} onChange={setView} />
+                {view === 'map' && <div className="flex items-center justify-between mb-2"><h3>{t('network')} · {t('prices_at')} {`H${String(hour).padStart(2, '0')}`}</h3>
+                  <select value={hour} onChange={e => setHour(+e.target.value)} className="h-8 font-mono">{(run.result.summary.hours as number[]).map(h => <option key={h} value={h}>{`H${String(h).padStart(2, '0')}`}</option>)}</select></div>}
+                <div className="rounded-lg bg-panel p-2 mb-4">
+                  {view === 'map' && <NetworkMap prices={run.result.prices} flows={run.result.flows} ntc={room?.ntc || {}} hour={hour} unit={unit} />}
+                  {view === 'prices' && <PriceChart prices={run.result.prices} hours={run.result.summary.hours} unit={unit} />}
+                  {view === 'dispatch' && <DispatchChart dispatch={run.result.dispatch} hours={run.result.summary.hours} label={k => t('p_' + k)} />}
+                  {view === 'flows' && <FlowChart flows={run.result.flows} hours={run.result.summary.hours} ntc={room?.ntc || {}} corridors={CORRIDORS} />}
+                </div>
                 {zonesInfo && <table><thead><tr><th>{t('zone')}</th><th className="text-right">{t('avg24')} ({unit})</th><th className="text-right">{t('position')} (MWh)</th><th className="text-right">{t('surplus')} ({cur})</th></tr></thead><tbody>
                   {Object.entries(zonesInfo).map(([z, zi]: [string, any]) => <tr key={z}>
                     <td className="font-semibold">{z}</td><td className="num">{fmt.n(zi.avg_price, 1)}</td>
