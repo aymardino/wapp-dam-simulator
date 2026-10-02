@@ -1,0 +1,95 @@
+/* WAPP Market Simulator — Light Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+    --green:        #1a6b3a;
+    --green-dark:   #0f4526;
+    --green-light:  #2d9155;
+    --green-pale:   #e8f5ee;
+    --green-border: #b8ddc8;
+    --orange:       #e86c1a;
+    --orange-light: #f5892a;
+    --orange-pale:  #fff3e8;
+    --white:        #ffffff;
+    --gray-50:      #f8f9fa;
+    --gray-100:     #f0f2f0;
+    --gray-200:     #e2e6e2;
+    --gray-400:     #8a9a8a;
+    --gray-600:     #4a5c4a;
+    --black:        #1a1f1a;
+    --shadow-sm:    0 1px 4px rgba(0,0,0,0.08);
+    --shadow-md:    0 4px 16px rgba(0,0,0,0.10);
+    --radius:       8px;
+    --font:         'Inter', sans-serif;
+    --font-heading: 'Barlow Condensed', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+}
+
+html, body, [class*="css"] { font-family: var(--font) !important; background-color: var(--gray-100) !important; color: var(--black) !important; }
+.stApp { background: var(--gray-100) !important; }
+
+[data-testid="stSidebar"] { background: var(--white) !important; border-right: 2px solid var(--green-border) !important; box-shadow: var(--shadow-md) !important; }
+[data-testid="stSidebar"] * { color: var(--black) !important; }
+[data-testid="stSidebar"] label { color: var(--green-dark) !important; font-weight: 600 !important; font-size: 0.78rem !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; }
+
+.wapp-header { display: flex; align-items: center; gap: 18px; padding: 18px 24px; background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%); border-radius: var(--radius); margin-bottom: 24px; box-shadow: var(--shadow-md); }
+.wapp-header h1 { font-family: var(--font-heading) !important; font-size: 1.9rem !important; font-weight: 700 !important; letter-spacing: 0.1em !important; color: var(--white) !important; margin: 0 !important; text-transform: uppercase !important; }
+.wapp-header .subtitle { font-size: 0.78rem; color: rgba(255,255,255,0.75); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 2px; }
+
+[data-testid="stMetric"] { background: var(--white) !important; border: 1px solid var(--gray-200) !important; border-top: 3px solid var(--green) !important; border-radius: var(--radius) !important; padding: 16px 20px !important; box-shadow: var(--shadow-sm) !important; }
+[data-testid="stMetricLabel"] { font-family: var(--font-heading) !important; font-size: 0.72rem !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: var(--gray-400) !important; font-weight: 600 !important; }
+[data-testid="stMetricValue"] { font-family: var(--font-mono) !important; color: var(--green-dark) !important; font-size: 1.5rem !important; font-weight: 600 !important; }
+
+.stButton > button { background: var(--green) !important; color: var(--white) !important; border: none !important; border-radius: 6px !important; font-family: var(--font-heading) !important; font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; font-size: 0.85rem !important; padding: 10px 22px !important; transition: all 0.15s !important; }
+.stButton > button:hover { background: var(--green-light) !important; transform: translateY(-1px) !important; }
+.stButton > button[kind="primary"] { background: var(--orange) !important; }
+.stButton > button[kind="primary"]:hover { background: var(--orange-light) !important; }
+
+.stTextInput input, .stNumberInput input { background: var(--white) !important; border: 1.5px solid var(--gray-200) !important; border-radius: 6px !important; color: var(--black) !important; }
+.stTextInput input:focus, .stNumberInput input:focus { border-color: var(--green) !important; box-shadow: 0 0 0 3px rgba(26,107,58,0.1) !important; }
+
+.stTabs [data-baseweb="tab-list"] { background: var(--white) !important; border-bottom: 2px solid var(--gray-200) !important; border-radius: var(--radius) var(--radius) 0 0 !important; }
+.stTabs [data-baseweb="tab"] { font-family: var(--font-heading) !important; font-weight: 600 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important; font-size: 0.85rem !important; color: var(--gray-400) !important; padding: 12px 20px !important; border-bottom: 3px solid transparent !important; background: transparent !important; }
+.stTabs [aria-selected="true"] { color: var(--green) !important; border-bottom: 3px solid var(--orange) !important; }
+
+.stDataFrame { border: 1px solid var(--gray-200) !important; border-radius: var(--radius) !important; overflow: hidden !important; }
+
+.stSuccess { background: var(--green-pale) !important; border-left: 4px solid var(--green) !important; color: var(--green-dark) !important; border-radius: 0 var(--radius) var(--radius) 0 !important; }
+.stWarning { background: var(--orange-pale) !important; border-left: 4px solid var(--orange) !important; border-radius: 0 var(--radius) var(--radius) 0 !important; }
+.stError { background: #fff0f0 !important; border-left: 4px solid #e05260 !important; border-radius: 0 var(--radius) var(--radius) 0 !important; }
+.stInfo { background: #f0f6ff !important; border-left: 4px solid #3a7bd5 !important; border-radius: 0 var(--radius) var(--radius) 0 !important; }
+
+.streamlit-expanderHeader { background: var(--white) !important; border: 1px solid var(--gray-200) !important; border-radius: 6px !important; color: var(--green-dark) !important; font-weight: 600 !important; }
+
+.phase-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-family: var(--font-heading) !important; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.phase-submission { background: var(--orange-pale); border: 1.5px solid var(--orange); color: var(--orange); }
+.phase-cleared { background: var(--green-pale); border: 1.5px solid var(--green); color: var(--green); }
+
+.zone-pill { display: inline-block; padding: 3px 12px; border-radius: 20px; font-family: var(--font-heading) !important; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; margin: 2px; }
+
+.player-card { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--white); border: 1px solid var(--gray-200); border-left: 4px solid var(--green); border-radius: var(--radius); margin-bottom: 8px; box-shadow: var(--shadow-sm); }
+.player-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.player-name { font-weight: 600; color: var(--black); }
+.player-zone { font-family: var(--font-mono) !important; font-size: 0.8rem; color: var(--gray-400); margin-left: auto; }
+
+.map-container { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius); overflow: hidden; }
+
+hr { border-color: var(--gray-200) !important; margin: 20px 0 !important; }
+h1, h2, h3 { font-family: var(--font-heading) !important; }
+h2 { color: var(--green-dark) !important; }
+h3 { color: var(--green) !important; }
+
+.order-type-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--font-heading) !important; }
+.ot-stepwise { background: var(--green-pale); color: var(--green-dark); border: 1px solid var(--green-border); }
+.ot-block    { background: var(--orange-pale); color: #a04010; border: 1px solid #f5c09a; }
+.ot-linked   { background: #f0eeff; color: #4a3aaa; border: 1px solid #c5bef5; }
+
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.status-dot.live { background: var(--green); animation: pulse 2s infinite; }
+.status-dot.closed { background: #e05260; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--gray-100); }
+::-webkit-scrollbar-thumb { background: var(--green-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--green); }

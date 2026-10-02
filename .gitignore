@@ -1,0 +1,15 @@
+# Données locales de session (ne jamais publier)
+data/
+*.db
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+venv*/
+.venv/
+# Système / éditeurs
+.DS_Store
+.vscode/
+.claude/
+# Secrets Streamlit
+.streamlit/secrets.toml
