@@ -27,34 +27,34 @@ const L = {
     title_1: 'Le marché day-ahead du West African Power Pool,', title_2: 'expliqué par le calcul.',
     lead: 'Les traders déposent leurs offres pour le lendemain ; le moteur fixe les volumes, les prix et les flux entre quatorze pays. Chaque règle est écrite, testée, et vous pouvez la vérifier ici même.',
     cta_app: 'Ouvrir le simulateur', cta_explore: 'Explorer une zone',
-    computed: (t: number) => `Cas de référence 2024, calculé par le moteur à l’ouverture de cette page en ${t.toFixed(2)} s · HiGHS`,
-    map_hint: 'Prix zonal en $/MWh et flux sur les quinze interconnexions ; les lignes en corail sont saturées. Les barres donnent le prix moyen de chaque heure : cliquez pour figer l’heure, cliquez un pays pour lire sa position.',
+    computed: (t: number) => `Scénario de démonstration (données 2024 reconstituées), calculé par le moteur à l’ouverture de cette page en ${t.toFixed(2)} s`,
+    map_hint: 'Prix simulés en $/MWh (pas des prix observés) et flux sur les quinze interconnexions ; les lignes en corail sont saturées. Les barres donnent le prix moyen de chaque heure : cliquez pour figer l’heure, cliquez un pays pour lire sa position.',
     welfare: 'welfare', volume: 'volume', saturated: 'lignes saturées',
     loading: 'Calcul du cas de référence…', demo_err: 'Le serveur de démonstration ne répond pas.',
     ex_kicker: 'Explorer', ex_title: 'Pourquoi ce prix, dans cette zone, à cette heure',
-    ex_lead: 'Les ordres de référence 2024 de la zone forment une courbe d’offre et une courbe de demande. Le prix zonal ne se lit pas à leur croisement : le réseau déplace l’équilibre par les importations et les exportations.',
+    ex_lead: 'Les ordres du scénario de démonstration (centrales et demande de la zone, données 2024 reconstituées) forment une courbe d’offre et une courbe de demande. Le prix zonal ne se lit pas à leur croisement : le réseau déplace l’équilibre par les importations et les exportations.',
     ex_supply: 'Offre (centrales)', ex_demand: 'Demande (charge)', ex_price: 'prix zonal', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Ordres de la zone à l’heure choisie', ex_accepted: 'retenu', ex_marginal: 'marginal', ex_rejected: 'hors marché',
-    ex_prices_title: 'Les quatorze prix sur vingt-quatre heures', ex_prices_hint: 'La zone choisie est en trait épais. Les prix ne divergent qu’entre zones séparées par une ligne saturée.',
+    ex_prices_title: 'Les quatorze prix sur vingt-quatre heures', ex_prices_hint: 'Prix simulés sur le scénario de démonstration, pas des prix observés. La zone choisie est en trait épais ; les prix ne divergent qu’entre zones séparées par une ligne saturée.',
     m_kicker: 'Le moteur', m_title: 'Trois questions, trois programmes, dans cet ordre',
     m_lead: 'Un couplage de marché répond chaque jour à trois questions. Le moteur les prend l’une après l’autre, comme un algorithme de bourse, mais à livre ouvert : les règles sont dans le code et dans la documentation.',
     steps: [
-      ['P1', 'LP · MILP avec blocs', 'Qui est servi ?', 'Maximiser le welfare, la valeur créée par les échanges, sous l’équilibre de chaque zone, les capacités des lignes et la contrainte d’interdépendance CIV / GHA / BFA.'],
-      ['P1bis', 'LP', 'Combien ?', 'Parmi les solutions de welfare égal, retenir celle qui échange le plus de volume, exactement, sans tolérance numérique.'],
-      ['P2', 'LP', 'À quel prix ?', 'Parmi tous les prix compatibles avec l’équilibre (ordres acceptés, rejetés, lignes saturées ou libres), choisir le milieu de l’intervalle admissible.'],
+      ['P1', 'optimisation linéaire, entière avec des blocs', 'Qui est servi ?', 'Maximiser le welfare, la valeur créée par les échanges, sous l’équilibre de chaque zone, les capacités des lignes et la contrainte d’interdépendance CIV / GHA / BFA.'],
+      ['P1bis', 'optimisation linéaire', 'Combien ?', 'Parmi les solutions de welfare égal, retenir celle qui échange le plus de volume, exactement, sans tolérance numérique.'],
+      ['P2', 'optimisation linéaire', 'À quel prix ?', 'Parmi tous les prix compatibles avec l’équilibre (ordres acceptés, rejetés, lignes saturées ou libres), choisir le milieu de l’intervalle admissible.'],
     ] as [string, string, string, string][],
     m_interval: ['prix admissible le plus bas', 'retenu', 'le plus haut'], m_note: 'Les blocs paradoxalement acceptés sont rejetés et le calcul repris ; les ordres au même prix sont servis au prorata ; une condition de revenu minimum non satisfaite retire les offres de l’acteur et relance le calcul.',
     f_kicker: 'Fiche technique', f_title: 'Ce qui est dans la boîte', f_lead: 'Un moteur de clearing complet, des salles de formation et des données de référence sourcées, dans un seul dépôt.',
     spec: [
       ['Ordres', 'Segments prix–quantité avec profil horaire (solaire, hydraulique, base, pointe, constant)'],
-      ['Blocs', 'Fill-or-kill, liés (enfant ⇒ parent), exclusifs (au plus un par groupe) ; blocs paradoxalement acceptés rejetés itérativement, paradoxalement rejetés signalés'],
+      ['Blocs', 'Tout ou rien (fill-or-kill), liés (enfant ⇒ parent), exclusifs (au plus un par groupe) ; blocs paradoxalement acceptés rejetés itérativement, paradoxalement rejetés signalés'],
       ['Conditions', 'Revenu minimum (terme fixe + terme variable × volume) : retrait des offres et relance'],
       ['Départage', 'Welfare, puis volume exact, puis prix au milieu de l’intervalle admissible ; ex æquo au prorata des quantités'],
-      ['Réseau', 'Quatorze zones, quinze interconnexions, capacités NTC éditables par salle, flux signés, rentes de congestion'],
-      ['Données', 'Jeu « Référence 2024 » reconstitué à partir de sources publiques (parc, demande, NTC estimées) et cinq scénarios pédagogiques'],
+      ['Réseau', 'Quatorze zones, quinze interconnexions, capacités d’échange (NTC) éditables par salle, flux signés, rentes de congestion'],
+      ['Données', 'Scénario 2024 reconstitué à partir de sources publiques (parc, demande, capacités d’échange estimées) et cinq scénarios pédagogiques'],
       ['Vérifications', 'Bornes de prix, flux dans les capacités, équilibre horaire, règles de blocs, identité du welfare ; 65 tests, campagne de cas aléatoires'],
       ['Interfaces', 'Salles de formation (web, temps réel), API REST documentée, ligne de commande, exports CSV et JSON, français et anglais'],
-      ['Solveurs', 'HiGHS inclus ; Gurobi utilisé s’il est installé ; modèles Pyomo'],
+      ['Solveurs', 'Solveur libre HiGHS inclus ; Gurobi utilisé s’il est installé ; modèles Pyomo'],
       ['Licence', 'Apache 2.0 pour le code, CC BY 4.0 pour les données et la documentation'],
     ] as [string, string][],
     w_title: 'Trois usages',
@@ -67,14 +67,23 @@ const L = {
     o_kicker: 'Ouvert et vérifiable', o_title: 'Rien à croire sur parole',
     o_lead: 'Le code est public sous licence Apache 2.0, les données et la documentation sous CC BY 4.0. Les valeurs du cas de référence sont fixées par des tests, et une campagne de cas aléatoires contrôle les propriétés du clearing à chaque modification.',
     o_links: ['Règles de marché', 'Données de référence', 'Architecture', 'Déploiement', 'Dépôt GitHub'],
-    o_note: 'Trois commandes suffisent pour rejouer le cas de référence du Livrable 2 sur votre poste : welfare 22 317 910 USD, volume 167 900 MWh.',
+    o_note: 'Trois commandes suffisent pour rejouer sur votre poste le cas de test qui fixe les valeurs de non-régression du moteur : welfare 22 317 910 USD, volume 167 900 MWh.',
     d_title: 'Avertissements',
     d1: 'Simulateur pédagogique indépendant. Ce projet n’est pas affilié au West African Power Pool, à son Centre d’Information et de Coordination ni à aucun fournisseur de plateforme de marché. « WAPP » et « West African Power Pool » appartiennent au WAPP.',
-    d2: 'Les données de référence (parc, demande, capacités d’échange) sont reconstituées à partir de sources publiques et de valeurs estimées, en particulier les NTC. Elles servent à la formation et à la recherche, pas à l’exploitation.',
+    d2: 'Les données du scénario de démonstration (parc, demande, capacités d’échange) sont reconstituées à partir de sources publiques et de valeurs estimées. Les prix affichés sont des résultats de simulation sur ces données, pas des prix observés : le marché day-ahead du WAPP n’a pas encore démarré. Elles servent à la formation et à la recherche, pas à l’exploitation.',
     a_title: 'Auteurs',
-    a_text: 'Kodjovi Plakoo et Enrico Patanè, Mastère Spécialisé OSE 2025, Mines Paris-PSL, avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila pour les premiers livrables. Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT).',
+    a_text: 'Kodjovi Plakoo et Enrico Patanè, Mastère Spécialisé OSE 2025, Mines Paris-PSL, avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila pour les premières phases du projet. Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT).',
     a_paper: 'Note technique à paraître.', a_paper_link: 'Lire la note technique', contact: 'Questions et contributions',
     footer: 'Simulateur pédagogique indépendant, non affilié au WAPP.',
+    sim_badge: 'Simulation · données reconstituées',
+    src_title: 'D’où viennent ces chiffres ?',
+    src_items: [
+      ['Sourcé', 'Capacités installées et principales centrales de chaque pays, capacités contractuelles de plusieurs lignes, prix du gaz au Nigeria et au Ghana : rapports publics cités, ligne par ligne, dans la documentation.'],
+      ['Estimé', 'Pointes de demande de plusieurs pays, capacités d’échange des lignes sans valeur publiée (corridor Ghana–Togo–Bénin, boucle OMVG, Mali), profils horaires de charge et de production.'],
+      ['Hypothèse', 'Prix des offres de vente : coût variable typique de chaque technologie (hydraulique 12 à 36 $/MWh, fioul lourd 125 à 210), prix d’achat par tranche. Ce ne sont pas les offres réelles des acteurs.'],
+    ] as [string, string][],
+    src_note: 'Le marché day-ahead du WAPP n’a pas encore démarré : il n’existe pas de prix observés auxquels comparer ces résultats. Les niveaux de prix dépendent de nos hypothèses ; la structure (qui importe, quelles lignes saturent) dépend surtout des capacités d’échange, à valider avec le centre de coordination du WAPP.',
+    src_link: 'Sources et hypothèses, ligne par ligne',
   },
   en: {
     nav: [['#explorer', 'Explore'], ['#moteur', 'The engine'], ['#fiche', 'Spec sheet'], ['#ouvert', 'Code']] as [string, string][],
@@ -83,34 +92,34 @@ const L = {
     title_1: 'The West African Power Pool day-ahead market,', title_2: 'explained by computation.',
     lead: 'Traders submit orders for the next day; the engine sets volumes, prices and flows across fourteen countries. Every rule is written down, tested, and you can check it right here.',
     cta_app: 'Open the simulator', cta_explore: 'Explore a zone',
-    computed: (t: number) => `2024 reference case, computed by the engine when this page opened in ${t.toFixed(2)} s · HiGHS`,
-    map_hint: 'Zonal price in $/MWh and flows on the fifteen interconnections; coral lines are saturated. The bars give the mean price of each hour: click to freeze the hour, click a country to read its position.',
+    computed: (t: number) => `Demonstration scenario (reconstructed 2024 data), computed by the engine when this page opened in ${t.toFixed(2)} s`,
+    map_hint: 'Simulated prices in $/MWh (not observed prices) and flows on the fifteen interconnections; coral lines are saturated. The bars give the mean price of each hour: click to freeze the hour, click a country to read its position.',
     welfare: 'welfare', volume: 'volume', saturated: 'saturated lines',
     loading: 'Computing the reference case…', demo_err: 'The demonstration server is not responding.',
     ex_kicker: 'Explore', ex_title: 'Why this price, in this zone, at this hour',
-    ex_lead: 'The zone’s 2024 reference orders form a supply curve and a demand curve. The zonal price is not read at their crossing: the network shifts the balance through imports and exports.',
+    ex_lead: 'The demonstration scenario’s orders (the zone’s plants and demand, reconstructed 2024 data) form a supply curve and a demand curve. The zonal price is not read at their crossing: the network shifts the balance through imports and exports.',
     ex_supply: 'Supply (plants)', ex_demand: 'Demand (load)', ex_price: 'zonal price', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Orders of the zone at the chosen hour', ex_accepted: 'accepted', ex_marginal: 'marginal', ex_rejected: 'out of market',
-    ex_prices_title: 'Fourteen prices over twenty-four hours', ex_prices_hint: 'The chosen zone is drawn thicker. Prices only diverge between zones separated by a saturated line.',
+    ex_prices_title: 'Fourteen prices over twenty-four hours', ex_prices_hint: 'Simulated prices on the demonstration scenario, not observed prices. The chosen zone is drawn thicker; prices only diverge between zones separated by a saturated line.',
     m_kicker: 'The engine', m_title: 'Three questions, three programs, in that order',
     m_lead: 'A market coupling answers three questions every day. The engine takes them one after the other, like an exchange algorithm, but with the book open: the rules are in the code and in the documentation.',
     steps: [
-      ['P1', 'LP · MILP with blocks', 'Who is served?', 'Maximise welfare, the value created by trades, under each zone’s balance, line capacities and the CIV / GHA / BFA interdependence constraint.'],
-      ['P1bis', 'LP', 'How much?', 'Among equal-welfare solutions, keep the one that trades the most volume, exactly, with no numerical tolerance.'],
-      ['P2', 'LP', 'At what price?', 'Among all prices consistent with equilibrium (accepted and rejected orders, saturated or free lines), pick the midpoint of the admissible interval.'],
+      ['P1', 'linear optimisation, integer with blocks', 'Who is served?', 'Maximise welfare, the value created by trades, under each zone’s balance, line capacities and the CIV / GHA / BFA interdependence constraint.'],
+      ['P1bis', 'linear optimisation', 'How much?', 'Among equal-welfare solutions, keep the one that trades the most volume, exactly, with no numerical tolerance.'],
+      ['P2', 'linear optimisation', 'At what price?', 'Among all prices consistent with equilibrium (accepted and rejected orders, saturated or free lines), pick the midpoint of the admissible interval.'],
     ] as [string, string, string, string][],
     m_interval: ['lowest admissible price', 'chosen', 'highest'], m_note: 'Paradoxically accepted blocks are rejected and the run repeated; equal-price orders are served pro rata; an unmet minimum income condition withdraws the actor’s orders and reruns the clearing.',
     f_kicker: 'Spec sheet', f_title: 'What is in the box', f_lead: 'A complete clearing engine, training rooms and sourced reference data, in a single repository.',
     spec: [
       ['Orders', 'Price–quantity segments with hourly profiles (solar, hydro, baseload, peaking, flat)'],
-      ['Blocks', 'Fill-or-kill, linked (child ⇒ parent), exclusive (at most one per group); paradoxically accepted blocks rejected iteratively, paradoxically rejected ones reported'],
+      ['Blocks', 'All-or-nothing (fill-or-kill), linked (child ⇒ parent), exclusive (at most one per group); paradoxically accepted blocks rejected iteratively, paradoxically rejected ones reported'],
       ['Conditions', 'Minimum income (fixed term + variable term × volume): orders withdrawn and clearing rerun'],
       ['Tie-break', 'Welfare, then exact volume, then the midpoint of the admissible price interval; equal prices shared pro rata'],
-      ['Network', 'Fourteen zones, fifteen interconnections, NTC editable per room, signed flows, congestion rents'],
-      ['Data', '“Reference 2024” set rebuilt from public sources (fleet, demand, estimated NTC) and five teaching scenarios'],
+      ['Network', 'Fourteen zones, fifteen interconnections, exchange capacities (NTC) editable per room, signed flows, congestion rents'],
+      ['Data', '2024 scenario rebuilt from public sources (fleet, demand, estimated exchange capacities) and five teaching scenarios'],
       ['Checks', 'Price bounds, flows within capacities, hourly balance, block rules, welfare identity; 65 tests, random-case campaign'],
       ['Interfaces', 'Training rooms (web, live), documented REST API, command line, CSV and JSON exports, French and English'],
-      ['Solvers', 'HiGHS included; Gurobi used when installed; Pyomo models'],
+      ['Solvers', 'Open-source HiGHS solver included; Gurobi used when installed; Pyomo models'],
       ['Licence', 'Apache 2.0 for the code, CC BY 4.0 for data and documentation'],
     ] as [string, string][],
     w_title: 'Three uses',
@@ -123,14 +132,23 @@ const L = {
     o_kicker: 'Open and verifiable', o_title: 'Nothing to take on faith',
     o_lead: 'The code is public under the Apache 2.0 licence, data and documentation under CC BY 4.0. Reference-case values are pinned by tests, and a campaign of random cases checks clearing properties on every change.',
     o_links: ['Market rules', 'Reference data', 'Architecture', 'Deployment', 'GitHub repository'],
-    o_note: 'Three commands replay the Deliverable 2 reference case on your machine: welfare 22,317,910 USD, volume 167,900 MWh.',
+    o_note: 'Three commands replay on your machine the test case that pins the engine’s regression values: welfare 22,317,910 USD, volume 167,900 MWh.',
     d_title: 'Disclaimers',
     d1: 'Independent educational simulator. This project is not affiliated with the West African Power Pool, its Information and Coordination Centre, or any market platform vendor. “WAPP” and “West African Power Pool” belong to the WAPP.',
-    d2: 'Reference data (fleet, demand, exchange capacities) are rebuilt from public sources and estimated values, in particular the NTC. They are meant for training and research, not for operations.',
+    d2: 'The demonstration scenario’s data (fleet, demand, exchange capacities) are rebuilt from public sources and estimated values. The prices shown are simulation results on these data, not observed prices: the WAPP day-ahead market has not started yet. They are meant for training and research, not for operations.',
     a_title: 'Authors',
-    a_text: 'Kodjovi Plakoo and Enrico Patanè, Advanced Master OSE 2025, Mines Paris-PSL, with Lucien Kouakou, Mouhamadou Sow and Wissem Hmila for the first deliverables. Supervision: El Hadji Tamsir Diop (SENELEC) and Adrien Atayi (EPEX SPOT).',
+    a_text: 'Kodjovi Plakoo and Enrico Patanè, Advanced Master OSE 2025, Mines Paris-PSL, with Lucien Kouakou, Mouhamadou Sow and Wissem Hmila for the first phases of the project. Supervision: El Hadji Tamsir Diop (SENELEC) and Adrien Atayi (EPEX SPOT).',
     a_paper: 'Technical note forthcoming.', a_paper_link: 'Read the technical note', contact: 'Questions and contributions',
     footer: 'Independent educational simulator, not affiliated with the WAPP.',
+    sim_badge: 'Simulation · reconstructed data',
+    src_title: 'Where do these figures come from?',
+    src_items: [
+      ['Sourced', 'Installed capacities and main plants of each country, contractual capacities of several lines, gas prices in Nigeria and Ghana: public reports cited, line by line, in the documentation.'],
+      ['Estimated', 'Peak demand of several countries, exchange capacities of lines with no published value (Ghana–Togo–Benin corridor, OMVG loop, Mali), hourly load and generation profiles.'],
+      ['Assumption', 'Sell order prices: typical variable cost of each technology (hydro 12 to 36 $/MWh, heavy fuel oil 125 to 210), buy prices by tranche. These are not the actors’ real bids.'],
+    ] as [string, string][],
+    src_note: 'The WAPP day-ahead market has not started yet: there are no observed prices to compare these results with. Price levels depend on our assumptions; the structure (who imports, which lines saturate) depends mostly on exchange capacities, to be validated with the WAPP coordination centre.',
+    src_link: 'Sources and assumptions, line by line',
   },
 }
 type Strings = typeof L.fr
@@ -173,6 +191,7 @@ const ticks = (max: number, n: number) => { const step = niceCeil(max / n); cons
 function Ticker({ demo, hour, s }: { demo: Demo; hour: number; s: Strings }) {
   const h = String(hour)
   const items: ReactNode[] = [
+    <span key="s" className="text-amber uppercase tracking-wider text-xs">{s.sim_badge}</span>,
     <span key="h" className="text-amber">{hh(hour)}</span>,
     ...ZONES.map(z => <span key={z}><span className="text-mint/70">{z}</span> <span className="text-white">{Math.round(demo.prices[z]?.[h] ?? 0)}</span></span>),
     <span key="w"><span className="text-mint/70">{s.welfare}</span> <span className="text-white">{money(demo.welfare)}</span></span>,
@@ -204,6 +223,11 @@ function HourStrip({ demo, hour, onPick, dark }: { demo: Demo; hour: number; onP
   )
 }
 
+function SimBadge({ label, light }: { label: string; light?: boolean }) {
+  const look = light ? 'border-amber/60 text-amber bg-deep/70' : 'border-warn/40 text-warn bg-warn-soft'
+  return <span className={`inline-flex items-center rounded-full border px-2.5 h-6 font-mono text-[11px] uppercase tracking-wider whitespace-nowrap ${look}`}>{label}</span>
+}
+
 function Kicker({ children, light }: { children: ReactNode; light?: boolean }) {
   return <div className={`font-mono text-xs uppercase tracking-[0.18em] ${light ? 'text-mint' : 'text-accent'}`}>{children}</div>
 }
@@ -229,7 +253,10 @@ function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Stri
         <div className="lg:col-span-7 min-w-0">
           {demo ? (
             <>
-              <NetworkMap theme="dark" prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
+              <div className="relative">
+                <NetworkMap theme="dark" prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
+                <div className="absolute top-3 left-3"><SimBadge label={s.sim_badge} light /></div>
+              </div>
               <div className="mt-4 flex items-center gap-4">
                 <button onClick={() => setPlay(p => !p)} className="font-mono text-sm text-amber w-8 shrink-0" aria-label={play ? 'pause' : 'play'}>{play ? '❚❚' : '▶'}</button>
                 <div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={h => { setPlay(false); setHour(h) }} dark /></div>
@@ -321,14 +348,22 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
           </div>
           <div className="lg:col-span-8 min-w-0">
             <div className="bg-surface border border-line rounded-lg p-4 md:p-6">
-              <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2"><span className="font-display text-2xl">{ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]} <span className="font-mono text-sm text-ink-3">{zone} · {hh(hour)}</span></span></div>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-2"><span className="font-display text-2xl">{ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]} <span className="font-mono text-sm text-ink-3">{zone} · {hh(hour)}</span></span><SimBadge label={s.sim_badge} /></div>
               <CurveChart c={c} s={s} />
               <SegmentTable c={c} s={s} />
             </div>
           </div>
         </div>
-        <div className="mt-16 border-t border-line pt-8">
-          <div className="flex items-baseline justify-between flex-wrap gap-3"><span className="font-display text-2xl">{s.ex_prices_title}</span><span className="text-sm text-ink-3">{s.ex_prices_hint}</span></div>
+        <div className="mt-14 bg-surface border border-line rounded-lg p-6 md:p-8">
+          <div className="flex items-center justify-between flex-wrap gap-3"><span className="font-display text-2xl">{s.src_title}</span><SimBadge label={s.sim_badge} /></div>
+          <div className="grid md:grid-cols-3 gap-8 mt-6">
+            {s.src_items.map(([k, v]) => <div key={k}><div className="font-mono text-xs uppercase tracking-wider text-accent">{k}</div><p className="text-ink-2 mt-2 leading-relaxed text-sm">{v}</p></div>)}
+          </div>
+          <p className="text-ink mt-6 leading-relaxed max-w-4xl">{s.src_note}</p>
+          <a href={LINKS.data} target="_blank" rel="noreferrer" className="inline-block mt-3 text-accent font-medium hover:underline underline-offset-4">{s.src_link} →</a>
+        </div>
+        <div className="mt-14 border-t border-line pt-8">
+          <div className="flex items-center justify-between flex-wrap gap-3"><span className="font-display text-2xl flex items-center gap-3">{s.ex_prices_title} <SimBadge label={s.sim_badge} /></span><span className="text-sm text-ink-3 max-w-xl">{s.ex_prices_hint}</span></div>
           <div className="mt-4"><PriceChart prices={demo.prices} hours={demo.hours} highlight={zone} unit="$/MWh" /></div>
         </div>
       </div>

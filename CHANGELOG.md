@@ -29,6 +29,12 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 - Mise en page fluide (`.wrap`, 1 440 px maximum, marges en pourcentage), vérifiée à 375, 1 000, 1 280 et
   1 900 px.
 
+- Transparence sur les chiffres : badge « Simulation · données reconstituées » sur la carte, le bandeau,
+  l'explorateur et le graphique des prix ; encadré « D'où viennent ces chiffres ? » (sourcé / estimé /
+  hypothèse, lien vers `docs/DONNEES_DE_REFERENCE.md`) ; mention que le marché n'a pas encore démarré et
+  qu'il n'existe pas de prix observés. Vocabulaire public : plus de « Livrable », « cas de référence »,
+  « LP · MILP » ou « fill-or-kill » sans traduction.
+
 **Corrigé**
 - Graphiques ECharts (`Chart`) : l'instance était détruite et recréée à chaque rendu du parent, d'où un
   graphique vide jusqu'au survol sur la page d'accueil (rendu toutes les 1,5 s) ; une seule instance par
