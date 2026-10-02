@@ -84,6 +84,9 @@ def engine_rows(db: Session, room: Room):
 def run_room_clearing(db: Session, room: Room):
     s = room.settings
     supply, demand, blocks, mic = engine_rows(db, room)
+    if not (supply or demand or blocks) and not s['fill_missing']:
+        from engine.clearing import ClearingError
+        raise ClearingError("Aucun ordre déposé dans la salle et complétion par les données de référence désactivée : rien à calculer.")
     result = run_clearing(supply, demand, block_rows=blocks, mic_rows=mic, hours=s['hours'],
                           ntc_override=effective_ntc(room), fill_missing_zones=bool(s['fill_missing']),
                           pricing=s['pricing'], pab_rule=s['pab_rule'], tie_rule=s['tie_rule'])

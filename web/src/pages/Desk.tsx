@@ -39,6 +39,9 @@ export default function Desk() {
   const d = run?.result?.summary?.diagnostics
   const zonesInfo = run?.result?.summary?.zones as Record<string, any> | undefined
   const traders = room?.participants.filter(p => p.role === 'trader') || []
+  const coveredZones = new Set(orders.filter(o => o.supply.length + o.demand.length + o.blocks.length > 0).map(o => o.participant.zone))
+  const nZones = ref?.zones.length || 14
+  const refZones: string[] = run?.result?.summary?.reference_zones || []
 
   return (
     <div className="min-h-screen">
@@ -56,7 +59,8 @@ export default function Desk() {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="flex flex-col gap-5">
             <Panel title={t('run_clearing')}>
-              <p className="text-ink-2 mb-4">{t('run_hint')}</p>
+              <p className="text-ink-2 mb-3">{t('run_hint')}</p>
+              <p className="mb-4"><span className="font-mono font-medium">{coveredZones.size}</span> {t('with_orders')} · <span className="font-mono font-medium">{nZones - coveredZones.size}</span> {t('without_orders')}, {s?.fill_missing ? t('will_fill') : t('will_ignore')}</p>
               <div className="flex items-center gap-3">
                 <Button primary onClick={clear} disabled={busy}>{busy ? t('running') : t('run_clearing')}</Button>
                 <Button onClick={togglePhase}>{room?.phase === 'submission' ? t('close_market') : t('open_market')}</Button>
@@ -100,7 +104,9 @@ export default function Desk() {
           <div className="flex flex-col gap-5">
             <Panel title={t('results')} right={run && <span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span>}>
               {!run || !d ? <Empty>{t('no_clearing')}</Empty> : <>
+                {refZones.length === nZones && <div className="mb-3 rounded bg-warn-soft text-warn px-4 py-2.5">{t('demo_badge')}</div>}
                 <div className="flex flex-wrap gap-2 mb-4">
+                  {refZones.length > 0 && refZones.length < nZones && <Badge tone="warn">{t('reference_badge')} · {refZones.length} {t('zones_word')}</Badge>}
                   <Badge tone={d.pro === 0 ? 'up' : 'down'}>{d.pro} {t('check_pro')}</Badge>
                   <Badge tone={d.unsaturated_price_gaps === 0 ? 'up' : 'down'}>{d.unsaturated_price_gaps} {t('check_gaps')}</Badge>
                   <Badge tone={d.tie_break === 'exact' ? 'up' : 'warn'}>{t('check_tie')} {d.tie_break} · {d.tie_rule}</Badge>

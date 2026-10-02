@@ -5,6 +5,22 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 7 — Carte géographique et lisibilité du mode démonstration
+
+**Ajouté**
+- Fond de carte d'Afrique de l'Ouest sous le réseau, à partir de Natural Earth (domaine public, résolution 50 m)
+  extrait à la compilation par `web/scripts/extract_map.mjs` en un GeoJSON de 86 Ko ; projection Mercator
+  (d3-geo), nœuds placés aux coordonnées réelles des pays, pays membres mis en évidence, légende et crédit.
+- Le moteur renvoie `summary.reference_zones`, la liste des zones complétées par les données de référence.
+  Le poste du formateur annonce avant le calcul combien de zones ont des ordres et ce qu'il adviendra des
+  autres ; après le calcul, un bandeau « Démonstration » s'affiche quand aucune offre de participant n'a été
+  utilisée, et un badge « Données de référence · N zones » sinon. Même badge dans la salle de marché.
+
+**Modifié**
+- L'API refuse (422, message en clair) de lancer un clearing sans aucun ordre quand la complétion par les
+  données de référence est désactivée, au lieu de produire un marché vide à 250 par MWh.
+- Deux tests ajoutés (29 au total).
+
 ### Étape 6 — Première passe de design du front et navigation entre rôles
 
 **Ajouté**

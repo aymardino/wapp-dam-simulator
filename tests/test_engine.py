@@ -223,3 +223,12 @@ def test_mic_withdrawal_removes_child_blocks():
     assert names == set(), names                                  # parent et enfant retirés du clearing
     withdrawn = {a['actor'] for a in res['summary']['actors'] if a['status'] == 'withdrawn_mic'}
     assert withdrawn == {'Parent', 'Enfant'}
+
+
+def test_reference_zones_reported(ref):
+    assert ref['summary']['reference_zones'] == C.ZONES
+    sup = [dict(zone='SEN', player='x', actor='A', segment=0, quantity=10, price=10, profile='baseload')]
+    r = run_clearing(sup, [], horizon=1, fill_missing_zones=True)
+    assert 'SEN' not in r['summary']['reference_zones'] and len(r['summary']['reference_zones']) == 13
+    r2 = run_clearing(sup, [], horizon=1, fill_missing_zones=False)
+    assert r2['summary']['reference_zones'] == []

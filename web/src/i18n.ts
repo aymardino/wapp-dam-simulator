@@ -47,6 +47,10 @@ const STR: Record<string, [string, string]> = {
   network: ['Réseau', 'Network'], prices_at: ['Prix à', 'Prices at'], saved_at: ['Enregistré à', 'Saved at'],
   run_hint: ['Exécute le moteur avec les ordres déposés ; les zones sans soumission sont complétées si l\u2019option est cochée.', 'Runs the engine with submitted orders; zones without submission are filled when the option is checked.'],
   results: ['Résultats', 'Results'], invite: ['Partagez ce code aux participants', 'Share this code with participants'],
+  reference_badge: ['Données de référence', 'Reference data'], zones_word: ['zone(s)', 'zone(s)'],
+  demo_badge: ['Démonstration : aucune offre de participant, les 14 zones viennent des données de référence', 'Demonstration: no participant order, all 14 zones come from reference data'],
+  with_orders: ['zone(s) avec ordres', 'zone(s) with orders'], without_orders: ['sans soumission', 'without submission'],
+  will_fill: ['complétée(s) par les données de référence', 'filled with reference data'], will_ignore: ['ignorée(s)', 'ignored'],
   order_book_hint: ['Vos ordres sont remplacés à chaque enregistrement.', 'Your orders are replaced on each save.'],
 }
 

@@ -799,8 +799,10 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         raise ClearingError("Les heures simulées doivent être comprises entre 0 et 23.")
 
     # ── Données ───────────────────────────────────────────────────
+    reference_zones = []
     if supply_rows is None and demand_rows is None:
         supply_rows, demand_rows = default_rows()
+        reference_zones = list(ZONES)
         notes.append("Données de référence utilisées pour les 14 zones.")
     else:
         supply_rows = list(supply_rows or [])
@@ -813,6 +815,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                 ds, dd = default_rows(zones=missing)
                 supply_rows += ds
                 demand_rows += dd
+                reference_zones = missing
                 notes.append(f"Zones complétées par les données de référence : {', '.join(missing)}.")
     block_rows = list(block_rows or [])
     validate_inputs(supply_rows, demand_rows, block_rows)
@@ -1026,6 +1029,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         'n_blocks':        len(blocks_all),
         'n_mic':           len(mics),
         'n_withdrawn':     len(withdrawn),
+        'reference_zones': reference_zones,
         'net_pos':         {z: zones_out[z]['net_position'] for z in ZONES},
         'demand_accepted': demand_accepted,
         'welfare_hourly':  welfare_hourly,

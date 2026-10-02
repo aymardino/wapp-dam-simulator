@@ -129,7 +129,7 @@ export default function Room() {
           <p className="text-sm text-ink-3 mt-4">{t('order_book_hint')}</p>
         </Panel>
 
-        <Panel title={`${t('market')} · ${t('last_clearing')}`} right={run && <span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span>}>
+        <Panel title={`${t('market')} · ${t('last_clearing')}`} right={run && <>{(summary?.reference_zones?.length || 0) > 0 && <Badge tone="warn">{t('reference_badge')} · {summary.reference_zones.length} {t('zones_word')}</Badge>}<span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span></>}>
           {!run || !prices || !flows ? <Empty>{t('waiting_clearing')}</Empty> : <>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <Kpi label={t('welfare')} value={fmt.money(run.welfare / 1e6, 'M ' + cur)} />

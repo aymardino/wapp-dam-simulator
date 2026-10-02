@@ -111,3 +111,13 @@ def test_clearing_and_results(room):
 
 def test_unknown_room():
     assert client.get(API + '/rooms/ZZZZZZ').status_code == 404
+
+
+def test_empty_room_without_fill_is_refused():
+    r = client.post(API + '/rooms', json={'name': 'Vide', 'trainer_name': 'T'}); code, tok = r.json()['code'], r.json()['trainer_token']
+    assert client.put(API + f'/rooms/{code}/settings', json={'fill_missing': False}, headers=_auth(tok)).status_code == 200
+    r = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok))
+    assert r.status_code == 422 and 'Aucun ordre' in r.json()['detail']
+    assert client.put(API + f'/rooms/{code}/settings', json={'fill_missing': True}, headers=_auth(tok)).status_code == 200
+    r = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok))
+    assert r.status_code == 201 and len(r.json()['result']['summary']['reference_zones']) == 14
