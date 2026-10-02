@@ -156,3 +156,70 @@ def test_actor_results_consistent(ref):
     assert tcn['accepted_mwh'] > 0 and tcn['avg_price'] is not None
     total_supply = sum(a['accepted_mwh'] for a in actors if a['side'] == 'S')
     assert abs(total_supply - ref['volume']) < 5
+
+
+# ── Partage des ex æquo et Minimum Income Condition ────────────────
+NTC_ZERO = {k: 0 for k in C.NTC}   # isole chaque zone
+
+
+def _one_zone(supply, demand, **kw):
+    return run_clearing(supply, demand, hours=[12], ntc_override=NTC_ZERO, **kw)
+
+
+def test_tie_rule_prorata_shares_equal_price_offers():
+    sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=100, price=50, profile='baseload'),
+           dict(zone='NGA', player='b', actor='B', segment=0, quantity=100, price=50, profile='baseload')]
+    dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=150, price=100)]
+    res = _one_zone(sup, dem)                                   # prorata par défaut
+    acc = {a['actor']: a['accepted_mwh'] for a in res['summary']['actors'] if a['side'] == 'S'}
+    assert abs(acc['A'] - acc['B']) < 0.2, acc                  # 132 MWh demandés, 95 + 95 offerts : 66 chacun
+    assert res['prices']['NGA']['12'] == 50
+    assert res['summary']['diagnostics']['tie_groups_adjusted'] >= 0
+    res_o = _one_zone(sup, dem, tie_rule='order')
+    acc_o = {a['actor']: a['accepted_mwh'] for a in res_o['summary']['actors'] if a['side'] == 'S'}
+    assert acc_o['A'] == 95 and abs(acc_o['B'] - 37) < 0.2, acc_o   # premier servi
+    assert round(res_o['welfare']) == round(res['welfare']) and round(res_o['volume']) == round(res['volume'])
+
+
+def test_mic_withdraws_actor_and_reruns():
+    sup = [dict(zone='NGA', player='a', actor='Base', segment=0, quantity=100, price=30, profile='baseload'),
+           dict(zone='NGA', player='b', actor='Peaker', segment=0, quantity=100, price=60, profile='baseload')]
+    dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=150, price=100)]
+    mic = [dict(zone='NGA', player='b', actor='Peaker', fixed_term=3000, variable_term=0)]
+    res0 = _one_zone(sup, dem)
+    assert res0['prices']['NGA']['12'] == 60                     # Peaker marginal : 37 MWh à 60 = 2 220 < 3 000
+    res = _one_zone(sup, dem, mic_rows=mic)
+    d = res['summary']['diagnostics']
+    assert d['mic_iterations'] == 2 and d['mic_withdrawn'] == ['Peaker (NGA)']
+    assert res['prices']['NGA']['12'] == 100                     # la demande devient marginale
+    m = res['summary']['mic'][0]
+    assert m['withdrawn'] is True and m['satisfied'] is False
+    peaker = [a for a in res['summary']['actors'] if a['actor'] == 'Peaker'][0]
+    assert peaker['status'] == 'withdrawn_mic' and peaker['accepted_mwh'] == 0
+    assert round(res['volume']) == 95
+
+
+def test_mic_satisfied_keeps_actor():
+    sup = [dict(zone='NGA', player='a', actor='Base', segment=0, quantity=100, price=30, profile='baseload'),
+           dict(zone='NGA', player='b', actor='Peaker', segment=0, quantity=100, price=60, profile='baseload')]
+    dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=150, price=100)]
+    mic = [dict(zone='NGA', player='b', actor='Peaker', fixed_term=1000, variable_term=20)]   # 1000 + 20×37 = 1 740 ≤ 2 220
+    res = _one_zone(sup, dem, mic_rows=mic)
+    m = res['summary']['mic'][0]
+    assert m['satisfied'] is True and not m['withdrawn'] and res['summary']['diagnostics']['mic_iterations'] == 1
+    assert abs(m['income'] - 2220) < 1
+
+
+def test_mic_withdrawal_removes_child_blocks():
+    """Le bloc enfant d'un acteur retiré par la MIC est retiré aussi."""
+    sup = [dict(zone='NGA', player='a', actor='Base', segment=0, quantity=100, price=30, profile='baseload')]
+    dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=400, price=100)]
+    blocks = [dict(zone='NGA', player='b', name='Parent', side='S', quantity=50, price=60, h_start=12, h_end=12),
+              dict(zone='NGA', player='b', name='Enfant', side='S', quantity=50, price=61, h_start=12, h_end=12, parent_name='Parent')]
+    mic = [dict(zone='NGA', player='b', actor='Parent', fixed_term=100000, variable_term=0)]
+    res = run_clearing(sup, dem, hours=[12], ntc_override=NTC_ZERO, block_rows=blocks, mic_rows=mic)
+    assert res['summary']['diagnostics']['mic_withdrawn'] == ['Parent (NGA)']
+    names = {b['name'] for b in res['summary']['blocks']}
+    assert names == set(), names                                  # parent et enfant retirés du clearing
+    withdrawn = {a['actor'] for a in res['summary']['actors'] if a['status'] == 'withdrawn_mic'}
+    assert withdrawn == {'Parent', 'Enfant'}

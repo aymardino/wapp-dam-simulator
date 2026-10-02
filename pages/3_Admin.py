@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 import streamlit as st
 import pandas as pd
 from engine import (get_session, set_session, reset_market, get_all_supply, get_all_demand, get_all_blocks,
-                    get_players, save_results, get_results, get_ntc, set_ntc, reset_ntc,
-                    run_clearing, ClearingError, ZONES, LINES, NTC, PRICING_MODES, PAB_RULES)
+                    get_players, save_results, get_results, get_ntc, set_ntc, reset_ntc, get_all_mic,
+                    run_clearing, ClearingError, ZONES, LINES, NTC, PRICING_MODES, PAB_RULES, TIE_RULES)
 from engine.db import get_conn
 from ui_common import inject_css, header, lang_selector, t, money, hours_label, LANGS
 
@@ -45,13 +45,14 @@ players = get_players()
 supply  = get_all_supply()
 demand  = get_all_demand()
 blocks  = get_all_blocks()
+mic     = get_all_mic()
 phase   = session.get('phase', 'submission')
 
 c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric(t('kpi_participants'), len(players))
 c2.metric(t('kpi_supply'), len(supply), t('n_zones', n=len({r['zone'] for r in supply})))
 c3.metric(t('kpi_demand'), len(demand), t('n_zones', n=len({r['zone'] for r in demand})))
-c4.metric(t('kpi_blocks'), len(blocks), t('n_zones', n=len({r['zone'] for r in blocks})))
+c4.metric(t('kpi_blocks'), len(blocks), f"{t('kpi_mic')} : {len(mic)}")
 c5.metric(t('phase'), t('phase_submission') if phase == 'submission' else t('phase_cleared'))
 st.markdown("---")
 
@@ -117,18 +118,23 @@ st.markdown("---")
 
 # ── 3. Règles de clearing ─────────────────────────────────────────
 st.markdown(f"## {t('rules_section')}")
-r1, r2 = st.columns(2)
+r1, r2, r3 = st.columns(3)
 pricing_labels = {'complete': t('pricing_complete'), 'l2': t('pricing_l2')}
 pab_labels = {'euphemia': t('pab_euphemia'), 'l2': t('pab_l2'), 'none': t('pab_none')}
+tie_labels = {'prorata': t('tie_prorata'), 'order': t('tie_order'), 'solver': t('tie_solver')}
 with r1:
     pricing_choice = st.selectbox(t('pricing_input'), list(PRICING_MODES), index=list(PRICING_MODES).index(session.get('pricing', 'complete')),
                                   format_func=lambda k: pricing_labels[k])
 with r2:
     pab_choice = st.selectbox(t('pab_input'), list(PAB_RULES), index=list(PAB_RULES).index(session.get('pab_rule', 'euphemia')),
                               format_func=lambda k: pab_labels[k])
+with r3:
+    tie_choice = st.selectbox(t('tie_input'), list(TIE_RULES), index=list(TIE_RULES).index(session.get('tie_rule', 'prorata')),
+                              format_func=lambda k: tie_labels[k])
 if st.button(t('update_rules')):
     set_session('pricing', pricing_choice)
     set_session('pab_rule', pab_choice)
+    set_session('tie_rule', tie_choice)
     st.success(t('rules_set'))
 st.markdown("---")
 
@@ -191,12 +197,13 @@ hours = list(range(24)) if session.get('horizon', '24') == '24' else [int(sessio
 if st.button(t('run_clearing'), type="primary", use_container_width=True):
     with st.spinner(t('running', h=hours_label(session))):
         try:
-            kwargs = dict(hours=hours, pricing=session.get('pricing', 'complete'), pab_rule=session.get('pab_rule', 'euphemia'))
+            kwargs = dict(hours=hours, pricing=session.get('pricing', 'complete'), pab_rule=session.get('pab_rule', 'euphemia'),
+                          tie_rule=session.get('tie_rule', 'prorata'))
             if fill_choice == 'demo':
                 result = run_clearing(None, None, **kwargs)
             else:
                 set_session('fill_missing', '1' if fill_choice == 'reference' else '0')
-                result = run_clearing(supply, demand, block_rows=blocks, fill_missing_zones=(fill_choice == 'reference'), **kwargs)
+                result = run_clearing(supply, demand, block_rows=blocks, mic_rows=mic, fill_missing_zones=(fill_choice == 'reference'), **kwargs)
             save_results(welfare=result['welfare'], volume=result['volume'], prices=result['prices'],
                          flows=result['flows'], dispatch=result['dispatch'], summary=result['summary'])
             st.success(t('clearing_done', t=result['summary']['elapsed'], w=money(result['welfare'], millions=True),
@@ -241,6 +248,13 @@ with tab_b:
         st.dataframe(df_b, use_container_width=True, hide_index=True)
     else:
         st.info(t('no_block_orders'))
+    st.markdown(f"**{t('mic_results')}**")
+    if mic:
+        df_m = pd.DataFrame(mic)[['zone', 'player', 'actor', 'fixed_term', 'variable_term']].copy()
+        df_m.columns = [t('zone'), t('trader'), t('actor'), t('fixed_term'), t('variable_term')]
+        st.dataframe(df_m, use_container_width=True, hide_index=True)
+    else:
+        st.info(t('no_mic'))
 with tab_p:
     if players:
         for p in players:

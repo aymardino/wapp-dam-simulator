@@ -5,6 +5,21 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 4 — Règles restantes du Livrable 2 : partage des ex æquo et Minimum Income Condition
+
+**Ajouté**
+- Règle explicite de partage entre offres de même zone, même sens, même heure et même prix, appliquée après
+  P1bis : `prorata` (défaut), `order` (ordre de soumission) ou `solver`. Le total accepté du groupe, le welfare,
+  le volume et l'ensemble des prix admissibles sont inchangés. Réglable dans Administration.
+- Minimum Income Condition (Livrable 2 §6.3, annoncée pour le L3) : par acteur vendeur, terme fixe et terme
+  variable par MWh ; si la recette aux prix finals est insuffisante, toutes ses offres (et les blocs enfants qui en
+  dépendent) sont retirées et la séquence complète est relancée, jusqu'à satisfaction. Table `mic_conditions`,
+  saisie dans la page Soumission, état de chaque condition dans les résultats et les diagnostics.
+- Résultats par acteur : statut `withdrawn_mic` pour les offres retirées.
+- Quatre tests : prorata et ordre de soumission (même welfare, même volume), retrait MIC avec relance et nouveau
+  prix, condition satisfaite, retrait des blocs enfants.
+- Règles de marché mises à jour (§3 P1bis, nouveau §5 MIC, tolérance MIC_TOL, liste de ce qui reste hors modèle).
+
 ### Correctif — base de données héritée (2 octobre 2026, soir)
 
 - Une base créée par une version antérieure du code contenait déjà une table `ntc` avec les colonnes

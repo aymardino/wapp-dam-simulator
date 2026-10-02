@@ -20,6 +20,7 @@ SESSION_DEFAULTS = {
     'lang': 'fr',               # fr | en
     'pricing': 'complete',      # complete | l2
     'pab_rule': 'euphemia',     # euphemia | l2 | none
+    'tie_rule': 'prorata',      # prorata | order | solver
     'fill_missing': '1',        # 1 : zones sans soumission complétées par les données de référence
 }
 
@@ -38,6 +39,7 @@ EXPECTED_COLUMNS = {
     'demand_bids':   ['zone', 'player', 'actor', 'segment', 'quantity', 'price'],
     'block_orders':  ['zone', 'player', 'name', 'side', 'quantity', 'price', 'h_start', 'h_end', 'parent_name', 'excl_group'],
     'ntc':           ['u', 'v', 'mw'],
+    'mic_conditions': ['zone', 'player', 'actor', 'fixed_term', 'variable_term'],
     'results':       ['run_at', 'welfare', 'volume', 'prices_json', 'flows_json', 'dispatch_json', 'summary_json'],
 }
 
@@ -114,6 +116,15 @@ def init_db():
             excl_group  TEXT,
             submitted_at TEXT
         );
+        CREATE TABLE IF NOT EXISTS mic_conditions (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            zone      TEXT NOT NULL,
+            player    TEXT NOT NULL,
+            actor     TEXT NOT NULL,
+            fixed_term    REAL NOT NULL DEFAULT 0,
+            variable_term REAL NOT NULL DEFAULT 0,
+            submitted_at TEXT
+        );
         CREATE TABLE IF NOT EXISTS ntc (
             u   TEXT NOT NULL,
             v   TEXT NOT NULL,
@@ -177,6 +188,7 @@ def reset_market():
     conn.execute("DELETE FROM supply_offers")
     conn.execute("DELETE FROM demand_bids")
     conn.execute("DELETE FROM block_orders")
+    conn.execute("DELETE FROM mic_conditions")
     conn.execute("DELETE FROM results")
     conn.execute("UPDATE session SET value='submission' WHERE key='phase'")
     conn.commit()
@@ -288,6 +300,29 @@ def get_zone_blocks(zone, player=None):
     if player is None:
         return _rows("SELECT * FROM block_orders WHERE zone=? ORDER BY id", (zone,))
     return _rows("SELECT * FROM block_orders WHERE zone=? AND player=? ORDER BY id", (zone, player))
+
+
+# ── Conditions de revenu minimum (MIC) ────────────────────────────
+def save_mic_conditions(zone, player, conditions):
+    """conditions : liste de dicts {actor, fixed_term, variable_term} ; remplace celles du trader."""
+    conn = get_conn()
+    conn.execute("DELETE FROM mic_conditions WHERE zone=? AND player=?", (zone, player))
+    now = datetime.now().isoformat()
+    for m in conditions:
+        conn.execute("INSERT INTO mic_conditions (zone,player,actor,fixed_term,variable_term,submitted_at) VALUES (?,?,?,?,?,?)",
+                     (zone, player, m['actor'], float(m.get('fixed_term') or 0), float(m.get('variable_term') or 0), now))
+    conn.commit()
+    conn.close()
+
+
+def get_all_mic():
+    return _rows("SELECT * FROM mic_conditions ORDER BY zone, player, id")
+
+
+def get_zone_mic(zone, player=None):
+    if player is None:
+        return _rows("SELECT * FROM mic_conditions WHERE zone=? ORDER BY id", (zone,))
+    return _rows("SELECT * FROM mic_conditions WHERE zone=? AND player=? ORDER BY id", (zone, player))
 
 
 # ── NTC modifiables ───────────────────────────────────────────────

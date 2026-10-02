@@ -16,6 +16,8 @@ Changements v2 par rapport au moteur du Livrable 3 (détail dans CHANGELOG.md et
     - NTC paramétrables, heures simulées paramétrables, zones manquantes complétées par les
       données de référence, validation des entrées.
     - Contrôle du statut du solveur à chaque étape (ClearingError) et diagnostics de cohérence.
+    - Règle explicite de partage des offres au même prix (prorata par défaut) après P1bis.
+    - Minimum Income Condition (revenu ≥ terme fixe + terme variable × volume) avec retrait itératif.
 """
 import time
 import logging
@@ -34,7 +36,7 @@ __all__ = [
     'run_clearing', 'ClearingError', 'default_rows', 'validate_inputs',
     'ZONES', 'LINES', 'NTC', 'PAIRS', 'PROF', 'LOAD_WA', 'ALPHA', 'ALPHA_LINES',
     'P_MIN', 'P_MAX', 'DEFAULT_SUPPLY_24', 'DEFAULT_DEMAND_24',
-    'PRICING_MODES', 'PAB_RULES',
+    'PRICING_MODES', 'PAB_RULES', 'TIE_RULES',
 ]
 
 # ── Paramètres réglementaires et numériques ───────────────────────
@@ -45,6 +47,8 @@ F_TOL = 1e-3               # MW : une ligne est saturée si |f| >= NTC - F_TOL
 PRICE_TOL = 0.5            # EUR/MWh : tolérance des diagnostics de cohérence
 PRICING_MODES = ('complete', 'l2')
 PAB_RULES = ('euphemia', 'l2', 'none')
+TIE_RULES = ('prorata', 'order', 'solver')   # partage des offres au même prix
+MIC_TOL = 0.5              # unité monétaire : tolérance de la condition de revenu minimum
 
 ZONES = ['NGA','BEN','TGO','GHA','CIV','BFA','MLI','SEN','GIN','SLE','LBR','GNB','GMB','NER']
 
@@ -605,15 +609,169 @@ def _diagnostics(seg_s, seg_d, xs, xd, fl, prices, hours, ntc, pairs, alpha_acti
     return dict(pro=pro, pao=pao, unsaturated_price_gaps=gaps, max_violation=round(max_viol, 3))
 
 
+# ── Règle de partage des ex æquo ──────────────────────────────────
+def _apply_tie_rule(seg_s, seg_d, xs, xd, hours, rule):
+    """Répartit, entre offres de même zone, même sens, même heure et même prix, la quantité que le solveur
+    a acceptée pour le groupe : 'prorata' (proportionnel aux quantités offertes), 'order' (dans l'ordre de
+    soumission, premier servi), 'solver' (répartition laissée au solveur). Le total accepté du groupe est
+    inchangé : ni le welfare, ni le volume, ni l'ensemble des prix admissibles ne bougent.
+    Retourne le nombre de groupes (zone, heure, sens, prix) dont la répartition a été modifiée."""
+    if rule == 'solver':
+        return 0
+    adjusted = 0
+    for segs, x in ((seg_s, xs), (seg_d, xd)):
+        for h in hours:
+            groups = {}
+            for i, s in enumerate(segs):
+                if s.qty[h] > 0:
+                    groups.setdefault((s.zone, s.p), []).append(i)
+            for idx in groups.values():
+                if len(idx) < 2:
+                    continue
+                total = sum(segs[i].qty[h] for i in idx)
+                acc = sum(segs[i].qty[h] * x[i, h] for i in idx)
+                if acc < X_TOL * total or acc > (1 - X_TOL) * total:
+                    continue                       # groupe entièrement rejeté ou accepté : rien à partager
+                if rule == 'prorata':
+                    share = acc / total
+                    new = {i: share for i in idx}
+                else:                              # 'order' : premier soumis, premier servi
+                    new, rem = {}, acc
+                    for i in idx:
+                        take = min(segs[i].qty[h], rem)
+                        new[i] = take / segs[i].qty[h]
+                        rem -= take
+                if any(abs(new[i] - x[i, h]) > 1e-9 for i in idx):
+                    adjusted += 1
+                    for i in idx:
+                        x[i, h] = new[i]
+    return adjusted
+
+
+# ── Minimum Income Condition ──────────────────────────────────────
+@dataclass
+class Mic:
+    zone: str
+    player: str
+    actor: str
+    fixed_term: float
+    variable_term: float
+
+
+def _build_mic(mic_rows):
+    out = []
+    for r in mic_rows:
+        if r.get('zone') not in ZONES:
+            raise ClearingError(f"Condition MIC de {r.get('actor', '?')} : zone inconnue.")
+        out.append(Mic(r['zone'], r.get('player', ''), r['actor'],
+                       float(r.get('fixed_term') or 0.0), float(r.get('variable_term') or 0.0)))
+    return out
+
+
+def _mic_check(mics, seg_s, blocks, xs, y, prices, hours, withdrawn):
+    """Revenu de chaque acteur sous MIC aux prix finals, comparé à terme fixe + terme variable × volume.
+    Un acteur dont rien n'est accepté satisfait trivialement sa condition (ordre inactif)."""
+    results, to_withdraw = [], []
+    for m in mics:
+        key = (m.zone, m.player, m.actor)
+        base = dict(zone=m.zone, player=m.player, actor=m.actor, fixed_term=m.fixed_term, variable_term=m.variable_term)
+        if key in withdrawn:
+            results.append(dict(base, accepted_mwh=0.0, income=0.0, required=round(m.fixed_term, 1), satisfied=False, withdrawn=True))
+            continue
+        acc = inc = 0.0
+        for i, s in enumerate(seg_s):
+            if (s.zone, s.player, s.actor) == key:
+                for h in hours:
+                    if s.qty[h] > 0:
+                        q = s.qty[h] * xs[i, h]
+                        acc += q
+                        inc += prices[s.zone, h] * q
+        for b, blk in enumerate(blocks):
+            if blk.side == 'S' and (blk.zone, blk.player, blk.name) == key and y.get(b, 0):
+                for h in blk.active_hours:
+                    acc += blk.q
+                    inc += prices[blk.zone, h] * blk.q
+        req = m.fixed_term + m.variable_term * acc
+        sat = acc <= 1e-6 or inc >= req - MIC_TOL
+        results.append(dict(base, accepted_mwh=round(acc, 1), income=round(inc, 1), required=round(req, 1), satisfied=sat, withdrawn=False))
+        if not sat:
+            to_withdraw.append(key)
+    return results, to_withdraw
+
+
+# ── Séquence P1 → P1bis → P2 avec boucle PAB ──────────────────────
+def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, alpha_active,
+                    solver, pricing, pab_rule, max_pab_iter, tie_rule, notes):
+    fixed_y, iterations = {}, 0
+    while True:
+        iterations += 1
+        m1 = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
+                           objective='welfare', fixed_y=fixed_y)
+        _solve(solver, m1, "P1 (welfare)")
+        W_star = float(value(m1.welfare))
+        xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
+        tie_break = 'none'
+
+        # P1bis : volume maximal parmi les solutions de welfare optimal (ε = 0)
+        if seg_s or seg_d:
+            m2 = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
+                               objective='volume', welfare_floor=W_star, fixed_y=dict(y))
+            ok, status = _try_solve(solver, m2)
+            if ok:
+                xs, xd, fl, _ = _extract(m2, seg_s, seg_d, blocks, hours, pairs)
+                tie_break = 'exact'
+            else:
+                notes.append(f"P1bis : départage par volume impossible ({status}) ; solution de P1 conservée.")
+        tie_groups = _apply_tie_rule(seg_s, seg_d, xs, xd, hours, tie_rule)
+
+        # P2
+        mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing)
+        ok, status = _try_solve(solver, mp)
+        pricing_feasible = ok
+        if not ok and tie_break == 'exact':
+            xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
+            tie_break = 'fallback_p1'
+            tie_groups = _apply_tie_rule(seg_s, seg_d, xs, xd, hours, tie_rule)
+            mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing)
+            ok, status = _try_solve(solver, mp)
+            pricing_feasible = ok
+            notes.append("P2 : la solution de P1bis n'admettait aucun prix admissible ; prix calculés sur la solution de P1.")
+        if not ok:
+            raise ClearingError(f"P2 (prix) : pas de solution ({status}). Vérifiez les offres (prix hors bornes, incohérences).")
+        prices = {(z, h): float(value(mp.pi[z, h])) for z in ZONES for h in hours}
+
+        # Blocs paradoxaux
+        block_results = _price_blocks(blocks, y, prices) if blocks else []
+        to_fix = {}
+        for b, br in enumerate(block_results):
+            if b in fixed_y:
+                continue
+            if br['status'] == 'PAB' and pab_rule in ('euphemia', 'l2'):
+                to_fix[b] = 0
+            elif br['status'] == 'PRB' and pab_rule == 'l2':
+                to_fix[b] = 1
+        if not to_fix or iterations > max_pab_iter:
+            if to_fix:
+                notes.append("Boucle PAB/PRB arrêtée au nombre maximal d'itérations.")
+            break
+        fixed_y.update(to_fix)
+        notes.append("Itération %d : blocs fixés %s" % (iterations, {blocks[b].name: v for b, v in to_fix.items()}))
+    return dict(xs=xs, xd=xd, fl=fl, y=y, prices=prices, block_results=block_results, W_star=W_star,
+                iterations=iterations, fixed_y=fixed_y, tie_break=tie_break,
+                pricing_feasible=pricing_feasible, tie_groups=tie_groups)
+
+
 # ── Moteur principal ──────────────────────────────────────────────
 def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=None, *,
-                 block_rows=None, hours=None, fill_missing_zones=False,
-                 pricing='complete', pab_rule='euphemia', max_pab_iter=10):
+                 block_rows=None, mic_rows=None, hours=None, fill_missing_zones=False,
+                 pricing='complete', pab_rule='euphemia', tie_rule='prorata',
+                 max_pab_iter=10, max_mic_iter=None):
     """
     Clearing complet P1 → P1bis → P2.
 
     supply_rows / demand_rows : lignes au format de la base (None pour les données de référence).
     block_rows   : ordres bloc, liés, exclusifs (format table block_orders) ; None = aucun.
+    mic_rows     : conditions de revenu minimum (zone, player, actor, fixed_term, variable_term) ; None = aucune.
     horizon      : 24 (jour complet) ou 1 ; ignoré si `hours` est fourni.
     hours        : liste d'heures simulées (ex. [19]) ; par défaut range(horizon).
     ntc_override : {(u, v): MW} ; sinon NTC de la base (si définies), sinon valeurs par défaut.
@@ -621,6 +779,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     pricing      : 'complete' (KKT complètes, v2) ou 'l2' (contraintes (8)-(12) du Livrable 2).
     pab_rule     : 'euphemia' (rejet itératif des PAB, PRB tolérés), 'l2' (PAB fixés à 0 et
                    PRB fixés à 1, Livrable 2 §3.3) ou 'none' (détection seule).
+    tie_rule     : partage des offres au même prix : 'prorata' (défaut), 'order', 'solver'.
     Retourne dict : prices, flows, dispatch, welfare, volume, summary.
     """
     t_total = time.time()
@@ -628,6 +787,8 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         raise ClearingError(f"Mode de prix inconnu : {pricing}")
     if pab_rule not in PAB_RULES:
         raise ClearingError(f"Règle PAB inconnue : {pab_rule}")
+    if tie_rule not in TIE_RULES:
+        raise ClearingError(f"Règle de partage inconnue : {tie_rule}")
     notes = []
 
     # ── Heures simulées ───────────────────────────────────────────
@@ -656,9 +817,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     block_rows = list(block_rows or [])
     validate_inputs(supply_rows, demand_rows, block_rows)
 
-    seg_s, seg_d = _build_segments(supply_rows, demand_rows, hours)
-    blocks = _build_blocks(block_rows, hours)
-    parent_of, groups = _resolve_links(blocks, notes)
+    seg_s_all, seg_d = _build_segments(supply_rows, demand_rows, hours)
+    blocks_all = _build_blocks(block_rows, hours)
+    mics = _build_mic(mic_rows or [])
+    if max_mic_iter is None:
+        max_mic_iter = len(mics) + 1
 
     # ── NTC : override > base > défaut ────────────────────────────
     ntc = dict(NTC)
@@ -679,67 +842,38 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     alpha_active = all(l in ntc for l in ALPHA_LINES)
 
     solver, solver_name = _get_solver()
-    S, D, B = range(len(seg_s)), range(len(seg_d)), range(len(blocks))
-    logger.info("Solveur %s | %d segments vente, %d segments achat, %d blocs, %d heures",
-                solver_name, len(seg_s), len(seg_d), len(blocks), len(hours))
+    logger.info("Solveur %s | %d segments vente, %d segments achat, %d blocs, %d MIC, %d heures",
+                solver_name, len(seg_s_all), len(seg_d), len(blocks_all), len(mics), len(hours))
 
-    # ── Boucle P1 → P1bis → P2 (+ correction des blocs paradoxaux) ─
-    fixed_y = {}
-    iterations = 0
+    # ── Boucle MIC autour de la séquence P1 → P1bis → P2 ──────────
+    withdrawn = set()
+    mic_iter = 0
     while True:
-        iterations += 1
-        # P1
-        m1 = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
-                           objective='welfare', fixed_y=fixed_y)
-        _solve(solver, m1, "P1 (welfare)")
-        W_star = float(value(m1.welfare))
-        xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
-        tie_break = 'none'
-
-        # P1bis : volume maximal parmi les solutions de welfare optimal (ε = 0)
-        if seg_s or seg_d:
-            m2 = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
-                               objective='volume', welfare_floor=W_star, fixed_y=dict(y))
-            ok, status = _try_solve(solver, m2)
-            if ok:
-                xs, xd, fl, _ = _extract(m2, seg_s, seg_d, blocks, hours, pairs)
-                tie_break = 'exact'
-            else:
-                notes.append(f"P1bis : départage par volume impossible ({status}) ; solution de P1 conservée.")
-
-        # P2
-        mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing)
-        ok, status = _try_solve(solver, mp)
-        pricing_feasible = ok
-        if not ok and tie_break == 'exact':
-            # La solution de P1bis n'est pas supportée par un prix exact : repli sur la solution de P1
-            xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
-            tie_break = 'fallback_p1'
-            mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing)
-            ok, status = _try_solve(solver, mp)
-            pricing_feasible = ok
-            notes.append("P2 : la solution de P1bis n'admettait aucun prix admissible ; prix calculés sur la solution de P1.")
-        if not ok:
-            raise ClearingError(f"P2 (prix) : pas de solution ({status}). Vérifiez les offres (prix hors bornes, incohérences).")
-        prices = {(z, h): float(value(mp.pi[z, h])) for z in ZONES for h in hours}
-
-        # Blocs paradoxaux
-        block_results = _price_blocks(blocks, y, prices) if blocks else []
-        to_fix = {}
-        for b, br in enumerate(block_results):
-            if b in fixed_y:
-                continue
-            if br['status'] == 'PAB' and pab_rule in ('euphemia', 'l2'):
-                to_fix[b] = 0
-            elif br['status'] == 'PRB' and pab_rule == 'l2':
-                to_fix[b] = 1
-        if not to_fix or iterations > max_pab_iter:
-            if to_fix:
-                notes.append("Boucle PAB/PRB arrêtée au nombre maximal d'itérations.")
+        mic_iter += 1
+        seg_s = [s for s in seg_s_all if (s.zone, s.player, s.actor) not in withdrawn]
+        # Blocs retirés : ceux de l'acteur retiré, puis leurs enfants (un enfant sans parent ne peut être accepté)
+        gone = {(b.zone, b.player, b.name) for b in blocks_all if b.side == 'S' and (b.zone, b.player, b.name) in withdrawn}
+        changed = True
+        while changed:
+            changed = False
+            for b in blocks_all:
+                if (b.zone, b.player, b.name) not in gone and b.parent and (b.zone, b.player, b.parent) in gone:
+                    gone.add((b.zone, b.player, b.name)); changed = True
+        blocks = [b for b in blocks_all if (b.zone, b.player, b.name) not in gone]
+        parent_of, groups = _resolve_links(blocks, notes if mic_iter == 1 else [])
+        sol = _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, alpha_active,
+                              solver, pricing, pab_rule, max_pab_iter, tie_rule, notes)
+        mic_results, to_withdraw = _mic_check(mics, seg_s, blocks, sol['xs'], sol['y'], sol['prices'], hours, withdrawn)
+        if not to_withdraw or mic_iter > max_mic_iter:
+            if to_withdraw:
+                notes.append("Boucle MIC arrêtée au nombre maximal d'itérations.")
             break
-        fixed_y.update(to_fix)
-        notes.append("Itération %d : blocs fixés %s" % (iterations, {blocks[b].name: v for b, v in to_fix.items()}))
+        withdrawn |= set(to_withdraw)
+        notes.append("MIC non satisfaite, offres retirées : " + ", ".join(f"{a} ({z})" for z, _, a in to_withdraw) + ".")
 
+    xs, xd, fl, y, prices = sol['xs'], sol['xd'], sol['fl'], sol['y'], sol['prices']
+    block_results = sol['block_results']
+    S, D, B = range(len(seg_s)), range(len(seg_d)), range(len(blocks))
     vol = sum(seg_s[s].qty[h] * xs[s, h] for s in S for h in hours if seg_s[s].qty[h] > 0) \
         + sum(blocks[b].q * len(blocks[b].active_hours) * y.get(b, 0) for b in B if blocks[b].side == 'S')
 
@@ -773,10 +907,12 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     def _acc(key, **kw):
         a = actors.setdefault(key, dict(zone=key[0], player=key[1], actor=key[2], side=key[3],
                                         offered_mwh=0.0, accepted_mwh=0.0, money=0.0, value=0.0,
-                                        rejected=[]))
+                                        rejected=[], status='ok'))
         for k2, v2 in kw.items():
             if k2 == 'rejected':
                 a['rejected'].append(v2)
+            elif k2 == 'status':
+                a['status'] = v2
             else:
                 a[k2] += v2
     for s in S:
@@ -789,6 +925,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
             _acc(key, offered_mwh=Q, accepted_mwh=q, money=prices[seg_s[s].zone, h] * q, value=seg_s[s].p * q)
         if all(_classify(xs[s, h]) == 'rej' for h in hours if seg_s[s].qty[h] > 0):
             _acc(key, rejected=dict(segment=seg_s[s].k, quantity=seg_s[s].q, price=seg_s[s].p))
+    for s in seg_s_all:                       # acteurs retirés par la MIC
+        key = (s.zone, s.player, s.actor, 'S')
+        if (s.zone, s.player, s.actor) in withdrawn:
+            _acc(key, offered_mwh=sum(s.qty[h] for h in hours), status='withdrawn_mic',
+                 rejected=dict(segment=s.k, quantity=s.q, price=s.p))
     for d in D:
         key = (seg_d[d].zone, seg_d[d].player, seg_d[d].actor, 'D')
         for h in hours:
@@ -811,6 +952,10 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                  value=blk.p * blk.q * nh)
         else:
             _acc(key, rejected=dict(segment='bloc', quantity=blk.q, price=blk.p))
+    for blk in blocks_all:
+        if (blk.zone, blk.player, blk.name) in gone and blk.side == 'S':
+            _acc((blk.zone, blk.player, blk.name, 'S'), offered_mwh=blk.q * len(blk.active_hours),
+                 status='withdrawn_mic', rejected=dict(segment='bloc', quantity=blk.q, price=blk.p))
     actor_list = []
     for a in actors.values():
         a['surplus'] = (a['money'] - a['value']) if a['side'] == 'S' else (a['value'] - a['money'])
@@ -860,10 +1005,12 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     cr_tot = sum(l['congestion_rent'] for l in lines_out.values())
 
     diag = _diagnostics(seg_s, seg_d, xs, xd, fl, prices, hours, ntc, pairs, alpha_active)
-    diag.update(dict(pricing_mode=pricing, pricing_feasible=pricing_feasible, tie_break=tie_break,
-                     pab_iterations=iterations, blocks_fixed={blocks[b].name: v for b, v in fixed_y.items()},
+    diag.update(dict(pricing_mode=pricing, pricing_feasible=sol['pricing_feasible'], tie_break=sol['tie_break'],
+                     tie_rule=tie_rule, tie_groups_adjusted=sol['tie_groups'],
+                     pab_iterations=sol['iterations'], blocks_fixed={blocks[b].name: v for b, v in sol['fixed_y'].items()},
                      prb=[br['name'] for br in block_results if br['status'] == 'PRB'],
                      pab=[br['name'] for br in block_results if br['status'] == 'PAB'],
+                     mic_iterations=mic_iter, mic_withdrawn=[f"{a} ({z})" for z, _, a in sorted(withdrawn)],
                      welfare_identity_gap=round(W_final - (cs_tot + ps_tot + cr_tot), 1),
                      notes=notes))
 
@@ -874,9 +1021,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         'solver':          solver_name,
         'horizon':         len(hours),
         'hours':           hours,
-        'n_supply':        len(seg_s),
+        'n_supply':        len(seg_s_all),
         'n_demand':        len(seg_d),
-        'n_blocks':        len(blocks),
+        'n_blocks':        len(blocks_all),
+        'n_mic':           len(mics),
+        'n_withdrawn':     len(withdrawn),
         'net_pos':         {z: zones_out[z]['net_position'] for z in ZONES},
         'demand_accepted': demand_accepted,
         'welfare_hourly':  welfare_hourly,
@@ -886,9 +1035,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         'zones':           zones_out,
         'lines':           lines_out,
         'blocks':          block_results,
+        'mic':             mic_results,
         'actors':          actor_list,
-        'rules':           dict(pricing=pricing, pab_rule=pab_rule, tie_break='volume max, welfare exact',
-                                x_tol=X_TOL, f_tol=F_TOL, price_bounds=[P_MIN, P_MAX], alpha=ALPHA,
+        'rules':           dict(pricing=pricing, pab_rule=pab_rule, tie_rule=tie_rule,
+                                tie_break='volume max, welfare exact', x_tol=X_TOL, f_tol=F_TOL, mic_tol=MIC_TOL,
+                                price_bounds=[P_MIN, P_MAX], alpha=ALPHA,
                                 ntc=dict((f"{u}->{v}", ntc[(u, v)]) for u, v in pairs)),
         'diagnostics':     diag,
     }

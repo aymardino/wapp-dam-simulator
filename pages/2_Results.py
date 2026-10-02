@@ -186,6 +186,20 @@ def render():
                                        textposition='inside', showlegend=False))
             fig_g.update_layout(height=120 + 30 * len(blocks), xaxis=dict(range=[-0.5, 23.5], dtick=1, title=t('hour')), **PLOTLY_LAYOUT)
             st.plotly_chart(fig_g, use_container_width=True)
+        mics = summary.get('mic', [])
+        st.markdown(f"#### {t('mic_results')}")
+        if not mics:
+            st.info(t('no_mic'))
+        else:
+            df_mic = pd.DataFrame([{
+                t('zone'): m['zone'], t('trader'): m.get('player', ''), t('actor'): m['actor'],
+                f"{t('fixed_term')} ({currency()})": m['fixed_term'], t('variable_term'): m['variable_term'],
+                t('accepted_mwh'): m['accepted_mwh'], f"{t('income')} ({currency()})": m['income'],
+                f"{t('required')} ({currency()})": m['required'],
+                t('status'): t('withdrawn') if m['withdrawn'] else (t('satisfied') if m['satisfied'] else '—'),
+            } for m in mics])
+            st.dataframe(df_mic, use_container_width=True, hide_index=True)
+            st.caption(t('mic_explain'))
 
     # ── Mon résultat ──────────────────────────────────────────────
     with tabs[4]:
@@ -212,7 +226,8 @@ def render():
                     k3.metric(t('revenue') if side == 'S' else t('payment'), money(money_))
                     k4.metric(t('surplus'), money(surplus))
                 df_m = pd.DataFrame([{
-                    t('actor'): a['actor'], t('side'): t('sell') if a['side'] == 'S' else t('buy'),
+                    t('actor'): a['actor'] + (f" ({t('status_withdrawn')})" if a.get('status') == 'withdrawn_mic' else ''),
+                    t('side'): t('sell') if a['side'] == 'S' else t('buy'),
                     t('offered_mwh'): a['offered_mwh'], t('accepted_mwh'): a['accepted_mwh'],
                     t('acceptance'): a['acceptance_pct'], f"{t('avg_price')} ({unit})": a['avg_price'],
                     f"{t('surplus')} ({currency()})": a['surplus'],
@@ -260,6 +275,9 @@ def render():
         st.markdown(f"{ok(diag.get('max_violation', 0) <= 0.5)} {t('check_max', v=diag.get('max_violation', '—'), unit=unit)}")
         st.markdown(f"{ok(diag.get('tie_break') == 'exact')} {t('check_tie', mode=diag.get('tie_break', '—'))}")
         st.markdown(f"ℹ️ {t('check_pricing', mode=diag.get('pricing_mode', '—'))}")
+        st.markdown(f"ℹ️ {t('check_tie_rule', rule=diag.get('tie_rule', '—'), n=diag.get('tie_groups_adjusted', 0))}")
+        if summary.get('n_mic'):
+            st.markdown(f"ℹ️ {t('check_mic', n=diag.get('mic_iterations', 1), names=', '.join(diag.get('mic_withdrawn') or ['—']))}")
         if summary.get('n_blocks'):
             st.markdown(f"ℹ️ {t('check_pab', n=diag.get('pab_iterations', 1), fixed=diag.get('blocks_fixed') or '—')}")
             if diag.get('prb'):

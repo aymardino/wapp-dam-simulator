@@ -4,8 +4,9 @@ Page 1 — Soumission des offres : segments (stepwise) et ordres bloc (simples, 
 import streamlit as st
 import pandas as pd
 from engine import (get_session, save_supply_offers, save_demand_bids, get_zone_supply, get_zone_demand,
-                    save_block_orders, delete_block_orders, get_zone_blocks, ZONE_COLORS, PROF, P_MIN, P_MAX)
-from ui_common import inject_css, header, lang_selector, t, price_unit
+                    save_block_orders, delete_block_orders, get_zone_blocks, save_mic_conditions, get_zone_mic,
+                    ZONE_COLORS, PROF, P_MIN, P_MAX)
+from ui_common import inject_css, header, lang_selector, t, price_unit, currency
 
 inject_css()
 with st.sidebar:
@@ -85,6 +86,33 @@ with tab_step:
                 st.rerun()
         with st.expander(t('profiles_help')):
             st.markdown(t('profiles_table'))
+        with st.expander(t('mic_section')):
+            st.caption(t('mic_help'))
+            existing_mic = get_zone_mic(my_zone, my_player)
+            if 'mic_rows' not in st.session_state:
+                st.session_state.mic_rows = [{'actor': m['actor'], 'fixed_term': m['fixed_term'], 'variable_term': m['variable_term']}
+                                             for m in existing_mic] or [{'actor': '', 'fixed_term': 0.0, 'variable_term': 0.0}]
+            mrows = st.session_state.mic_rows
+            _head(st.columns([3, 2, 2, 1]), [t('actor'), f"{t('fixed_term')} ({currency()})", t('variable_term'), ""])
+            to_del_m = []
+            for i, r in enumerate(mrows):
+                c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
+                mrows[i]['actor']         = c1.text_input("ma", value=r['actor'], key=f"ma_{i}", label_visibility="collapsed", placeholder=t('mic_actor_ph'))
+                mrows[i]['fixed_term']    = c2.number_input("mf", value=float(r['fixed_term']), min_value=0.0, step=100.0, key=f"mf_{i}", label_visibility="collapsed")
+                mrows[i]['variable_term'] = c3.number_input("mv", value=float(r['variable_term']), min_value=0.0, step=1.0, key=f"mv_{i}", label_visibility="collapsed")
+                if c4.button("✕", key=f"mdel_{i}"):
+                    to_del_m.append(i)
+            for idx in reversed(to_del_m):
+                mrows.pop(idx)
+            ma, mb = st.columns([1, 2])
+            if ma.button(t('add_mic'), use_container_width=True, key="madd"):
+                mrows.append({'actor': '', 'fixed_term': 0.0, 'variable_term': 0.0})
+                st.rerun()
+            if mb.button(t('save_mic'), type="primary", use_container_width=True, key="msave"):
+                valid_m = [r for r in mrows if r['actor'].strip()]
+                save_mic_conditions(my_zone, my_player, valid_m)
+                st.success(t('saved_mic', n=len(valid_m)))
+                st.rerun()
 
     with col_d:
         st.markdown(f"### {t('demand_in_zone', zone=my_zone)}")
@@ -211,3 +239,11 @@ with tab_preview:
         st.dataframe(df_b, use_container_width=True, hide_index=True)
     else:
         st.info(t('no_blocks'))
+    st.markdown(f"#### {t('mic_results')}")
+    mic_data = get_zone_mic(my_zone)
+    if mic_data:
+        df_m = pd.DataFrame(mic_data)[['player', 'actor', 'fixed_term', 'variable_term']]
+        df_m.columns = [t('trader'), t('actor'), f"{t('fixed_term')} ({currency()})", t('variable_term')]
+        st.dataframe(df_m, use_container_width=True, hide_index=True)
+    else:
+        st.info(t('no_mic'))

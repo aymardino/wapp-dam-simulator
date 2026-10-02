@@ -35,7 +35,7 @@ Maximiser la valeur créée : somme sur les heures de (prix des achats acceptés
 
 Parmi les solutions de welfare optimal, maximiser le volume accepté (ventes + achats). Les décisions de blocs sont fixées à celles de P1. **Le welfare est contraint à sa valeur optimale exacte** (W ≥ W*), et non à W* − 0,01 comme dans le Livrable 2 : une tolérance absolue était intégralement consommée par la maximisation du volume et produisait une solution que plus aucun prix ne supportait. Si le solveur ne trouve pas de solution (cas numérique), la solution de P1 est conservée et le diagnostic `tie_break` l'indique.
 
-Ce départage ne tranche pas tous les ex æquo : deux offres au même prix dans la même zone peuvent encore être partagées de plusieurs façons sans changer ni le welfare ni le volume. Le solveur retourne alors un sommet quelconque. Règle complémentaire à documenter dans une version future (prorata, priorité temporelle).
+Ce départage ne tranche pas tous les ex æquo : deux offres au même prix dans la même zone peuvent encore être partagées de plusieurs façons sans changer ni le welfare ni le volume. Une **règle de partage explicite** est donc appliquée ensuite, par groupe (zone, heure, sens, prix) partiellement accepté : `prorata` (défaut, chaque offre du groupe est acceptée dans la même proportion de sa quantité), `order` (ordre de soumission, premier servi) ou `solver` (répartition laissée au solveur). Le total accepté du groupe est inchangé : ni le welfare, ni le volume, ni l'ensemble des prix admissibles ne bougent.
 
 ### P2 — À quel prix ? (prix zonaux)
 
@@ -66,20 +66,25 @@ Après P2, le surplus de chaque bloc est calculé aux prix finals : Σ_h (π_h �
 - **PRB** (bloc rejeté qui aurait un surplus > 0) : toléré et signalé, comme dans EUPHEMIA. Le rejeter était optimal pour le welfare total : l'accepter aurait déplacé les prix.
 - Règle `l2` : en plus, les PRB sont fixés à « accepté » (texte du Livrable 2 §3.3). Règle `none` : détection seule.
 
-## 5. Tolérances
+## 5. Minimum Income Condition (MIC)
+
+Un acteur vendeur peut assortir ses offres d'une condition de revenu minimum : terme fixe F et terme variable V par MWh. Après P2, sa recette aux prix finals (segments et blocs portant son nom) est comparée à F + V × volume accepté. Si elle est inférieure (à MIC_TOL près) et que du volume lui a été accepté, **toutes ses offres sont retirées** (ses blocs, et les blocs enfants qui en dépendent) et la séquence P1 → P1bis → P2, boucle PAB comprise, est relancée sans lui. Un acteur dont rien n'est accepté satisfait trivialement sa condition. La boucle s'arrête quand toutes les conditions restantes sont satisfaites ; au plus une itération par condition. Les prix publiés sont ceux de la dernière exécution. La formulation « revenu − coût ≥ F » du Livrable 2 §6.3 s'obtient en posant V égal au coût variable de l'acteur.
+
+## 6. Tolérances
 
 | Grandeur | Valeur | Rôle |
 |----------|--------|------|
 | X_TOL | 10⁻⁴ | un ratio x < X_TOL est « rejeté », x > 1 − X_TOL « accepté en totalité », entre les deux « partiel » |
 | F_TOL | 10⁻³ MW | une ligne est saturée si le flux est à moins de F_TOL de sa borne |
 | PRICE_TOL | 0,5 par MWh | tolérance des diagnostics (ordres paradoxaux, écarts de prix) |
+| MIC_TOL | 0,5 (monnaie) | tolérance de la condition de revenu minimum |
 | gap MILP | 10⁻⁶ relatif | optimalité des problèmes avec blocs |
 | arrondi des quantités horaires | 1 MW | quantité effective = round(q × profil) |
 
-## 6. Sorties et vérifications
+## 7. Sorties et vérifications
 
-Pour chaque clearing, le moteur publie : prix par zone et par heure, flux signés par ligne, dispatch par profil, résultats par acteur (volume offert et accepté, prix moyen, recette ou paiement, surplus, offres rejetées), décomposition par zone (surplus consommateur, surplus producteur, position nette, heures sans échange), rente de congestion et heures saturées par ligne, statut de chaque bloc, et des **diagnostics** : nombre d'ordres simples paradoxalement rejetés ou acceptés (attendu : 0), nombre de lignes non saturées à prix différents (attendu : 0), écart maximal aux conditions d'équilibre, mode de départage, itérations PAB, et l'identité welfare = surplus consommateur + surplus producteur + rente de congestion.
+Pour chaque clearing, le moteur publie : prix par zone et par heure, flux signés par ligne, dispatch par profil, résultats par acteur (volume offert et accepté, prix moyen, recette ou paiement, surplus, offres rejetées), décomposition par zone (surplus consommateur, surplus producteur, position nette, heures sans échange), rente de congestion et heures saturées par ligne, statut de chaque bloc, état de chaque condition MIC (recette, revenu requis, satisfaite ou retirée), et des **diagnostics** : nombre d'ordres simples paradoxalement rejetés ou acceptés (attendu : 0), nombre de lignes non saturées à prix différents (attendu : 0), écart maximal aux conditions d'équilibre, mode de départage, itérations PAB, et l'identité welfare = surplus consommateur + surplus producteur + rente de congestion.
 
-## 7. Ce qui n'est pas modélisé
+## 8. Ce qui n'est pas modélisé
 
-Minimum Income Condition, pertes, réserves, rampes, durées minimales de fonctionnement, enchères intrajournalières, règlement financier, flow-based, courbes d'offre interpolées (les segments sont des marches), partage explicite des ex æquo entre offres de même prix, arrondi final des prix publiés.
+Pertes, réserves, rampes, durées minimales de fonctionnement, enchères intrajournalières, règlement financier, flow-based, courbes d'offre interpolées (les segments sont des marches), arrondi final des prix publiés, MIC côté achat.

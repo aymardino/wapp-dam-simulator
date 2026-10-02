@@ -13,6 +13,7 @@ Chaque participant se connecte comme trader d'un pays, dépose ses offres de ven
 
 Nouveautés de la version 2 (détail dans [CHANGELOG.md](CHANGELOG.md)) :
 - ordres bloc, liés et exclusifs réellement modélisés (MILP), blocs paradoxaux traités selon la règle EUPHEMIA ;
+- condition de revenu minimum (MIC) avec retrait itératif, règle explicite de partage des offres au même prix ;
 - prix zonaux choisis dans l'ensemble admissible complet (plus d'ordre paradoxalement rejeté, plus d'écart de prix sans congestion) ;
 - NTC modifiables, heure simulée au choix, zones manquantes complétées, messages d'erreur lisibles ;
 - vue « Mon résultat » pour chaque trader, décomposition du welfare, diagnostics de cohérence ;
@@ -113,8 +114,9 @@ Zones : NGA, BEN, TGO, GHA, CIV, BFA, MLI, SEN, GIN, SLE, LBR, GNB, GMB, NER. In
 | Bloc simple | binaire, fill-or-kill sur sa plage horaire |
 | Bloc lié | enfant ≤ parent |
 | Groupe exclusif | au plus une option |
+| Condition de revenu minimum (MIC) | recette ≥ terme fixe + terme variable × volume, sinon retrait et relance |
 
-Blocs paradoxalement acceptés : rejetés itérativement (règle EUPHEMIA, par défaut). Blocs paradoxalement rejetés : tolérés et signalés.
+Blocs paradoxalement acceptés : rejetés itérativement (règle EUPHEMIA, par défaut). Blocs paradoxalement rejetés : tolérés et signalés. Offres au même prix : partage au prorata des quantités (ou par ordre de soumission).
 
 ## Tests
 
@@ -123,7 +125,7 @@ pip install pytest
 pytest -q
 ```
 
-Quinze tests reproduisent les valeurs du Livrable 2 (welfare 22 317 910 et volume 167 900 MWh sur le cas de référence, 23 082 419 avec blocs, 23 775 223 avec blocs liés et exclusifs) et vérifient les propriétés des prix. Les tests utilisent une base temporaire (`WAPP_DB_PATH`) et ne touchent jamais `data/market.db`.
+Vingt et un tests reproduisent les valeurs du Livrable 2 (welfare 22 317 910 et volume 167 900 MWh sur le cas de référence, 23 082 419 avec blocs, 23 775 223 avec blocs liés et exclusifs) et vérifient les propriétés des prix. Les tests utilisent une base temporaire (`WAPP_DB_PATH`) et ne touchent jamais `data/market.db`.
 
 ## Données et confidentialité
 
@@ -139,4 +141,4 @@ Kodjovi Plakoo et Enrico Patanè (Mines Paris-PSL, MS OSE 2025), avec Lucien Kou
 
 ## English summary
 
-An open, documented and tested implementation of day-ahead zonal market coupling for the West African Power Pool, built as a multi-user training tool. Traders log in as a country's organisation and submit stepwise orders (price/quantity segments shaped by hourly profiles) and block orders (simple, linked, exclusive). The administrator runs the clearing: P1 maximises welfare under zonal balance, NTC limits and a CIV/GHA/BFA interdependence constraint (LP, MILP with blocks); P1bis maximises traded volume among welfare-optimal solutions; P2 selects, within the complete set of admissible prices (full equilibrium conditions, network included), the price closest to the midpoint of the admissible interval. Paradoxically accepted blocks are iteratively rejected (EUPHEMIA rule); paradoxically rejected blocks are tolerated and reported. Every rule is stated in `docs/REGLES_DE_MARCHE.md` and checked by `tests/test_engine.py`. Install with `pip install -r requirements.txt` (HiGHS solver included), run with `streamlit run app.py`, or use the Dockerfile. The interface is bilingual (French / English). Reference NTC values and profiles are illustrative estimates, not WAPP operational data.
+An open, documented and tested implementation of day-ahead zonal market coupling for the West African Power Pool, built as a multi-user training tool. Traders log in as a country's organisation and submit stepwise orders (price/quantity segments shaped by hourly profiles) and block orders (simple, linked, exclusive). The administrator runs the clearing: P1 maximises welfare under zonal balance, NTC limits and a CIV/GHA/BFA interdependence constraint (LP, MILP with blocks); P1bis maximises traded volume among welfare-optimal solutions; P2 selects, within the complete set of admissible prices (full equilibrium conditions, network included), the price closest to the midpoint of the admissible interval. Paradoxically accepted blocks are iteratively rejected (EUPHEMIA rule); paradoxically rejected blocks are tolerated and reported. Equal-price orders are shared pro rata; minimum income conditions withdraw an actor's orders and re-run the clearing when its revenue falls short. Every rule is stated in `docs/REGLES_DE_MARCHE.md` and checked by `tests/test_engine.py`. Install with `pip install -r requirements.txt` (HiGHS solver included), run with `streamlit run app.py`, or use the Dockerfile. The interface is bilingual (French / English). Reference NTC values and profiles are illustrative estimates, not WAPP operational data.
