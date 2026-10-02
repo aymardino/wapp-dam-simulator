@@ -9,6 +9,7 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 - Code, comments, docstrings, engine error messages, API documentation, tests, scripts and configuration files translated to English. Actor and plant names in the reference data keep their original language.
 - Reference documentation in English: `README.md`, `docs/MARKET_RULES.md`, `docs/ARCHITECTURE.md`, `docs/REFERENCE_DATA.md`, `docs/DEPLOYMENT.md`, `NOTICE`, this changelog. French versions kept in `README.fr.md` and `docs/fr/` (rules, architecture, data, deployment, changelog). The trainer and trader guides remain bilingual in `docs/guides/`.
 - Internal project notes (audit, valorisation plan) moved out of the public tree (`private/`, ignored by git).
+- Landing page: the "simulation" notices are plain captions instead of amber pills; the explorer's import / export annotation is drawn as a white label beside the curves (a single marker when the volume is small) instead of overlapping the crossing.
 - The git history was rewritten before publication (3 October 2026) to remove a former default administrator password and two images that were not free of rights.
 
 ### Step 13 — Landing page, second version: own identity, zone explorer, fixes

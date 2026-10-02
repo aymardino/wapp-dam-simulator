@@ -75,7 +75,7 @@ const L = {
     a_text: 'Kodjovi Plakoo et Enrico Patanè, Mastère Spécialisé OSE 2025, Mines Paris-PSL, avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila pour les premières phases du projet. Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT).',
     a_paper: 'Note technique à paraître.', a_paper_link: 'Lire la note technique', contact: 'Questions et contributions',
     footer: 'Simulateur pédagogique indépendant, non affilié au WAPP.',
-    sim_badge: 'Simulation · données reconstituées',
+    sim_badge: 'Simulation sur données 2024 reconstituées, pas des prix observés',
     src_title: 'D’où viennent ces chiffres ?',
     src_items: [
       ['Sourcé', 'Capacités installées et principales centrales de chaque pays, capacités contractuelles de plusieurs lignes, prix du gaz au Nigeria et au Ghana : rapports publics cités, ligne par ligne, dans la documentation.'],
@@ -140,7 +140,7 @@ const L = {
     a_text: 'Kodjovi Plakoo and Enrico Patanè, Advanced Master OSE 2025, Mines Paris-PSL, with Lucien Kouakou, Mouhamadou Sow and Wissem Hmila for the first phases of the project. Supervision: El Hadji Tamsir Diop (SENELEC) and Adrien Atayi (EPEX SPOT).',
     a_paper: 'Technical note forthcoming.', a_paper_link: 'Read the technical note', contact: 'Questions and contributions',
     footer: 'Independent educational simulator, not affiliated with the WAPP.',
-    sim_badge: 'Simulation · reconstructed data',
+    sim_badge: 'Simulation on reconstructed 2024 data, not observed prices',
     src_title: 'Where do these figures come from?',
     src_items: [
       ['Sourced', 'Installed capacities and main plants of each country, contractual capacities of several lines, gas prices in Nigeria and Ghana: public reports cited, line by line, in the documentation.'],
@@ -191,7 +191,7 @@ const ticks = (max: number, n: number) => { const step = niceCeil(max / n); cons
 function Ticker({ demo, hour, s }: { demo: Demo; hour: number; s: Strings }) {
   const h = String(hour)
   const items: ReactNode[] = [
-    <span key="s" className="text-amber uppercase tracking-wider text-xs">{s.sim_badge}</span>,
+    <span key="s" className="text-mint/60 text-xs">{s.sim_badge}</span>,
     <span key="h" className="text-amber">{hh(hour)}</span>,
     ...ZONES.map(z => <span key={z}><span className="text-mint/70">{z}</span> <span className="text-white">{Math.round(demo.prices[z]?.[h] ?? 0)}</span></span>),
     <span key="w"><span className="text-mint/70">{s.welfare}</span> <span className="text-white">{money(demo.welfare)}</span></span>,
@@ -224,8 +224,7 @@ function HourStrip({ demo, hour, onPick, dark }: { demo: Demo; hour: number; onP
 }
 
 function SimBadge({ label, light }: { label: string; light?: boolean }) {
-  const look = light ? 'border-amber/60 text-amber bg-deep/70' : 'border-warn/40 text-warn bg-warn-soft'
-  return <span className={`inline-flex items-center rounded-full border px-2.5 h-6 font-mono text-[11px] uppercase tracking-wider whitespace-nowrap ${look}`}>{label}</span>
+  return <span className={`text-sm italic ${light ? 'text-mint/70' : 'text-ink-3'}`}>{label}</span>
 }
 
 function Kicker({ children, light }: { children: ReactNode; light?: boolean }) {
@@ -253,10 +252,7 @@ function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Stri
         <div className="lg:col-span-7 min-w-0">
           {demo ? (
             <>
-              <div className="relative">
-                <NetworkMap theme="dark" prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
-                <div className="absolute top-3 left-3"><SimBadge label={s.sim_badge} light /></div>
-              </div>
+              <NetworkMap theme="dark" prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
               <div className="mt-4 flex items-center gap-4">
                 <button onClick={() => setPlay(p => !p)} className="font-mono text-sm text-amber w-8 shrink-0" aria-label={play ? 'pause' : 'play'}>{play ? '❚❚' : '▶'}</button>
                 <div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={h => { setPlay(false); setHour(h) }} dark /></div>
@@ -292,13 +288,25 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
       <path d={path(c.dem, Y(0))} fill="none" stroke="#B5443C" strokeWidth={2.5} strokeLinejoin="round" />
       <line x1={Lm} x2={W - Rm} y1={by} y2={by} stroke="#1B1B19" strokeDasharray="5 4" strokeWidth={1.2} />
       <text x={W - Rm - 4} y={by - 6} textAnchor="end" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#1B1B19">{`${s.ex_price} ${nf(c.price, 1)}`}</text>
-      {netLabel && bx2 - bx1 > 2 && (
-        <g>
-          <line x1={bx1} x2={bx2} y1={by + 14} y2={by + 14} stroke="#F2B134" strokeWidth={3} strokeLinecap="round" />
-          <line x1={bx1} x2={bx1} y1={by + 8} y2={by + 20} stroke="#F2B134" strokeWidth={2} /><line x1={bx2} x2={bx2} y1={by + 8} y2={by + 20} stroke="#F2B134" strokeWidth={2} />
-          <text x={(bx1 + bx2) / 2} y={by + 34} textAnchor="middle" fontSize="12" fontWeight="600" fill="#854F0B">{netLabel}</text>
-        </g>
-      )}
+      {netLabel && (() => {
+        const narrow = bx2 - bx1 < 12
+        const tw = netLabel.length * 7.2 + 18
+        const right = bx2 + 14 + tw <= W - Rm
+        const bx = right ? bx2 + 14 : bx1 - 14 - tw
+        return (
+          <g>
+            {narrow
+              ? <circle cx={(bx1 + bx2) / 2} cy={by} r={4.5} fill="#F2B134" stroke="#1B1B19" strokeWidth={1} />
+              : <>
+                  <line x1={bx1} x2={bx2} y1={by} y2={by} stroke="#F2B134" strokeWidth={4} strokeLinecap="round" />
+                  <line x1={bx1} x2={bx1} y1={by - 6} y2={by + 6} stroke="#F2B134" strokeWidth={2} /><line x1={bx2} x2={bx2} y1={by - 6} y2={by + 6} stroke="#F2B134" strokeWidth={2} />
+                </>}
+            <line x1={right ? bx2 : bx1} x2={right ? bx + 2 : bx + tw - 2} y1={by} y2={by + 22} stroke="#8C8B84" strokeWidth={1} />
+            <rect x={bx} y={by + 12} width={tw} height={22} rx={4} fill="#FFFFFF" stroke="#C8C6BE" />
+            <text x={bx + tw / 2} y={by + 27} textAnchor="middle" fontSize="12" fontWeight="600" fill="#854F0B">{netLabel}</text>
+          </g>
+        )
+      })()}
       <g fontSize="12" fill="#5C5B56">
         <line x1={Lm} x2={Lm + 22} y1={Tm + 2} y2={Tm + 2} stroke="#0F6E56" strokeWidth={3} /><text x={Lm + 28} y={Tm + 6}>{s.ex_supply}</text>
         <line x1={Lm + 150} x2={Lm + 172} y1={Tm + 2} y2={Tm + 2} stroke="#B5443C" strokeWidth={3} /><text x={Lm + 178} y={Tm + 6}>{s.ex_demand}</text>
