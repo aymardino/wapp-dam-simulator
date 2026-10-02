@@ -54,6 +54,7 @@ const STR: Record<string, [string, string]> = {
   scenario: ['Scénario', 'Scenario'], tab_map: ['Carte', 'Map'], tab_prices: ['Prix', 'Prices'], tab_dispatch: ['Dispatch', 'Dispatch'], tab_flows: ['Flux', 'Flows'],
   export_json: ['Résultats (JSON)', 'Results (JSON)'], export_csv: ['Prix (CSV)', 'Prices (CSV)'], live: ['En direct', 'Live'],
   p_solar: ['Solaire', 'Solar'], p_hydro: ['Hydraulique', 'Hydro'], p_baseload: ['Base thermique', 'Thermal baseload'], p_flat: ['Constant', 'Flat'], p_custom: ['Autre', 'Other'], p_peaker: ['Pointe', 'Peaking'], p_block: ['Blocs', 'Blocks'], p_demand: ['Demande acceptée', 'Accepted demand'],
+  name_hint: ['Nom affiché aux autres participants, unique dans la salle', 'Name shown to other participants, unique in the room'],
   autosave: ['Enregistré automatiquement', 'Saved automatically'],
   order_book_hint: ['Vos ordres sont remplacés à chaque enregistrement.', 'Your orders are replaced on each save.'],
 }

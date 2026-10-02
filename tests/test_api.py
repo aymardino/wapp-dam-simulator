@@ -167,3 +167,18 @@ def test_purge_old_rooms():
     assert purge_old_rooms(db, 30) == 1
     assert client.get(API + '/rooms/OLDOLD').status_code == 404
     db.close()
+
+
+def test_duplicate_name_refused_and_participant_removal():
+    r = client.post(API + '/rooms', json={'name': 'Noms'}); code, tok = r.json()['code'], r.json()['trainer_token']
+    a = client.post(API + f'/rooms/{code}/join', json={'name': 'CEB', 'zone': 'TGO'}); assert a.status_code == 201
+    assert client.post(API + f'/rooms/{code}/join', json={'name': ' ceb ', 'zone': 'BEN'}).status_code == 422
+    assert client.post(API + f'/rooms/{code}/join', json={'name': '   ', 'zone': 'BEN'}).status_code == 422
+    client.put(API + f'/rooms/{code}/orders/me', json={'supply': [{'actor': 'X', 'quantity': 10, 'price': 10}]}, headers=_auth(a.json()['token']))
+    assert client.get(API + f'/rooms/{code}').json()['counts']['supply'] == 1
+    assert client.delete(API + f"/rooms/{code}/participants/{a.json()['id']}", headers=_auth(a.json()['token'])).status_code == 403
+    assert client.delete(API + f"/rooms/{code}/participants/{a.json()['id']}", headers=_auth(tok)).status_code == 204
+    info = client.get(API + f'/rooms/{code}').json()
+    assert info['counts']['supply'] == 0 and all(p['role'] == 'trainer' for p in info['participants'])
+    assert client.get(API + f'/rooms/{code}/orders/me', headers=_auth(a.json()['token'])).status_code == 401
+    assert 'SENELEC' in client.get(API + '/reference').json()['organisations']['SEN']

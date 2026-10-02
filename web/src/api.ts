@@ -14,7 +14,7 @@ export type OrderBook = { supply: Supply[]; demand: Demand[]; blocks: Block[]; m
 export type Run = { id: number; run_at: string; welfare: number; volume: number; settings: Settings; result: any }
 export type MyResult = { run_id: number; run_at: string; participant: Participant; zone_prices: Record<string, number>; actors: any[]; blocks: any[]; mic: any[]; hours: number[]; currency: string }
 export type RefRow = { zone: string; actor: string; segment: number; quantity: number; price: number; profile?: string }
-export type Reference = { zones: string[]; lines: { from: string; to: string; ntc: number }[]; profiles: Record<string, number[]>; price_bounds: number[]; rules: Record<string, string[]>; reference_supply: RefRow[]; reference_demand: RefRow[] }
+export type Reference = { zones: string[]; lines: { from: string; to: string; ntc: number }[]; profiles: Record<string, number[]>; price_bounds: number[]; rules: Record<string, string[]>; reference_supply: RefRow[]; reference_demand: RefRow[]; organisations: Record<string, string[]> }
 
 /** Valeurs par défaut d'un nouvel ordre, tirées des tailles types de la zone dans les données de référence. */
 export function zoneDefaults(ref: Reference | null, zone: string | null) {

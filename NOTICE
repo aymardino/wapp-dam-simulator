@@ -1,0 +1,16 @@
+WAPP Day-Ahead Market Simulator
+Copyright 2026 Kodjovi Plakoo, Enrico Patanè and contributors
+Projet MS OSE 2025, Mines Paris-PSL, encadré par El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT)
+
+Ce logiciel est distribué sous la licence Apache 2.0 (fichier LICENSE).
+Les données de référence (engine/scenarios.py, docs/DONNEES_DE_REFERENCE.md) et la documentation (docs/)
+sont distribuées sous licence Creative Commons Attribution 4.0 International (CC BY 4.0).
+
+Ce produit comprend ou utilise :
+- Pyomo (BSD 3-Clause), Sandia National Laboratories
+- HiGHS (MIT), University of Edinburgh
+- FastAPI, Starlette, pydantic (MIT) ; SQLAlchemy (MIT) ; Streamlit (Apache 2.0)
+- React (MIT), Vite (MIT), Tailwind CSS (MIT), d3-geo (ISC), ECharts (Apache 2.0)
+- Fonds de carte : Natural Earth (domaine public), via world-atlas (ISC)
+« WAPP », « West African Power Pool » et le logo du WAPP appartiennent au West African Power Pool. Ce simulateur
+pédagogique est indépendant et n'est pas affilié au WAPP.

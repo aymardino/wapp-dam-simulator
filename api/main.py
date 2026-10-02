@@ -115,6 +115,12 @@ def join(body: S.JoinRequest, room: Room = Depends(get_room), db: Session = Depe
     return S.JoinResponse(**_participant_out(p).model_dump(), token=p.token, room_code=room.code)
 
 
+@app.delete(API + '/rooms/{code}/participants/{participant_id}', status_code=204, summary="Retirer un participant et ses ordres (formateur)")
+def remove_participant(participant_id: str, room: Room = Depends(get_room), _: Participant = Depends(require_trainer), db: Session = Depends(get_db)):
+    if not service.remove_participant(db, room, participant_id):
+        raise HTTPException(status_code=404, detail="Participant introuvable")
+
+
 @app.get(API + '/rooms/{code}/me', response_model=S.ParticipantOut, summary="Qui suis-je dans cette salle ?")
 def me(p: Participant = Depends(current_participant)):
     return _participant_out(p)

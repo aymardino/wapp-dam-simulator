@@ -49,6 +49,11 @@ def create_room(db: Session, name: str, trainer_name: str, lang: str):
 def join_room(db: Session, room: Room, name: str, zone, role: str):
     if role == 'trader' and zone not in ZONES:
         raise ValueError("Un trader doit choisir une zone")
+    name = ' '.join(name.split())
+    if not name:
+        raise ValueError("Le nom est vide")
+    if any(p.name.lower() == name.lower() for p in room.participants):
+        raise ValueError(f"Le nom « {name} » est déjà utilisé dans cette salle ; choisissez-en un autre")
     p = Participant(id=str(uuid.uuid4()), room_id=room.id, name=name, zone=zone if role == 'trader' else None,
                     role=role, token=new_token())
     db.add(p)
@@ -134,9 +139,21 @@ def state_snapshot(db: Session, room: Room):
                 settings=room.settings)
 
 
+def remove_participant(db: Session, room: Room, participant_id: str):
+    p = next((x for x in room.participants if x.id == participant_id), None)
+    if p is None or p.role == 'trainer':
+        return False
+    db.execute(delete(Order).where(Order.participant_id == p.id))
+    db.delete(p)
+    db.commit()
+    return True
+
+
 def reference():
+    from engine.actors import ZONE_ACTORS, CUSTOM_SENTINEL
     sup, dem = default_rows()
     return {
+        'organisations': {z: [a for a in names if a != CUSTOM_SENTINEL] for z, names in ZONE_ACTORS.items()},
         'zones': ZONES,
         'lines': [{'from': u, 'to': v, 'ntc': c} for u, v, c in LINES],
         'alpha': {'factor': ALPHA, 'lines': [line_key(u, v) for u, v in ALPHA_LINES]},

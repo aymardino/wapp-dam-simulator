@@ -149,7 +149,11 @@ Vingt et un tests reproduisent les valeurs du Livrable 2 (welfare 22 317 910 et 
 
 ## Auteurs
 
-Kodjovi Plakoo et Enrico Patanè (Mines Paris-PSL, MS OSE 2025), avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila (livrables 1 et 2). Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT). Licence : à définir avant publication.
+Kodjovi Plakoo et Enrico Patanè (Mines Paris-PSL, MS OSE 2025), avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila (livrables 1 et 2). Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT).
+
+## Licence
+
+Code sous licence [Apache 2.0](LICENSE). Données de référence et documentation sous [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attributions dans [NOTICE](NOTICE). Simulateur pédagogique indépendant, non affilié au West African Power Pool.
 
 ---
 

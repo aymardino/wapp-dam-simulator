@@ -702,12 +702,21 @@ def _mic_check(mics, seg_s, blocks, xs, y, prices, hours, withdrawn):
 # ── Séquence P1 → P1bis → P2 avec boucle PAB ──────────────────────
 def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, alpha_active,
                     solver, pricing, pab_rule, max_pab_iter, tie_rule, notes):
-    fixed_y, iterations = {}, 0
+    fixed_y, iterations, unforceable = {}, 0, set()
     while True:
         iterations += 1
         m1 = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
                            objective='welfare', fixed_y=fixed_y)
-        _solve(solver, m1, "P1 (welfare)")
+        ok, status = _try_solve(solver, m1)
+        if not ok:
+            forced = [b for b, v in fixed_y.items() if v == 1]
+            if not forced:
+                raise ClearingError(f"P1 (welfare) : pas de solution optimale ({status}).")
+            # L'acceptation forcée d'un ou plusieurs PRB (règle 'l2') est physiquement impossible : on la lève.
+            for b in forced:
+                del fixed_y[b]; unforceable.add(b)
+            notes.append("PRB non forçables (P1 infaisable), libérés : " + ", ".join(blocks[b].name for b in forced))
+            continue
         W_star = float(value(m1.welfare))
         xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
         tie_break = 'none'
@@ -744,11 +753,11 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
         block_results = _price_blocks(blocks, y, prices) if blocks else []
         to_fix = {}
         for b, br in enumerate(block_results):
-            if b in fixed_y:
-                continue
-            if br['status'] == 'PAB' and pab_rule in ('euphemia', 'l2'):
+            # Un PAB est toujours rejeté, même s'il avait été forcé à l'acceptation par la règle 'l2' (au plus
+            # deux changements par bloc, donc terminaison garantie) ; un PRB n'est forcé qu'une fois.
+            if br['status'] == 'PAB' and pab_rule in ('euphemia', 'l2') and fixed_y.get(b) != 0:
                 to_fix[b] = 0
-            elif br['status'] == 'PRB' and pab_rule == 'l2':
+            elif br['status'] == 'PRB' and pab_rule == 'l2' and b not in fixed_y and b not in unforceable:
                 to_fix[b] = 1
         if not to_fix or iterations > max_pab_iter:
             if to_fix:
@@ -765,7 +774,7 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
 def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=None, *,
                  block_rows=None, mic_rows=None, hours=None, fill_missing_zones=False,
                  pricing='complete', pab_rule='euphemia', tie_rule='prorata',
-                 max_pab_iter=10, max_mic_iter=None, reference_rows=None):
+                 max_pab_iter=None, max_mic_iter=None, reference_rows=None):
     """
     Clearing complet P1 → P1bis → P2.
 
@@ -834,6 +843,8 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     mics = _build_mic(mic_rows or [])
     if max_mic_iter is None:
         max_mic_iter = len(mics) + 1
+    if max_pab_iter is None:
+        max_pab_iter = 2 * len(blocks_all) + 1
 
     # ── NTC : override > base > défaut ────────────────────────────
     ntc = dict(NTC)

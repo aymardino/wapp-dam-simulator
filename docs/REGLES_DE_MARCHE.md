@@ -64,7 +64,7 @@ Après P2, le surplus de chaque bloc est calculé aux prix finals : Σ_h (π_h �
 
 - **PAB** (bloc accepté à perte, surplus < 0) : interdit. Règle `euphemia` (défaut) : le bloc est fixé à « rejeté » et la séquence P1 → P1bis → P2 est relancée, jusqu'à absence de PAB (au plus un bloc fixé par itération, donc au plus autant d'itérations que de blocs ; plafond paramétrable).
 - **PRB** (bloc rejeté qui aurait un surplus > 0) : toléré et signalé, comme dans EUPHEMIA. Le rejeter était optimal pour le welfare total : l'accepter aurait déplacé les prix.
-- Règle `l2` : en plus, les PRB sont fixés à « accepté » (texte du Livrable 2 §3.3). Règle `none` : détection seule.
+- Règle `l2` : en plus, les PRB sont fixés à « accepté » (texte du Livrable 2 §3.3). Un bloc ainsi forcé qui devient PAB aux nouveaux prix est finalement rejeté : la règle « pas de PAB » prime, et chaque bloc change d'état au plus deux fois, ce qui garantit l'arrêt. Règle `none` : détection seule.
 
 ## 5. Minimum Income Condition (MIC)
 

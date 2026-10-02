@@ -5,6 +5,28 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 10 — Campagne de simulations, noms de participants, licence
+
+**Ajouté**
+- `engine/checks.py` : vérification indépendante d'un résultat (prix dans les bornes, flux dans les NTC, équilibre
+  production-demande à chaque heure, somme des positions nettes nulle, accepté ≤ offert, aucun bloc
+  paradoxalement accepté, enfant accepté ⇒ parent accepté, au plus une option par groupe exclusif, chaque
+  condition de revenu minimum satisfaite ou retirée, identité du welfare).
+- `tests/test_properties.py` : cas aléatoires (segments, blocs simples, liés, exclusifs, MIC, règles de prix, de
+  blocs et de partage, scénarios, 24 h ou une heure, NTC réduites) vérifiés par ces contrôles ; 25 cas par
+  défaut, 150 exécutés avant publication (`WAPP_PROPERTY_CASES=150 pytest`), plus des cas limites.
+- Licence Apache 2.0 (`LICENSE`), `NOTICE` avec les attributions et la mention de non-affiliation au WAPP ;
+  données et documentation sous CC BY 4.0.
+- API : nom de participant unique par salle (insensible à la casse, espaces normalisés), retrait d'un participant
+  et de ses ordres par le formateur, suggestions d'organisations par zone dans l'accueil.
+
+**Corrigé (découvert par la campagne)**
+- Règle `l2` des blocs paradoxaux : un bloc forcé à l'acceptation parce que paradoxalement rejeté pouvait
+  rester paradoxalement accepté aux nouveaux prix ; il est maintenant rejeté définitivement (la règle « pas de
+  PAB » prime). Un forçage qui rend le problème infaisable (bloc impossible à absorber) est levé et noté.
+- Nombre maximal d'itérations de la boucle PAB calé sur le nombre de blocs (deux changements par bloc au plus).
+- Suite : 62 passed in 15.07s.
+
 ### Correctifs — lisibilité de la carte et identités multiples
 
 - Carte : nœuds plus petits ; Gambie, Guinée-Bissau, Sierra Leone, Liberia, Togo et Bénin sont déportés vers la

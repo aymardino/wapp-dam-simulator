@@ -47,7 +47,7 @@ export default function Hall() {
           <Panel title={t('join_room')}>
             <form onSubmit={join} className="flex flex-col gap-4">
               <Field label={t('room_code')}><input value={code} onChange={e => setCode(e.target.value)} placeholder="ABC123" required className="font-mono uppercase tracking-widest" /></Field>
-              <Field label={t('your_name')}><input value={name} onChange={e => setName(e.target.value)} placeholder="SENELEC" required /></Field>
+              <Field label={t('your_name')} hint={t('name_hint')}><input value={name} onChange={e => setName(e.target.value)} placeholder="SENELEC" required list="orgs" /><datalist id="orgs">{(role === 'trader' ? (ref?.organisations?.[zone] || []) : []).map(o => <option key={o} value={o} />)}</datalist></Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label={t('role')}><select value={role} onChange={e => setRole(e.target.value)}><option value="trader">{t('trader')}</option><option value="observer">{t('observer')}</option></select></Field>
                 {role === 'trader' && <Field label={t('zone')}><select value={zone} onChange={e => setZone(e.target.value)}>{(ref?.zones || ['SEN']).map(z => <option key={z}>{z}</option>)}</select></Field>}
