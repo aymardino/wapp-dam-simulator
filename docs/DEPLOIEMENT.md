@@ -42,8 +42,20 @@ git push -u origin main
 Avant le premier push, vérifications faites le 2 octobre 2026 et à refaire après toute modification :
 
 - `data/`, `*.db`, `.env`, `.venv/`, `web/node_modules`, `web/dist` sont ignorés (`.gitignore`) ;
-- aucun mot de passe dans le code ni dans l'historique (`git log -p -S'mot_de_passe' --all` ne doit rien renvoyer ; l'ancien mot de passe administrateur du Livrable 3 a été retiré de l'historique) ;
-- le logo du WAPP et la carte Tractebel/CEDEAO du Livrable 3 ne sont pas dans le dépôt (marque neutre `mark.svg`, carte Natural Earth générée) ;
+- aucun mot de passe dans le code ni dans l'historique : l'ancien mot de passe administrateur du Livrable 3
+  (celui de la page Administration de l'application Streamlit livrée) figure encore dans les deux premiers commits (`pages/3_Admin.py`, `README.md`, `Dockerfile`), et
+  les deux premiers commits contiennent aussi le logo du WAPP et la carte Tractebel/CEDEAO. Les retirer de
+  l'historique **avant** le premier push, depuis le dossier du projet (le dépôt n'a pas encore de remote, rien
+  n'est perdu : une branche de sauvegarde est créée d'abord) :
+
+```bash
+export ANCIEN_MDP='<ancien mot de passe administrateur>'   # à saisir, sans le laisser dans l'historique du shell
+git branch backup/avant-reecriture && FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter 'for f in README.md pages/3_Admin.py Dockerfile; do if [ -f "$f" ] && grep -q "$ANCIEN_MDP" "$f"; then LC_ALL=C sed -i "" "s/$ANCIEN_MDP/<mot-de-passe-retire>/g" "$f"; fi; done; rm -f assets/wapp_logo.png assets/wapp_map.png web/public/wapp_logo.png; true' -- main
+```
+
+  Vérifier ensuite que `git log main -p -S"$ANCIEN_MDP" | grep -c "$ANCIEN_MDP"` affiche `0`, puis supprimer la
+  sauvegarde pour qu'elle ne parte jamais sur GitHub : `git branch -D backup/avant-reecriture && rm -rf .git/refs/original && git reflog expire --expire=now --all && git gc --prune=now` ;
+- le logo du WAPP et la carte Tractebel/CEDEAO ne sont plus dans le dépôt courant (marque neutre `mark.svg`, carte Natural Earth générée) ;
 - `LICENSE`, `NOTICE` et la mention de non-affiliation sont présents.
 
 ## 4. Installer le serveur (une fois)

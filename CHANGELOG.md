@@ -28,8 +28,10 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   réseau `assets/network_map.png` générée à partir de Natural Earth (domaine public) à la place de la carte
   Tractebel/CEDEAO du Livrable 3. Les deux fichiers d'origine sont retirés du dépôt et de son historique, le
   projet n'étant pas affilié au WAPP et ces images n'étant pas libres de droits.
-- Historique git réécrit avant publication : l'ancien mot de passe administrateur du Livrable 3, présent dans
-  les deux premiers commits (`pages/3_Admin.py`, `README.md`, `Dockerfile`), est remplacé par un texte neutre.
+- À faire par l'auteur avant le premier push (commande dans `docs/DEPLOIEMENT.md`, section 3) : réécrire
+  l'historique git pour remplacer l'ancien mot de passe administrateur du Livrable 3, présent dans les deux
+  premiers commits (`pages/3_Admin.py`, `README.md`, `Dockerfile`), et retirer les images du WAPP des
+  anciens commits.
 - Suite : 65 tests.
 
 ### Étape 11 — Guides, mode « acteurs de fond », nom de domaine
