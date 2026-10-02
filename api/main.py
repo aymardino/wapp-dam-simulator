@@ -58,6 +58,7 @@ def _room_out(db: Session, room: Room):
     last = service.latest_run(db, room)
     return dict(code=room.code, name=room.name, phase=room.phase, settings=S.Settings(**room.settings),
                 ntc={service.line_key(u, v): mw for (u, v), mw in service.effective_ntc(room).items()},
+                ntc_default={service.line_key(u, v): mw for (u, v), mw in service.scenario_ntc(room).items()},
                 participants=[_participant_out(p) for p in room.participants],
                 counts=S.Counts(**service.counts(db, room)), last_run_id=last.id if last else None,
                 created_at=room.created_at)

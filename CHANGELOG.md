@@ -35,6 +35,14 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   qu'il n'existe pas de prix observés. Vocabulaire public : plus de « Livrable », « cas de référence »,
   « LP · MILP » ou « fill-or-kill » sans traduction.
 
+- Scénario par défaut des nouvelles salles : « Référence 2024 (sources publiques) », le même que la page
+  d'accueil ; le jeu du Livrable 2 reste disponible dans le sélecteur et reste le jeu de test de non-régression.
+  Le poste du formateur affiche en « défaut » les capacités du scénario choisi (`ntc_default` dans la fiche de
+  salle) et non plus celles du Livrable 2 ; test `test_default_scenario_is_reference_2024`.
+- Nouvelle marque : courbe d'offre en escalier et point d'équilibre au prix de marché (`web/public/mark.svg`,
+  `assets/mark.svg`), version horizontale avec nom et sous-titre pour les documents et LinkedIn
+  (`web/public/logo.svg`).
+
 **Corrigé**
 - Graphiques ECharts (`Chart`) : l'instance était détruite et recréée à chaque rendu du parent, d'où un
   graphique vide jusqu'au survol sur la page d'accueil (rendu toutes les 1,5 s) ; une seule instance par

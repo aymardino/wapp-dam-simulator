@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DAM simulator">
-  <circle cx="32" cy="32" r="32" fill="#0F6E56"/>
-  <g stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" fill="none">
-    <path d="M17 42 L31 21 L45 42"/><path d="M17 42 L45 42"/><path d="M31 21 L31 42"/>
-  </g>
-  <g fill="#FFFFFF"><circle cx="17" cy="42" r="4.5"/><circle cx="31" cy="21" r="4.5"/><circle cx="45" cy="42" r="4.5"/><circle cx="31" cy="42" r="3.2"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WAPP DAM Simulator">
+  <rect width="64" height="64" rx="14" fill="#0B3D30"/>
+  <!-- courbe d'offre en escalier (prix croissant) -->
+  <path d="M12 46 H22 V36 H32 V26 H42 V16 H52" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- prix de marché : ligne horizontale et point d'équilibre -->
+  <path d="M12 31 H52" stroke="#8FD3B5" stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round"/>
+  <circle cx="37" cy="31" r="5" fill="#F2B134" stroke="#0B3D30" stroke-width="2"/>
 </svg>

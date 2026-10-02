@@ -75,8 +75,12 @@ def test_trainer_settings_and_ntc(room):
     r = client.put(API + f'/rooms/{code}/settings', json={'hours': [19], 'tie_rule': 'order', 'currency': 'XOF'}, headers=_auth(tok))
     assert r.status_code == 200 and r.json()['hours'] == [19] and r.json()['tie_rule'] == 'order'
     assert client.put(API + f'/rooms/{code}/settings', json={'hours': [25]}, headers=_auth(tok)).status_code == 422
+    # capacités : celles du scénario de la salle (2024 par défaut), surchargées ligne par ligne
     r = client.put(API + f'/rooms/{code}/ntc', json={'values': {'SEN->MLI': 0}}, headers=_auth(tok))
-    assert r.status_code == 200 and r.json()['SEN->MLI'] == 0 and r.json()['NGA->BEN'] == 800
+    assert r.status_code == 200 and r.json()['SEN->MLI'] == 0 and r.json()['NGA->BEN'] == 200
+    client.put(API + f'/rooms/{code}/settings', json={'scenario': 'reference'}, headers=_auth(tok))
+    r = client.get(API + f'/rooms/{code}').json()
+    assert r['ntc']['NGA->BEN'] == 800 and r['ntc']['SEN->MLI'] == 0 and r['ntc_default']['SEN->MLI'] > 0
     assert client.put(API + f'/rooms/{code}/ntc', json={'values': {'XXX->YYY': 1}}, headers=_auth(tok)).status_code == 422
 
 
@@ -186,6 +190,7 @@ def test_duplicate_name_refused_and_participant_removal():
 
 def test_fill_mode_actors_in_room():
     r = client.post(API + '/rooms', json={'name': 'Fond'}); code, tok = r.json()['code'], r.json()['trainer_token']
+    client.put(API + f'/rooms/{code}/settings', json={'scenario': 'reference'}, headers=_auth(tok))   # acteurs du jeu Livrable 2
     tr = client.post(API + f'/rooms/{code}/join', json={'name': 'CEB', 'zone': 'TGO'}).json()
     client.put(API + f'/rooms/{code}/orders/me', json={'supply': [{'actor': 'Nangbeto', 'quantity': 30, 'price': 20, 'profile': 'hydro'}]}, headers=_auth(tr['token']))
     assert client.get(API + f'/rooms/{code}').json()['settings']['fill_mode'] == 'actors'
@@ -200,3 +205,11 @@ def test_demo_endpoint_is_cached():
     d = r1.json(); assert d['scenario'] == 'reference_2024' and len(d['hours']) == 24 and 'NGA' in d['prices'] and d['welfare'] > 0
     assert d['supply'] and d['demand'] and len(d['load']) == 24 and 'baseload' in d['profiles']
     r2 = client.get(API + '/demo'); assert r2.json()['welfare'] == d['welfare']
+
+
+def test_default_scenario_is_reference_2024():
+    r = client.post(API + '/rooms', json={'name': 'Défaut', 'trainer_name': 'F', 'lang': 'fr'}).json()
+    assert r['settings']['scenario'] == 'reference_2024'
+    assert r['ntc']['NGA->NER'] == 120 and r['ntc_default']['NGA->NER'] == 120   # capacités 2024, pas celles du Livrable 2 (300)
+    info = client.get(API + f"/rooms/{r['code']}").json()
+    assert info['ntc_default']['NGA->NER'] == 120

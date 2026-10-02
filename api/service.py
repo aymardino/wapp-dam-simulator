@@ -14,11 +14,17 @@ def line_key(u, v):
     return f"{u}->{v}"
 
 
-def effective_ntc(room: Room):
-    """{(u, v): MW} : valeurs par défaut, surchargées par celles de la salle."""
+def scenario_ntc(room: Room):
+    """{(u, v): MW} : capacités du scénario de la salle (valeurs par défaut du moteur, puis celles du scénario)."""
     ntc = dict(NTC)
-    _, _, sc_ntc = scenario_rows(room.settings.get('scenario', 'reference'), zones=[])
+    _, _, sc_ntc = scenario_rows(room.settings.get('scenario', 'reference_2024'), zones=[])
     ntc.update(sc_ntc)
+    return ntc
+
+
+def effective_ntc(room: Room):
+    """{(u, v): MW} : capacités du scénario, surchargées par celles saisies dans la salle."""
+    ntc = scenario_ntc(room)
     for k, mw in room.ntc_overrides.items():
         u, v = k.split('->')
         if (u, v) in ntc:

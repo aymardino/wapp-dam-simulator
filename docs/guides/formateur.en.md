@@ -6,7 +6,7 @@ This guide walks through a training session and explains every setting. The trai
 
 1. **Create the room** (training name, your name). The browser that creates the room becomes the trainer desk: do not lend it during the session.
 2. **Pick the horizon**: 24 hours for a full day, or a single hour (for instance 19:00, the peak) for a quick round.
-3. **Pick the scenario**: it provides the background data (plants, demands, line capacities). "Reference (Livrable 2)" and "Reference 2024 (public sources)" describe a normal network; "Hydro drought", "Nigeria–Benin line out of service", "Expensive gas" and "High demand" are for later rounds.
+3. **Pick the scenario**: it provides the background data (plants, demands, line capacities). "Reference 2024 (public sources)", the default scenario, and "Reference (Livrable 2)", the historical test set, describe a normal network; "Hydro drought", "Nigeria–Benin line out of service", "Expensive gas" and "High demand" are for later rounds.
 4. **Pick the fill mode**, which decides what happens to actors nobody plays (see §4).
 5. **Check line capacities (NTC)** if you want to create or remove a congestion.
 6. **Share the code** and let participants in.
@@ -59,7 +59,7 @@ Between rounds: "Reopen submission", change the scenario or NTC, and ask partici
 
 ## 6. Frequently asked
 
-- *Welfare is 22 million although nobody submitted.* That is the fill mode: the market ran on scenario data. The "Demonstration" banner says so.
+- *Welfare is 45 million although nobody submitted.* That is the fill mode: the market ran on scenario data. The "Demonstration" banner says so.
 - *A trader can no longer edit orders.* Submission is closed; reopen it.
 - *I want to test as a trader from my desk.* Use "Enter the floor as a trader"; both identities stay reachable from the hall.
 - *The run is refused.* The message gives the reason: order out of bounds, no order with fill disabled.

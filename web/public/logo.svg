@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 96" role="img" aria-label="WAPP DAM Simulator, implémentation ouverte de référence">
+  <rect x="16" y="16" width="64" height="64" rx="14" fill="#0B3D30"/>
+  <path d="M28 62 H38 V52 H48 V42 H58 V32 H68" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28 47 H68" stroke="#8FD3B5" stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round"/>
+  <circle cx="53" cy="47" r="5" fill="#F2B134" stroke="#0B3D30" stroke-width="2"/>
+  <text x="100" y="52" font-family="'Instrument Serif', Georgia, serif" font-size="40" fill="#0B3D30">WAPP DAM Simulator</text>
+  <text x="101" y="76" font-family="Inter, system-ui, sans-serif" font-size="14" letter-spacing="1.5" fill="#5C5B56">IMPLÉMENTATION OUVERTE DE RÉFÉRENCE · COUPLAGE DE MARCHÉ DAY-AHEAD</text>
+</svg>

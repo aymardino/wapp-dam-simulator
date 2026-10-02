@@ -113,8 +113,8 @@ export default function Desk() {
             <Panel title={t('ntc')} right={<><Button small onClick={resetNtc}>{t('reset')}</Button><Button small onClick={saveNtc}>{t('save')}</Button></>}>
               <div className="grid grid-cols-2 gap-x-6">
                 {(ref?.lines || []).map(l => { const k = `${l.from}->${l.to}`; return <div key={k} className="flex items-center justify-between gap-2 py-1 border-b border-line">
-                  <span className="font-mono text-sm">{k}</span><span className="text-xs text-ink-3 ml-auto">{l.ntc}</span>
-                  <input type="number" min={0} step={10} value={ntc[k] ?? l.ntc} onChange={e => setNtc({ ...ntc, [k]: +e.target.value })} className="w-24 h-8" />
+                  <span className="font-mono text-sm">{k}</span><span className="text-xs text-ink-3 ml-auto">{room?.ntc_default?.[k] ?? l.ntc}</span>
+                  <input type="number" min={0} step={10} value={ntc[k] ?? room?.ntc_default?.[k] ?? l.ntc} onChange={e => setNtc({ ...ntc, [k]: +e.target.value })} className="w-24 h-8" />
                 </div> })}
               </div>
             </Panel>

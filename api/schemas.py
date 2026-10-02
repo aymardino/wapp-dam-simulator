@@ -33,7 +33,7 @@ class Settings(BaseModel):
     currency: str = Field(default='USD', max_length=8)
     lang: Lang = 'fr'
     market_date: str = Field(default='', max_length=10)
-    scenario: Scenario = 'reference'
+    scenario: Scenario = 'reference_2024'
 
     @field_validator('hours')
     @classmethod
@@ -93,6 +93,7 @@ class RoomOut(BaseModel):
     phase: Phase
     settings: Settings
     ntc: Dict[str, float]
+    ntc_default: Dict[str, float] = {}
     participants: List[ParticipantOut]
     counts: Counts
     last_run_id: Optional[int]

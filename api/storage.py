@@ -40,7 +40,7 @@ def default_settings(lang='fr'):
         'currency': 'USD',
         'lang': lang,
         'market_date': (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'),
-        'scenario': 'reference',
+        'scenario': 'reference_2024',
     }
 
 

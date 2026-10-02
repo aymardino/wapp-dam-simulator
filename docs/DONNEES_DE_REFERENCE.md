@@ -1,6 +1,6 @@
 # Données de référence : sources et hypothèses
 
-*Jeu « Référence 2024 (sources publiques) », scénario `reference_2024` dans `engine/scenarios.py`. Version du 2 octobre 2026. Le jeu du Livrable 2 (`reference`) reste le jeu par défaut des tests ; celui-ci est à valider avec SENELEC et le centre de coordination du WAPP avant de devenir le défaut.*
+*Jeu « Référence 2024 (sources publiques) », scénario `reference_2024` dans `engine/scenarios.py`. Version du 2 octobre 2026. Scénario par défaut des salles et du site public depuis le 2 octobre 2026 ; le jeu du Livrable 2 (`reference`) reste le jeu de test de non-régression. Les valeurs marquées (est.) sont à valider avec SENELEC et le centre de coordination du WAPP.*
 
 **Principe.** Chaque zone offre ses centrales disponibles par technologie (quantité en MW disponible, prix en USD/MWh proche du coût variable) et demande sa pointe (quantité en MW à la pointe, modulée par le profil de charge horaire ; prix d'achat décroissants par tranche : 220 à 230 pour la base, 160 à 180 pour la tranche suivante, 110 à 130 pour la dernière, sous le plafond de 500). Les valeurs sans source directe sont marquées **(est.)**.
 
@@ -60,4 +60,4 @@ La contrainte d'interdépendance α = 0,7 sur GHA→BFA et CIV→BFA est conserv
 - Pointes de demande 2023-2024 pour SEN, CIV, BFA, MLI, NER, BEN, TGO, GIN : données des compagnies (rapports annuels) ou du centre de coordination du WAPP.
 - Capacités d'échange réelles des lignes marquées (est.), en particulier le corridor Ghana–Togo–Bénin et la boucle OMVG ; le WAPP calcule les NTC quotidiennement (réunion du 13 février 2026).
 - Coûts variables par centrale (contrats d'achat), si SENELEC et EPEX peuvent les partager sous forme agrégée.
-- Dès validation, faire de `reference_2024` le jeu par défaut et recaler les tests de non-régression.
+- `reference_2024` est déjà le scénario par défaut des salles ; dès validation, recaler les valeurs et, si besoin, les tests de non-régression.
