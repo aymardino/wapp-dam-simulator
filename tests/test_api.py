@@ -131,7 +131,7 @@ def test_scenarios_and_csv_export(room):
     code, tok = room['code'], room['trainer_token']
     sc = client.get(API + '/scenarios?lang=en').json()
     keys = [x['key'] for x in sc]
-    assert keys[0] == 'reference' and 'reference_2024' in keys and 'secheresse_hydro' in keys
+    assert keys[0] == 'reference_2024' and 'reference' not in keys and 'secheresse_hydro' in keys   # jeu L2 masqué
     assert next(x for x in sc if x['key'] == 'secheresse_hydro')['name'] == 'Hydro drought'
     assert client.put(API + f'/rooms/{code}/settings', json={'scenario': 'inconnu'}, headers=_auth(tok)).status_code == 422
     r = client.put(API + f'/rooms/{code}/settings', json={'scenario': 'ligne_nga_ben', 'fill_missing': True}, headers=_auth(tok))

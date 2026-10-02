@@ -43,6 +43,11 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   `assets/mark.svg`), version horizontale avec nom et sous-titre pour les documents et LinkedIn
   (`web/public/logo.svg`).
 
+- Un seul jeu de base : les quatre variantes pédagogiques (sécheresse hydraulique, ligne Nigeria–Bénin
+  indisponible, gaz cher, forte demande) dérivent désormais du scénario Référence 2024 et non plus du jeu du
+  Livrable 2 ; ce dernier, renommé « Jeu de test (Livrable 2) », est masqué des listes proposées aux
+  formateurs (`scenario_list(include_hidden=True)` pour l'obtenir) et reste le jeu des tests de non-régression.
+
 **Corrigé**
 - Graphiques ECharts (`Chart`) : l'instance était détruite et recréée à chaque rendu du parent, d'où un
   graphique vide jusqu'au survol sur la page d'accueil (rendu toutes les 1,5 s) ; une seule instance par
