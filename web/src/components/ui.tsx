@@ -71,7 +71,7 @@ export function LangToggle({ dark }: { dark?: boolean }) {
   )
 }
 
-export function Header({ title, code, meta, phase, switchTo }: { title: string; code?: string; meta?: ReactNode; phase?: 'submission' | 'cleared'; switchTo?: { label: string; to: string } }) {
+export function Header({ title, code, meta, phase, switchTo, extra }: { title: string; code?: string; meta?: ReactNode; phase?: 'submission' | 'cleared'; switchTo?: { label: string; to: string }; extra?: ReactNode }) {
   const t = useT()
   return (
     <header className="bg-brand text-white">
@@ -85,6 +85,7 @@ export function Header({ title, code, meta, phase, switchTo }: { title: string; 
           </div>
         </div>
         <div className="flex items-center gap-4 shrink-0">
+          {extra}
           {switchTo && <Link to={switchTo.to} className="text-sm text-brand-ink hover:text-white underline underline-offset-4">{switchTo.label}</Link>}
           {phase && <Badge tone={phase === 'submission' ? 'up' : 'neutral'}>{phase === 'submission' ? t('phase_submission') : t('phase_cleared')}</Badge>}
           <LangToggle dark />

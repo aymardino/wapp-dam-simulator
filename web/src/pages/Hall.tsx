@@ -23,7 +23,7 @@ export default function Hall() {
     try {
       const c = code.trim().toUpperCase(); const p = await api.join(c, name, role === 'trader' ? zone : null, role)
       const info = await api.room(c).catch(() => null)
-      session.save(c, p.token, role, info?.name); nav(`/room/${c}`)
+      session.save(c, p.token, role, info?.name); session.addMember(c, { id: p.id, name: p.name, zone: p.zone, role: p.role, token: p.token }); nav(`/room/${c}`)
     } catch (ex: any) { setErr(ex.message) }
   }
 
@@ -61,7 +61,7 @@ export default function Hall() {
             <table><thead><tr><th>{t('room_name')}</th><th>{t('room_code')}</th><th>{t('role')}</th><th /></tr></thead><tbody>
               {rooms.map(r => <tr key={r.code}>
                 <td className="font-medium">{r.name}</td><td className="font-mono tracking-wider">{r.code}</td>
-                <td className="flex gap-2 py-2">{r.trainer && <Badge tone="brand">{t('as_trainer')}</Badge>}{r.member && <Badge tone="accent">{t('as_member')}</Badge>}</td>
+                <td className="py-2"><div className="flex flex-wrap gap-2">{r.trainer && <Badge tone="brand">{t('as_trainer')}</Badge>}{session.members(r.code).map(m => <Badge key={m.id} tone="accent">{m.name}{m.zone ? ` · ${m.zone}` : ''}</Badge>)}</div></td>
                 <td className="text-right whitespace-nowrap">
                   {r.trainer && <Link className="text-accent font-medium mr-4" to={`/desk/${r.code}`}>{t('as_trainer')} →</Link>}
                   {r.member && <Link className="text-accent font-medium mr-4" to={`/room/${r.code}`}>{t('as_member')} →</Link>}

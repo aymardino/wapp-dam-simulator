@@ -5,6 +5,14 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Correctifs — lisibilité de la carte et identités multiples
+
+- Carte : nœuds plus petits ; Gambie, Guinée-Bissau, Sierra Leone, Liberia, Togo et Bénin sont déportés vers la
+  mer avec un trait de rappel vers leur position réelle, pour ne plus se chevaucher.
+- Un même navigateur peut mémoriser plusieurs identités de trader ou d'observateur pour une salle (utile pour
+  tester seul) : liste dans « Vos salles » sur l'accueil, sélecteur dans le bandeau de la salle de marché.
+  Les liens de bascule formateur / trader n'apparaissent que sur l'appareil qui détient le jeton correspondant.
+
 ### Étape 9 — Données de référence sourcées et valeurs par défaut réalistes
 
 **Ajouté**

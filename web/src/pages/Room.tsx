@@ -16,7 +16,8 @@ const hh = (h: number) => `H${String(h).padStart(2, '0')}`
 
 export default function Room() {
   const { code = '' } = useParams(); const t = useT()
-  const token = session.token(code, 'member'); const trainerToken = session.token(code, 'trainer')
+  const members = session.members(code); const [memberId, setMemberId] = useState<string | null>(session.current(code)?.id ?? null)
+  const token = members.find(m => m.id === memberId)?.token ?? session.token(code, 'member'); const trainerToken = session.token(code, 'trainer')
   const [room, setRoom] = useState<RoomInfo | null>(null)
   const [ref, setRef] = useState<Reference | null>(null)
   const [me, setMe] = useState<Participant | null>(null)
@@ -83,7 +84,8 @@ export default function Room() {
     <div className="min-h-screen">
       <Header title={room?.name || code} code={code} phase={room?.phase}
         meta={`${t('delivery')} ${room?.settings.market_date || ''} · ${room?.settings.hours.length === 24 ? t('hours24') : hh(room?.settings.hours[0] ?? 0)} · ${me?.name || ''}${me?.zone ? ` (${me.zone})` : ''}`}
-        switchTo={trainerToken ? { label: t('switch_desk'), to: `/desk/${code}` } : undefined} />
+        switchTo={trainerToken ? { label: t('switch_desk'), to: `/desk/${code}` } : undefined}
+        extra={members.length > 1 ? <select value={memberId ?? ''} onChange={e => { session.setCurrent(code, e.target.value); setMemberId(e.target.value); setBook(EMPTY); setMine(null) }} className="h-8 text-sm bg-brand-2 text-white border-brand-ink/40">{members.map(m => <option key={m.id} value={m.id}>{m.name}{m.zone ? ` · ${m.zone}` : ''}</option>)}</select> : undefined} />
       <main className="p-5 grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,5fr)_minmax(0,3fr)]">
         <Panel title={<>{t('my_orders')} {me?.zone && <Badge tone="accent">{me.zone}</Badge>}</>}
           right={open ? <><span className="text-sm text-ink-3">{savedAt ? `${t('saved_at')} ${savedAt}` : ''}</span><Button primary onClick={save}>{t('save')}</Button></> : <Badge>{t('closed_hint')}</Badge>}>

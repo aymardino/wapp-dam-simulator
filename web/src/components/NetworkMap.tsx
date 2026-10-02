@@ -10,6 +10,9 @@ const NODES: Record<string, [number, number]> = {
 }
 const LINES: [string, string][] = [['NGA', 'BEN'], ['NGA', 'NER'], ['BEN', 'TGO'], ['TGO', 'GHA'], ['GHA', 'CIV'], ['GHA', 'BFA'], ['CIV', 'BFA'], ['CIV', 'MLI'], ['CIV', 'LBR'], ['LBR', 'SLE'], ['SLE', 'GIN'], ['GIN', 'GNB'], ['GNB', 'GMB'], ['GMB', 'SEN'], ['SEN', 'MLI']]
 const W = 560, H = 340
+const R = 14
+/** Décalage (unités SVG) des nœuds des petits pays, vers la mer, pour éviter les chevauchements. */
+const OFFSET: Record<string, [number, number]> = { GMB: [-30, 2], GNB: [-24, 24], TGO: [-4, 34], BEN: [14, 40], SLE: [-16, 8], LBR: [-8, 18] }
 const EXTENT: any = { type: 'Polygon', coordinates: [[[-18.5, 3.5], [-18.5, 24.5], [16.5, 24.5], [16.5, 3.5], [-18.5, 3.5]]] }  // anneau horaire (convention d3-geo)
 
 function color(p: number, lo: number, hi: number) {
@@ -20,13 +23,18 @@ function color(p: number, lo: number, hi: number) {
 }
 
 export default function NetworkMap({ prices, flows, ntc, hour, selected, unit }: { prices: Record<string, Record<string, number>>; flows: Record<string, Record<string, number>>; ntc: Record<string, number>; hour: number; selected?: string | null; unit: string }) {
-  const { paths, pos } = useMemo(() => {
+  const { paths, pos, anchor } = useMemo(() => {
     const projection = geoMercator().fitExtent([[6, 6], [W - 6, H - 30]], EXTENT)
     const path = geoPath(projection)
     const paths: { id: string; member: boolean; d: string }[] = (westAfrica as any).features.map((f: any) => ({ id: String(f.id), member: !!f.properties.member, d: path(f) || '' }))
     const pos: Record<string, [number, number]> = {}
-    for (const [z, ll] of Object.entries(NODES)) { const p = projection(ll as [number, number]); if (p) pos[z] = [p[0], p[1]] }
-    return { paths, pos }
+    const anchor: Record<string, [number, number]> = {}
+    for (const [z, ll] of Object.entries(NODES)) {
+      const p = projection(ll as [number, number]); if (!p) continue
+      anchor[z] = [p[0], p[1]]
+      const o = OFFSET[z] || [0, 0]; pos[z] = [p[0] + o[0], p[1] + o[1]]
+    }
+    return { paths, pos, anchor }
   }, [])
   const h = String(hour)
   const vals = Object.keys(NODES).map(z => prices[z]?.[h] ?? 0)
@@ -55,11 +63,13 @@ export default function NetworkMap({ prices, flows, ntc, hour, selected, unit }:
       })}
       {Object.entries(pos).map(([z, [x, y]]) => {
         const p = prices[z]?.[h]; const c = color(p ?? lo, lo, hi); const isSel = selected === z
+        const [ax, ay] = anchor[z]; const moved = OFFSET[z] != null
         return (
           <g key={z}>
-            <circle cx={x} cy={y} r={isSel ? 20 : 17} fill={c.fill} stroke={isSel ? '#0F6E56' : '#FFFFFF'} strokeWidth={isSel ? 3 : 2} />
-            <text x={x} y={y - 3} textAnchor="middle" fontSize="9.5" fontWeight="600" fill={c.dark ? '#FFFFFF' : '#0B3D30'}>{z}</text>
-            <text x={x} y={y + 8} textAnchor="middle" fontSize="9" fontFamily="JetBrains Mono, monospace" fill={c.dark ? '#D7E8E1' : '#0B3D30'}>{p == null ? '—' : Math.round(p)}</text>
+            {moved && <><line x1={ax} y1={ay} x2={x} y2={y} stroke="#1B1B19" strokeWidth={0.8} strokeOpacity={0.6} /><circle cx={ax} cy={ay} r={1.8} fill="#1B1B19" /></>}
+            <circle cx={x} cy={y} r={isSel ? R + 3 : R} fill={c.fill} stroke={isSel ? '#0F6E56' : '#FFFFFF'} strokeWidth={isSel ? 2.5 : 1.5} />
+            <text x={x} y={y - 2.5} textAnchor="middle" fontSize="8.5" fontWeight="600" fill={c.dark ? '#FFFFFF' : '#0B3D30'}>{z}</text>
+            <text x={x} y={y + 7} textAnchor="middle" fontSize="8" fontFamily="JetBrains Mono, monospace" fill={c.dark ? '#D7E8E1' : '#0B3D30'}>{p == null ? '—' : Math.round(p)}</text>
             <title>{`${z} : ${p == null ? '—' : p.toFixed(1)} ${unit}`}</title>
           </g>
         )

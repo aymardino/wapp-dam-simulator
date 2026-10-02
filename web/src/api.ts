@@ -29,12 +29,25 @@ export function zoneDefaults(ref: Reference | null, zone: string | null) {
 
 /** Un jeton par salle et par rôle : un formateur peut aussi rejoindre sa propre salle comme trader depuis le même navigateur. */
 export type Role2 = 'trainer' | 'member'
+export type Member = { id: string; name: string; zone: string | null; role: string; token: string }
 export const session = {
-  token: (code: string, role: Role2) => localStorage.getItem(`wapp:${code}:${role}:token`),
+  token: (code: string, role: Role2) => role === 'trainer' ? localStorage.getItem(`wapp:${code}:trainer:token`) : (session.current(code)?.token ?? null),
   save: (code: string, token: string, role: string, name?: string) => {
-    localStorage.setItem(`wapp:${code}:${role === 'trainer' ? 'trainer' : 'member'}:token`, token)
+    if (role === 'trainer') localStorage.setItem(`wapp:${code}:trainer:token`, token)
     if (name) localStorage.setItem(`wapp:${code}:name`, name)
   },
+  /** Identités de trader ou d'observateur mémorisées pour une salle (plusieurs possibles sur un même navigateur). */
+  members: (code: string): Member[] => { try { return JSON.parse(localStorage.getItem(`wapp:${code}:members`) || '[]') } catch { return [] } },
+  addMember: (code: string, m: Member) => {
+    const list = session.members(code).filter(x => x.id !== m.id); list.push(m)
+    localStorage.setItem(`wapp:${code}:members`, JSON.stringify(list)); localStorage.setItem(`wapp:${code}:member:current`, m.id)
+    localStorage.setItem(`wapp:${code}:member:token`, m.token)
+  },
+  current: (code: string): Member | null => {
+    const list = session.members(code); if (!list.length) return null
+    const id = localStorage.getItem(`wapp:${code}:member:current`); return list.find(x => x.id === id) || list[list.length - 1]
+  },
+  setCurrent: (code: string, id: string) => localStorage.setItem(`wapp:${code}:member:current`, id),
   rooms: (): { code: string; name: string; trainer: boolean; member: boolean }[] => {
     const out: Record<string, { code: string; name: string; trainer: boolean; member: boolean }> = {}
     for (let i = 0; i < localStorage.length; i++) {
@@ -45,7 +58,7 @@ export const session = {
     }
     return Object.values(out)
   },
-  forget: (code: string) => ['trainer', 'member'].forEach(r => localStorage.removeItem(`wapp:${code}:${r}:token`)),
+  forget: (code: string) => ['trainer:token', 'member:token', 'members', 'member:current', 'name'].forEach(k => localStorage.removeItem(`wapp:${code}:${k}`)),
 }
 
 async function call<T>(path: string, init: RequestInit = {}, token?: string | null): Promise<T> {
