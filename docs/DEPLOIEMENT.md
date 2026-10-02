@@ -11,7 +11,7 @@ Internet ──HTTPS 443──▶ Caddy (certificat Let's Encrypt automatique, r
                                               └── volume wapp-data : data/rooms.db (salles, ordres, clearings)
 ```
 
-Une seule image Docker (`Dockerfile.app`) compile le front React et emballe l'API ; `docker-compose.yml` l'assemble avec Caddy. Le site vitrine est servi à `/`, l'application (hall des salles) à `/app`, l'API à `/api/v1`, sa documentation à `/docs`.
+Une seule image Docker (`Dockerfile.app`) compile le front React et emballe l'API ; `docker-compose.yml` l'assemble avec Caddy sur un serveur, `render.yaml` la déploie sur Render (section 4). Le site vitrine est servi à `/`, l'application (hall des salles) à `/app`, l'API à `/api/v1`, sa documentation à `/docs`.
 
 ## 2. Ce qu'il faut acheter
 
@@ -59,7 +59,20 @@ git branch backup/avant-reecriture && FILTER_BRANCH_SQUELCH_WARNING=1 git filter
 - le logo du WAPP et la carte Tractebel/CEDEAO ne sont plus dans le dépôt courant (marque neutre `mark.svg`, carte Natural Earth générée) ;
 - `LICENSE`, `NOTICE` et la mention de non-affiliation sont présents.
 
-## 4. Installer le serveur (une fois)
+## 4. Option A : Render (plateforme gérée, recommandé si vous y avez déjà un compte)
+
+Render construit l'image `Dockerfile.app` depuis GitHub et la met en ligne avec HTTPS ; aucune machine à administrer. Le fichier `render.yaml` à la racine décrit tout (service web Docker, disque persistant pour les salles, contrôle de santé, variables).
+
+1. Pousser le dépôt sur GitHub (section 3).
+2. Dans le tableau de bord Render : **New → Blueprint**, choisir le dépôt, valider. Render crée le service `wapp-dam-simulator` avec le plan Starter et un disque de 1 Go monté sur `/app/data`. La première construction prend 3 à 5 minutes (compilation du front puis installation de Python).
+   Sans Blueprint : **New → Web Service → le dépôt → Runtime Docker**, *Dockerfile path* `Dockerfile.app`, *Health check path* `/api/v1/health`, puis onglet *Disks* : ajouter un disque monté sur `/app/data`, et onglet *Environment* : les variables de `.env.example`.
+3. Vérifier `https://wapp-dam-simulator.onrender.com/api/v1/health`, puis créer une salle et lancer un clearing.
+4. Nom de domaine : *Settings → Custom Domains → Add* `wapp-dam-simulator.org` et `www.wapp-dam-simulator.org`. Render affiche les enregistrements DNS à créer chez le registrar (un enregistrement A ou ALIAS pour l'apex, un CNAME pour www) et obtient le certificat tout seul. Mettre ensuite le domaine dans `WAPP_CORS_ORIGINS` (déjà le cas dans `render.yaml`).
+5. Mises à jour : chaque `git push` sur `main` redéploie (*autoDeploy*). Sauvegardes : *Disks → Snapshots* (quotidiens, conservés 7 jours) ; pour une copie locale, `render ssh` puis `sqlite3 /app/data/rooms.db .dump`.
+
+Points d'attention : le plan Free n'accepte pas de disque (les salles seraient perdues à chaque redémarrage) et endort le service après quinze minutes d'inactivité ; prendre le plan Starter (7 $/mois, plus 0,25 $/mois le disque). Avec un disque attaché, un déploiement coupe le service quelques secondes. Le conteneur écoute sur le port fourni par Render (`PORT`), l'image gère les deux cas.
+
+## 4 bis. Option B : serveur virtuel (une fois)
 
 1. Chez le registrar, créer deux enregistrements DNS vers l'adresse IPv4 du serveur : `A @` et `A www`. Compter jusqu'à une heure de propagation.
 2. Se connecter au serveur et lancer le script d'installation (il installe Docker et le pare-feu, clone le dépôt, crée `.env`, démarre les services) :
@@ -96,9 +109,9 @@ Le fichier `/opt/wapp/app/.env` contient les réglages (modèle dans `.env.examp
 
 Le serveur ne demande aucune maintenance quotidienne : Caddy renouvelle le certificat, l'API purge les salles inactives, Docker redémarre les services après un redémarrage de la machine. Prévoir `apt upgrade` de temps en temps.
 
-### Plateformes gérées (sans serveur à administrer)
+### Autres plateformes gérées
 
-Render, Fly.io ou Railway déploient directement depuis GitHub avec `Dockerfile.app` ; prévoir un disque persistant monté sur `/app/data` (ou `WAPP_API_DATABASE_URL` vers un Postgres géré, avec `psycopg[binary]` dans l'image) et définir `WAPP_CORS_ORIGINS`. Le nom de domaine se rattache depuis leur console. Streamlit Community Cloud ne convient pas (il n'héberge que des applications Streamlit).
+Fly.io ou Railway fonctionnent comme Render avec `Dockerfile.app` : prévoir un disque persistant monté sur `/app/data` (ou `WAPP_API_DATABASE_URL` vers un Postgres géré, avec `psycopg[binary]` dans l'image) et définir `WAPP_CORS_ORIGINS`. Streamlit Community Cloud ne convient pas (il n'héberge que des applications Streamlit).
 
 ## 6. Avant d'annoncer le site
 

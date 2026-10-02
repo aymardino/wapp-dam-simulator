@@ -8,6 +8,10 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 ### Étape 13 — Site vitrine, deuxième version : identité propre, explorateur de zone, correctifs
 
 **Ajouté**
+- Déploiement Render : `render.yaml` (Blueprint : service Docker, disque persistant sur `/app/data`, contrôle de
+  santé, variables), procédure dans `docs/DEPLOIEMENT.md` ; l'image écoute sur `PORT` si la plateforme le
+  fournit (8000 sinon) et tourne en root dans le conteneur (disques Render montés pour root), contrôle de
+  santé dans `deploy/healthcheck.py`.
 - Nouvelle page d'accueil (`web/src/pages/Landing.tsx`) avec une identité distincte de l'application : titres en
   serif éditoriale (Instrument Serif), bandeau de cotations défilant (prix des 14 zones à l'heure courante,
   welfare, volume, lignes saturées), carte sombre « salle de contrôle » pilotée par un sélecteur d'heure en
