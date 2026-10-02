@@ -10,6 +10,7 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 - Reference documentation in English: `README.md`, `docs/MARKET_RULES.md`, `docs/ARCHITECTURE.md`, `docs/REFERENCE_DATA.md`, `docs/DEPLOYMENT.md`, `NOTICE`, this changelog. French versions kept in `README.fr.md` and `docs/fr/` (rules, architecture, data, deployment, changelog). The trainer and trader guides remain bilingual in `docs/guides/`.
 - Internal project notes (audit, valorisation plan) moved out of the public tree (`private/`, ignored by git).
 - Landing page: the "simulation" notices are plain captions instead of amber pills; the explorer's import / export annotation is drawn as a white label beside the curves (a single marker when the volume is small) instead of overlapping the crossing.
+- Explorer: white section background, wider text column and narrower chart, fixed 0–500 $/MWh price axis (the market's regulatory bounds) so that every zone is drawn in the same frame.
 - The git history was rewritten before publication (3 October 2026) to remove a former default administrator password and two images that were not free of rights.
 
 ### Step 13 — Landing page, second version: own identity, zone explorer, fixes

@@ -33,7 +33,7 @@ const L = {
     loading: 'Calcul du cas de référence…', demo_err: 'Le serveur de démonstration ne répond pas.',
     ex_kicker: 'Explorer', ex_title: 'Pourquoi ce prix, dans cette zone, à cette heure',
     ex_lead: 'Les ordres du scénario de démonstration (centrales et demande de la zone, données 2024 reconstituées) forment une courbe d’offre et une courbe de demande. Le prix zonal ne se lit pas à leur croisement : le réseau déplace l’équilibre par les importations et les exportations.',
-    ex_supply: 'Offre (centrales)', ex_demand: 'Demande (charge)', ex_price: 'prix zonal', ex_export: 'export', ex_import: 'import',
+    ex_cap: 'plafond réglementaire 500', ex_supply: 'Offre (centrales)', ex_demand: 'Demande (charge)', ex_price: 'prix zonal', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Ordres de la zone à l’heure choisie', ex_accepted: 'retenu', ex_marginal: 'marginal', ex_rejected: 'hors marché',
     ex_prices_title: 'Les quatorze prix sur vingt-quatre heures', ex_prices_hint: 'Prix simulés sur le scénario de démonstration, pas des prix observés. Une ligne par zone, une colonne par heure : les zones de même couleur partagent le même prix, un trait sépare les groupes isolés par une ligne saturée. Cliquez une zone pour l’explorer.',
     m_kicker: 'Le moteur', m_title: 'Trois questions, trois programmes, dans cet ordre',
@@ -98,7 +98,7 @@ const L = {
     loading: 'Computing the reference case…', demo_err: 'The demonstration server is not responding.',
     ex_kicker: 'Explore', ex_title: 'Why this price, in this zone, at this hour',
     ex_lead: 'The demonstration scenario’s orders (the zone’s plants and demand, reconstructed 2024 data) form a supply curve and a demand curve. The zonal price is not read at their crossing: the network shifts the balance through imports and exports.',
-    ex_supply: 'Supply (plants)', ex_demand: 'Demand (load)', ex_price: 'zonal price', ex_export: 'export', ex_import: 'import',
+    ex_cap: 'regulatory cap 500', ex_supply: 'Supply (plants)', ex_demand: 'Demand (load)', ex_price: 'zonal price', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Orders of the zone at the chosen hour', ex_accepted: 'accepted', ex_marginal: 'marginal', ex_rejected: 'out of market',
     ex_prices_title: 'Fourteen prices over twenty-four hours', ex_prices_hint: 'Simulated prices on the demonstration scenario, not observed prices. One row per zone, one column per hour: zones sharing a colour share a price, a rule separates groups isolated by a saturated line. Click a zone to explore it.',
     m_kicker: 'The engine', m_title: 'Three questions, three programs, in that order',
@@ -270,10 +270,10 @@ function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Stri
 }
 
 function CurveChart({ c, s }: { c: Curves; s: Strings }) {
-  const W = 760, H = 400, Lm = 56, Rm = 24, Tm = 24, Bm = 44
+  const W = 760, H = 460, Lm = 56, Rm = 24, Tm = 24, Bm = 44
   const totalS = c.sup.reduce((a, r) => a + r.qty, 0), totalD = c.dem.reduce((a, r) => a + r.qty, 0)
   const xMax = niceCeil(Math.max(totalS, totalD, c.demAt + Math.abs(c.net), 10) * 1.08)
-  const yMax = niceCeil(Math.max(...c.sup.map(r => r.price), ...c.dem.map(r => r.price), c.price, 50) * 1.1)
+  const yMax = 500   // regulatory price bounds of the market: the same frame for every zone
   const X = (q: number) => Lm + (q / xMax) * (W - Lm - Rm), Y = (p: number) => Tm + (1 - p / yMax) * (H - Tm - Bm)
   const path = (segs: Seg[], endY: number) => { let x = 0; const d: string[] = []; segs.forEach((r, i) => { d.push(i === 0 ? `M${X(0)} ${Y(r.price)}` : `L${X(x)} ${Y(r.price)}`); x += r.qty; d.push(`L${X(x)} ${Y(r.price)}`) }); if (segs.length) d.push(`L${X(x)} ${endY}`); return d.join(' ') }
   const bx1 = X(Math.min(c.demAt, c.demAt + c.net)), bx2 = X(Math.max(c.demAt, c.demAt + c.net)); const by = Y(c.price)
@@ -284,6 +284,7 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
       {ticks(xMax, 5).map(v => <text key={`x${v}`} x={X(v)} y={H - Bm + 18} textAnchor="middle" fontSize="11" fontFamily="JetBrains Mono, monospace" fill="#8C8B84">{nf(v)}</text>)}
       <text x={W - Rm} y={H - 6} textAnchor="end" fontSize="11" fill="#5C5B56">MW</text>
       <text x={Lm - 8} y={Tm - 8} textAnchor="end" fontSize="11" fill="#5C5B56">$/MWh</text>
+      <text x={W - Rm} y={Y(yMax) - 6} textAnchor="end" fontSize="11" fill="#8C8B84">{s.ex_cap}</text>
       <path d={path(c.sup, Y(yMax))} fill="none" stroke="#0F6E56" strokeWidth={2.5} strokeLinejoin="round" />
       <path d={path(c.dem, Y(0))} fill="none" stroke="#B5443C" strokeWidth={2.5} strokeLinejoin="round" />
       <line x1={Lm} x2={W - Rm} y1={by} y2={by} stroke="#1B1B19" strokeDasharray="5 4" strokeWidth={1.2} />
@@ -341,10 +342,10 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
   const [zone, setZone] = useState('SEN'); const [hour, setHour] = useState(19)
   const c = useMemo(() => zoneCurves(demo, zone, hour), [demo, zone, hour])
   return (
-    <section id="explorer" className="landing bg-page">
+    <section id="explorer" className="landing bg-surface border-b border-line">
       <div className="wrap py-20">
-        <div className="grid lg:grid-cols-12 gap-x-12 gap-y-10">
-          <div className="lg:col-span-4 min-w-0">
+        <div className="grid lg:grid-cols-12 gap-x-16 gap-y-10">
+          <div className="lg:col-span-5 min-w-0">
             <Kicker>{s.ex_kicker}</Kicker>
             <h2 className="mt-4">{s.ex_title}</h2>
             <p className="text-ink-2 text-lg mt-5">{s.ex_lead}</p>
@@ -354,7 +355,7 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
             <div className="mt-6 flex items-center gap-4"><div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={setHour} /></div><div className="font-mono text-xl w-14 text-right">{hh(hour)}</div></div>
             <p className="mt-8 text-base leading-relaxed text-ink border-l-2 border-amber pl-4">{sentence(c, zone, hour, lang)}</p>
           </div>
-          <div className="lg:col-span-8 min-w-0">
+          <div className="lg:col-span-7 min-w-0">
             <div className="bg-surface border border-line rounded-lg p-4 md:p-6">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2"><span className="font-display text-2xl">{ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]} <span className="font-mono text-sm text-ink-3">{zone} · {hh(hour)}</span></span><SimBadge label={s.sim_badge} /></div>
               <CurveChart c={c} s={s} />
