@@ -6,7 +6,7 @@ import { Badge, Button, ErrorBox, Field, Section, Stat, TopBar } from '../compon
 
 export default function Desk() {
   const { code = '' } = useParams(); const t = useT()
-  const token = session.token(code)
+  const token = session.token(code, 'trainer')
   const [room, setRoom] = useState<RoomInfo | null>(null)
   const [ref, setRef] = useState<Reference | null>(null)
   const [orders, setOrders] = useState<(OrderBook & { participant: Participant })[]>([])
@@ -25,7 +25,7 @@ export default function Desk() {
   }, [code, token])
   useEffect(() => { api.reference().then(setRef); load(); const id = setInterval(load, 10000); return () => clearInterval(id) }, [load])
 
-  if (!token || session.role(code) !== 'trainer') return <div className="p-8">{t('desk')} : <a className="text-accent" href="/">/</a></div>
+  if (!token) return <div className="p-8">{t('desk')} : <a className="text-accent" href="/">/</a></div>
   const cur = s?.currency || 'USD'
 
   const saveSettings = async () => { if (!s) return; setErr(null); try { setS(await api.settings(code, token, s)) } catch (ex: any) { setErr(ex.message) } }

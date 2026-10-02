@@ -9,7 +9,7 @@ const EMPTY: OrderBook = { supply: [], demand: [], blocks: [], mic: [] }
 
 export default function Room() {
   const { code = '' } = useParams(); const t = useT()
-  const token = session.token(code)
+  const token = session.token(code, 'member')
   const [room, setRoom] = useState<RoomInfo | null>(null)
   const [me, setMe] = useState<Participant | null>(null)
   const [book, setBook] = useState<OrderBook>(EMPTY)

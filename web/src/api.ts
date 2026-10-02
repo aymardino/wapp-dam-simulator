@@ -14,10 +14,10 @@ export type Run = { id: number; run_at: string; welfare: number; volume: number;
 export type MyResult = { run_id: number; run_at: string; participant: Participant; zone_prices: Record<string, number>; actors: any[]; blocks: any[]; mic: any[]; hours: number[]; currency: string }
 export type Reference = { zones: string[]; lines: { from: string; to: string; ntc: number }[]; profiles: Record<string, number[]>; price_bounds: number[]; rules: Record<string, string[]> }
 
+/** Un jeton par salle et par rôle : un formateur peut aussi rejoindre sa propre salle comme trader depuis le même navigateur. */
 export const session = {
-  token: (code: string) => localStorage.getItem(`wapp:${code}:token`),
-  role: (code: string) => localStorage.getItem(`wapp:${code}:role`),
-  save: (code: string, token: string, role: string) => { localStorage.setItem(`wapp:${code}:token`, token); localStorage.setItem(`wapp:${code}:role`, role) },
+  token: (code: string, role: 'trainer' | 'member') => localStorage.getItem(`wapp:${code}:${role}:token`),
+  save: (code: string, token: string, role: string) => localStorage.setItem(`wapp:${code}:${role === 'trainer' ? 'trainer' : 'member'}:token`, token),
 }
 
 async function call<T>(path: string, init: RequestInit = {}, token?: string | null): Promise<T> {

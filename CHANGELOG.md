@@ -20,6 +20,12 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 - `docs/ARCHITECTURE.md` : modèle de données, routes, structure du front, lancement.
 - `Dockerfile.app` : image unique API + front compilé.
 - Tests `tests/test_api.py` (parcours complet, droits, validations) et `tests/test_cli.py`.
+- Front compilé avec Node 24 (TypeScript et Vite sans erreur) et vérifié dans le navigateur sur le parcours
+  complet : création d'une salle, trader qui rejoint et dépose ses ordres, clearing lancé par le formateur,
+  marché et résultat individuel affichés. Un jeton par salle et par rôle, pour qu'un formateur puisse aussi
+  tester comme trader depuis le même navigateur.
+- `docs/DEPLOIEMENT.md` (poste, réseau de formation, Internet), `docker-compose.yml` et `Caddyfile`
+  (HTTPS automatique derrière un nom de domaine).
 
 ### Étape 4 — Règles restantes du Livrable 2 : partage des ex æquo et Minimum Income Condition
 

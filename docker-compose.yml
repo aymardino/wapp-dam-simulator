@@ -1,0 +1,30 @@
+# Déploiement sur un serveur : API + front dans une image, Caddy pour le HTTPS automatique.
+# Remplacer le domaine dans Caddyfile, puis : docker compose up -d
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    restart: unless-stopped
+    environment:
+      WAPP_CORS_ORIGINS: "https://simulateur.exemple.org"
+    volumes:
+      - wapp-data:/app/data
+    expose:
+      - "8000"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+volumes:
+  wapp-data:
+  caddy-data:
+  caddy-config:

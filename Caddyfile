@@ -1,0 +1,5 @@
+# Remplacer par votre nom de domaine ; Caddy obtient le certificat HTTPS tout seul.
+simulateur.exemple.org {
+    reverse_proxy api:8000
+    encode gzip
+}
