@@ -102,7 +102,7 @@ def run_room_clearing(db: Session, room: Room):
     if not (supply or demand or blocks) and mode == 'none':
         from engine.clearing import ClearingError
         raise ClearingError("Aucun ordre déposé dans la salle et complétion par les données de référence désactivée : rien à calculer.")
-    ref_sup, ref_dem, _ = scenario_rows(s.get('scenario', 'reference'))
+    ref_sup, ref_dem, _ = scenario_rows(s.get('scenario', 'reference_2024'))
     result = run_clearing(supply, demand, block_rows=blocks, mic_rows=mic, hours=s['hours'],
                           ntc_override=effective_ntc(room), fill_mode=mode,
                           pricing=s['pricing'], pab_rule=s['pab_rule'], tie_rule=s['tie_rule'],

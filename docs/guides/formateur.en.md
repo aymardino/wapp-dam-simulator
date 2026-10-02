@@ -6,7 +6,7 @@ This guide walks through a training session and explains every setting. The trai
 
 1. **Create the room** (training name, your name). The browser that creates the room becomes the trainer desk: do not lend it during the session.
 2. **Pick the horizon**: 24 hours for a full day, or a single hour (for instance 19:00, the peak) for a quick round.
-3. **Pick the scenario**: it provides the background data (plants, demands, line capacities). "Reference 2024 (public sources)", the default scenario, and "Reference (Livrable 2)", the historical test set, describe a normal network; "Hydro drought", "Nigeria–Benin line out of service", "Expensive gas" and "High demand" are for later rounds.
+3. **Pick the scenario**: it provides the background data (plants, demands, line capacities). There is a single base set, "Reference 2024 (public sources)"; the four variants ("Hydro drought", "Nigeria–Benin line out of service", "Expensive gas", "High demand") change one thing only and are for later rounds, to show the effect of a single shock.
 4. **Pick the fill mode**, which decides what happens to actors nobody plays (see §4).
 5. **Check line capacities (NTC)** if you want to create or remove a congestion.
 6. **Share the code** and let participants in.

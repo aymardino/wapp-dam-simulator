@@ -6,7 +6,7 @@ Ce guide décrit le déroulement d'une séance de formation avec le simulateur e
 
 1. **Créer la salle** depuis l'accueil (nom de la formation, votre nom). Le navigateur qui crée la salle devient le poste du formateur : ne le prêtez pas pendant la séance.
 2. **Choisir l'horizon** : 24 heures pour une journée complète, ou une seule heure (par exemple 19 h, la pointe) pour une manche rapide.
-3. **Choisir le scénario** : il fournit les données de fond (centrales, demandes, capacités des lignes). « Référence 2024 (sources publiques) », le scénario par défaut, et « Référence (Livrable 2) », jeu de test historique, décrivent un réseau normal ; « Sécheresse hydraulique », « Ligne Nigeria–Bénin indisponible », « Gaz cher » et « Forte demande » servent aux manches suivantes.
+3. **Choisir le scénario** : il fournit les données de fond (centrales, demandes, capacités des lignes). Il n'y a qu'un jeu de base, « Référence 2024 (sources publiques) » ; les quatre variantes (« Sécheresse hydraulique », « Ligne Nigeria–Bénin indisponible », « Gaz cher », « Forte demande ») ne changent qu'une chose et servent aux manches suivantes, pour montrer l'effet d'un seul choc.
 4. **Choisir le mode de complétion**, qui décide de ce qui se passe pour les acteurs que personne n'incarne (voir §4).
 5. **Vérifier les capacités des lignes (NTC)** si vous voulez provoquer ou lever une congestion.
 6. **Partager le code** et faire entrer les participants.

@@ -3,6 +3,7 @@ Scénarios pédagogiques : variantes des données de référence du Livrable 2.
 Chaque scénario renvoie (offres de vente, offres d'achat, NTC surchargées) au format des lignes du moteur ;
 il sert à compléter les zones sans soumission et à la démonstration.
 """
+import re
 from .clearing import default_rows, P_MAX
 
 # ── Jeu « Référence 2024 » : capacités disponibles et pointes de demande d'après des sources publiques ──
@@ -131,42 +132,47 @@ GAS_PLANTS = {'Egbin Gas', 'Delta Gas', 'Geregu', 'Afam VI', 'Olorunsogo', 'Suno
               'Karpowership GHA', 'CIPREL', 'Azito', 'Aggreko CIV', 'ContourGlobal'}
 
 SCENARIOS = {
-    'reference': {
-        'fr': ('Référence (Livrable 2)', "Données de référence du Livrable 2 : profils types, NTC estimées d'après les tensions des lignes."),
-        'en': ('Reference (Livrable 2)', "Livrable 2 reference data: typical profiles, NTC estimated from line voltages."),
-    },
     'reference_2024': {
-        'fr': ('Référence 2024 (sources publiques)', "Capacités disponibles, pointes de demande, coûts par technologie et capacités des lignes d'après des sources publiques 2023-2025 ; estimations signalées dans docs/DONNEES_DE_REFERENCE.md."),
-        'en': ('Reference 2024 (public sources)', "Available capacities, peak demands, costs by technology and line capacities from public 2023-2025 sources; estimates flagged in docs/DONNEES_DE_REFERENCE.md."),
+        'fr': ('Référence 2024 (sources publiques)', "Scénario de base : capacités disponibles, pointes de demande, coûts par technologie et capacités des lignes d'après des sources publiques 2023-2025 ; estimations signalées dans docs/DONNEES_DE_REFERENCE.md."),
+        'en': ('Reference 2024 (public sources)', "Base scenario: available capacities, peak demands, costs by technology and line capacities from public 2023-2025 sources; estimates flagged in docs/DONNEES_DE_REFERENCE.md."),
     },
     'secheresse_hydro': {
-        'fr': ('Sécheresse hydraulique', "Disponibilité des centrales hydrauliques réduite de moitié (Akosombo, CI-Energies, Manantali, Félou, Kaleta, Garafiri, Nangbéto)."),
-        'en': ('Hydro drought', "Hydro plants' availability halved (Akosombo, CI-Energies, Manantali, Félou, Kaleta, Garafiri, Nangbéto)."),
+        'fr': ('Sécheresse hydraulique', "Variante du scénario 2024 : disponibilité des centrales hydrauliques réduite de moitié (Kainji, Akosombo, Soubré, Souapiti, Manantali, Nangbéto…)."),
+        'en': ('Hydro drought', "Variant of the 2024 scenario: hydro plants' availability halved (Kainji, Akosombo, Soubré, Souapiti, Manantali, Nangbéto…)."),
     },
     'ligne_nga_ben': {
-        'fr': ('Ligne Nigeria–Bénin indisponible', "NTC Nigeria→Bénin à zéro : le corridor est coupe le Nigeria du reste du réseau."),
-        'en': ('Nigeria–Benin line out of service', "Nigeria→Benin NTC set to zero: the eastern corridor cuts Nigeria off from the rest of the network."),
+        'fr': ('Ligne Nigeria–Bénin indisponible', "Variante du scénario 2024 : capacité Nigeria→Bénin à zéro, le Nigeria n'alimente plus que le Niger."),
+        'en': ('Nigeria–Benin line out of service', "Variant of the 2024 scenario: Nigeria→Benin capacity set to zero, Nigeria only feeds Niger."),
     },
     'gaz_cher': {
-        'fr': ('Gaz cher', "Prix des centrales à gaz et des unités de pointe thermiques majorés de 40 %."),
-        'en': ('Expensive gas', "Gas-fired and thermal peaking plants' prices raised by 40%."),
+        'fr': ('Gaz cher', "Variante du scénario 2024 : prix des centrales à gaz majorés de 40 %."),
+        'en': ('Expensive gas', "Variant of the 2024 scenario: gas-fired plants' prices raised by 40%."),
     },
     'forte_demande': {
-        'fr': ('Forte demande', "Quantités demandées majorées de 15 % dans toutes les zones."),
-        'en': ('High demand', "Demand quantities raised by 15% in all zones."),
+        'fr': ('Forte demande', "Variante du scénario 2024 : quantités demandées majorées de 15 % dans toutes les zones."),
+        'en': ('High demand', "Variant of the 2024 scenario: demand quantities raised by 15% in all zones."),
+    },
+    'reference': {   # jeu de test historique, absent des listes proposées aux formateurs (hidden)
+        'fr': ('Jeu de test (Livrable 2)', "Données synthétiques du Livrable 2, conservées pour les tests de non-régression."),
+        'en': ('Test set (Livrable 2)', "Synthetic Livrable 2 data, kept for regression tests."),
+        'hidden': True,
     },
 }
 
+_GAS = re.compile(r'ccgt|gaz|gas', re.I)
 
-def scenario_rows(key='reference', zones=None):
-    """(supply_rows, demand_rows, {(u, v): mw}) pour le scénario `key`, limité aux `zones` si fournies."""
+
+def scenario_rows(key='reference_2024', zones=None):
+    """(supply_rows, demand_rows, {(u, v): mw}) pour le scénario `key`, limité aux `zones` si fournies.
+    Un seul jeu de base (Référence 2024) ; les variantes pédagogiques n'en modifient qu'un élément.
+    `reference` est le jeu synthétique du Livrable 2, conservé pour les tests."""
     if key not in SCENARIOS:
         raise KeyError(f"Scénario inconnu : {key}")
-    if key == 'reference_2024':
-        sup, dem = reference_2024_rows(zones)
-        return sup, dem, dict(NTC_2024)
-    sup, dem = default_rows(zones)
-    ntc = {}
+    if key == 'reference':
+        sup, dem = default_rows(zones)
+        return sup, dem, {}
+    sup, dem = reference_2024_rows(zones)
+    ntc = dict(NTC_2024)
     if key == 'secheresse_hydro':
         for r in sup:
             if r['profile'] == 'hydro':
@@ -175,7 +181,7 @@ def scenario_rows(key='reference', zones=None):
         ntc[('NGA', 'BEN')] = 0.0
     elif key == 'gaz_cher':
         for r in sup:
-            if r['actor'] in GAS_PLANTS:
+            if _GAS.search(r['actor']):
                 r['price'] = min(P_MAX, round(r['price'] * 1.4))
     elif key == 'forte_demande':
         for r in dem:
@@ -183,5 +189,7 @@ def scenario_rows(key='reference', zones=None):
     return sup, dem, ntc
 
 
-def scenario_list(lang='fr'):
-    return [{'key': k, 'name': v.get(lang, v['fr'])[0], 'description': v.get(lang, v['fr'])[1]} for k, v in SCENARIOS.items()]
+def scenario_list(lang='fr', include_hidden=False):
+    """Scénarios proposés aux formateurs, dans l'ordre du menu (le jeu de test est masqué sauf demande)."""
+    return [{'key': k, 'name': v.get(lang, v['fr'])[0], 'description': v.get(lang, v['fr'])[1]}
+            for k, v in SCENARIOS.items() if include_hidden or not v.get('hidden')]

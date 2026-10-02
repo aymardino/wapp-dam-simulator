@@ -132,7 +132,7 @@ uvicorn api.main:app --reload --port 8000      # documentation interactive sur h
 python -m engine.cli --reference --hours 19 --out resultat.json
 ```
 
-Le formateur dispose de cinq scénarios pédagogiques (référence, sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande) qui remplacent les données de référence pour la démonstration et la complétion des zones.
+Le formateur dispose d'un jeu de base (Référence 2024, sources publiques) et de quatre variantes pédagogiques (sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande) qui ne modifient qu'un élément, pour la démonstration et la complétion des zones.
 
 Le nouveau front (React, dossier `web/`) se compile avec Node : `cd web && npm install && npm run build`, puis l'API le sert : site vitrine à `/`, hall des salles à `/app`, guides à `/guide/formateur` et `/guide/trader`. Détails dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ; mise en ligne (nom de domaine, serveur, Docker, HTTPS) dans [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md). Site public : https://wapp-dam-simulator.org.
 

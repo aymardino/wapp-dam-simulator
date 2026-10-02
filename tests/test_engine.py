@@ -237,15 +237,22 @@ def test_reference_zones_reported(ref):
 def test_scenarios_change_outcomes():
     from engine.scenarios import scenario_rows, SCENARIOS, scenario_list
     assert set(scenario_list('en')[0].keys()) == {'key', 'name', 'description'} and len(SCENARIOS) == 6
-    base = run_clearing(None, None, horizon=24)
+    assert [x['key'] for x in scenario_list('fr')] == ['reference_2024', 'secheresse_hydro', 'ligne_nga_ben', 'gaz_cher', 'forte_demande']   # jeu L2 masqué
+    assert len(scenario_list('fr', include_hidden=True)) == 6
+    sup0, dem0, ntc0 = scenario_rows('reference_2024')   # les variantes dérivent du jeu de base 2024
+    base = run_clearing(None, None, horizon=24, reference_rows=(sup0, dem0), ntc_override=ntc0)
     sup, dem, ntc = scenario_rows('secheresse_hydro')
+    assert sum(r['quantity'] for r in sup if r['profile'] == 'hydro') < sum(r['quantity'] for r in sup0 if r['profile'] == 'hydro') and ntc == ntc0
     dry = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc or None)
     assert dry['welfare'] < base['welfare'] and dry['summary']['reference_zones'] == C.ZONES
     sup, dem, ntc = scenario_rows('ligne_nga_ben')
     cut = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc)
     assert all(abs(v) == 0 for v in cut['flows']['NGA->BEN'].values()) and cut['welfare'] < base['welfare']
     sup, dem, ntc = scenario_rows('forte_demande', zones=['SEN'])
-    assert {r['zone'] for r in sup} == {'SEN'} and dem[0]['quantity'] == round(350 * 1.15)
+    q0 = scenario_rows('reference_2024', zones=['SEN'])[1][0]['quantity']
+    assert {r['zone'] for r in sup} == {'SEN'} and dem[0]['quantity'] == round(q0 * 1.15)
+    gas = [r for r in scenario_rows('gaz_cher')[0] if 'CCGT' in r['actor']]; gas0 = [r for r in sup0 if 'CCGT' in r['actor']]
+    assert gas and all(g['price'] > g0['price'] for g, g0 in zip(gas, gas0))
     one = [dict(zone='SEN', player='x', actor='A', segment=0, quantity=10, price=10, profile='baseload')]
     r = run_clearing(one, [], horizon=1, fill_missing_zones=True, reference_rows=scenario_rows('gaz_cher')[:2])
     assert len(r['summary']['reference_zones']) == 13
