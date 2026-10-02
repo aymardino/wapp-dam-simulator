@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Literal, Any
 from pydantic import BaseModel, Field, field_validator
 from engine.clearing import ZONES, PROF, P_MIN, P_MAX, PRICING_MODES, PAB_RULES, TIE_RULES
+from engine.scenarios import SCENARIOS
 
 Zone = Literal[tuple(ZONES)]              # type: ignore[valid-type]
 Profile = Literal[tuple(PROF.keys())]     # type: ignore[valid-type]
@@ -11,6 +12,7 @@ Pricing = Literal[PRICING_MODES]          # type: ignore[valid-type]
 PabRule = Literal[PAB_RULES]              # type: ignore[valid-type]
 TieRule = Literal[TIE_RULES]              # type: ignore[valid-type]
 Lang = Literal['fr', 'en']
+Scenario = Literal[tuple(SCENARIOS.keys())]   # type: ignore[valid-type]
 Role = Literal['trainer', 'trader', 'observer']
 Phase = Literal['submission', 'cleared']
 
@@ -30,6 +32,7 @@ class Settings(BaseModel):
     currency: str = Field(default='USD', max_length=8)
     lang: Lang = 'fr'
     market_date: str = Field(default='', max_length=10)
+    scenario: Scenario = 'reference'
 
     @field_validator('hours')
     @classmethod
@@ -49,6 +52,7 @@ class SettingsUpdate(BaseModel):
     currency: Optional[str] = Field(default=None, max_length=8)
     lang: Optional[Lang] = None
     market_date: Optional[str] = Field(default=None, max_length=10)
+    scenario: Optional[Scenario] = None
 
 
 class PhaseUpdate(BaseModel):

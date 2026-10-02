@@ -39,6 +39,7 @@ def default_settings(lang='fr'):
         'currency': 'USD',
         'lang': lang,
         'market_date': (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'),
+        'scenario': 'reference',
     }
 
 
@@ -123,6 +124,22 @@ class ClearingRun(Base):
 
 def init_db():
     Base.metadata.create_all(engine)
+
+
+def purge_old_rooms(db, ttl_days):
+    """Supprime les salles sans activité (ordres, clearings, participants) depuis plus de ttl_days jours."""
+    from sqlalchemy import select, func
+    if ttl_days <= 0:
+        return 0
+    limit = datetime.utcnow() - timedelta(days=ttl_days)
+    n = 0
+    for room in db.execute(select(Room).where(Room.created_at < limit)).scalars().all():
+        last = max([room.created_at] + [p.joined_at for p in room.participants] + [o.created_at for o in room.orders] + [r.run_at for r in room.runs])
+        if last < limit:
+            db.delete(room); n += 1
+    if n:
+        db.commit()
+    return n
 
 
 def get_db():

@@ -232,3 +232,20 @@ def test_reference_zones_reported(ref):
     assert 'SEN' not in r['summary']['reference_zones'] and len(r['summary']['reference_zones']) == 13
     r2 = run_clearing(sup, [], horizon=1, fill_missing_zones=False)
     assert r2['summary']['reference_zones'] == []
+
+
+def test_scenarios_change_outcomes():
+    from engine.scenarios import scenario_rows, SCENARIOS, scenario_list
+    assert set(scenario_list('en')[0].keys()) == {'key', 'name', 'description'} and len(SCENARIOS) == 5
+    base = run_clearing(None, None, horizon=24)
+    sup, dem, ntc = scenario_rows('secheresse_hydro')
+    dry = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc or None)
+    assert dry['welfare'] < base['welfare'] and dry['summary']['reference_zones'] == C.ZONES
+    sup, dem, ntc = scenario_rows('ligne_nga_ben')
+    cut = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc)
+    assert all(abs(v) == 0 for v in cut['flows']['NGA->BEN'].values()) and cut['welfare'] < base['welfare']
+    sup, dem, ntc = scenario_rows('forte_demande', zones=['SEN'])
+    assert {r['zone'] for r in sup} == {'SEN'} and dem[0]['quantity'] == round(350 * 1.15)
+    one = [dict(zone='SEN', player='x', actor='A', segment=0, quantity=10, price=10, profile='baseload')]
+    r = run_clearing(one, [], horizon=1, fill_missing_zones=True, reference_rows=scenario_rows('gaz_cher')[:2])
+    assert len(r['summary']['reference_zones']) == 13

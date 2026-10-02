@@ -17,7 +17,8 @@ from datetime import datetime
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, PlainTextResponse
+import asyncio, json, time, collections
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -26,7 +27,7 @@ from sqlalchemy.orm import Session
 from engine.clearing import ClearingError, LINES
 from . import schemas as S
 from . import service
-from .storage import init_db, get_db, Room, Participant, ClearingRun
+from .storage import init_db, get_db, Room, Participant, ClearingRun, purge_old_rooms, SessionLocal
 from .auth import get_room, current_participant, require_trainer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,6 +40,9 @@ app.add_middleware(CORSMiddleware, allow_origins=os.environ.get('WAPP_CORS_ORIGI
                    allow_methods=['*'], allow_headers=['*'])
 init_db()
 API = '/api/v1'
+ROOM_TTL_DAYS = int(os.environ.get('WAPP_ROOM_TTL_DAYS', '30'))
+MAX_ROOMS_PER_IP_PER_DAY = int(os.environ.get('WAPP_MAX_ROOMS_PER_IP_PER_DAY', '20'))
+_room_creations: dict = collections.defaultdict(list)
 
 
 @app.exception_handler(ClearingError)
@@ -70,9 +74,21 @@ def reference():
     return service.reference()
 
 
+@app.get(API + '/scenarios', summary="Scénarios pédagogiques disponibles")
+def scenarios(lang: str = 'fr'):
+    return service.scenario_list(lang if lang in ('fr', 'en') else 'fr')
+
+
 # ── Salles ────────────────────────────────────────────────────────
 @app.post(API + '/rooms', response_model=S.RoomCreated, status_code=201, summary="Créer une salle (formateur)")
-def create_room(body: S.RoomCreate, db: Session = Depends(get_db)):
+def create_room(body: S.RoomCreate, request: Request, db: Session = Depends(get_db)):
+    ip = request.client.host if request.client else 'local'
+    now = time.time()
+    _room_creations[ip] = [t for t in _room_creations[ip] if now - t < 86400]
+    if len(_room_creations[ip]) >= MAX_ROOMS_PER_IP_PER_DAY:
+        raise HTTPException(status_code=429, detail="Trop de salles créées depuis cette adresse aujourd'hui")
+    _room_creations[ip].append(now)
+    purge_old_rooms(db, ROOM_TTL_DAYS)
     room, trainer = service.create_room(db, body.name, body.trainer_name, body.lang)
     return S.RoomCreated(**_room_out(db, room), trainer_token=trainer.token)
 
@@ -218,6 +234,44 @@ def get_my_result(run_id: str, room: Room = Depends(get_room), p: Participant = 
                   db: Session = Depends(get_db)):
     run = _run_or_404(db, room, run_id)
     return S.MyResultOut(participant=_participant_out(p), **service.my_result(run, p))
+
+
+@app.get(API + '/rooms/{code}/results/{run_id}/prices.csv', summary="Prix zonaux d'un clearing en CSV")
+def get_run_csv(run_id: str, room: Room = Depends(get_room), db: Session = Depends(get_db)):
+    run = _run_or_404(db, room, run_id)
+    return PlainTextResponse(service.prices_csv(run), media_type='text/csv',
+                             headers={'Content-Disposition': f'attachment; filename="prices_{room.code}_{run.id}.csv"'})
+
+
+# ── Flux d'événements (temps réel) ────────────────────────────────
+@app.get(API + '/rooms/{code}/events', summary="Flux SSE : état de la salle à chaque changement")
+async def room_events(room: Room = Depends(get_room), once: bool = False):
+    """`once=true` : un seul état puis fin (tests, diagnostics)."""
+    room_id, code = room.id, room.code
+
+    async def gen():
+        last_payload = None; last_beat = time.time()
+        while True:
+            db = SessionLocal()
+            try:
+                r = db.execute(select(Room).where(Room.id == room_id)).scalar_one_or_none()
+                if r is None:
+                    yield "event: gone\ndata: {}\n\n"; return
+                payload = json.dumps(service.state_snapshot(db, r), default=str)
+            finally:
+                db.close()
+            if payload != last_payload:
+                last_payload = payload; last_beat = time.time()
+                yield f"event: state\ndata: {payload}\n\n"
+                if once:
+                    return
+            elif time.time() - last_beat > 15:
+                last_beat = time.time()
+                yield ": keep-alive\n\n"
+            await asyncio.sleep(2)
+
+    return StreamingResponse(gen(), media_type='text/event-stream',
+                             headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
 # ── Front compilé (optionnel) ─────────────────────────────────────

@@ -5,6 +5,21 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 8 — Scénarios, temps réel, export et garde-fous (API et moteur)
+
+**Ajouté**
+- `engine/scenarios.py` : cinq scénarios pédagogiques dérivés des données de référence (référence, sécheresse
+  hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande). Le moteur accepte `reference_rows`
+  pour substituer ces données à celles du Livrable 2 dans la démonstration et la complétion des zones.
+- API : `GET /scenarios`, réglage `scenario` par salle (les NTC du scénario s'appliquent sous celles du
+  formateur), `GET /rooms/{code}/results/{id}/prices.csv`, flux d'événements `GET /rooms/{code}/events`
+  (Server-Sent Events : état de la salle à chaque changement, battement toutes les 15 s, `?once=true` pour
+  un seul état).
+- Garde-fous pour une mise en ligne : purge des salles sans activité depuis `WAPP_ROOM_TTL_DAYS` jours
+  (30 par défaut) à chaque création, et au plus `WAPP_MAX_ROOMS_PER_IP_PER_DAY` salles par adresse et
+  par jour (20 par défaut, réponse 429 au-delà).
+- Cinq tests (34 au total).
+
 ### Correctif — réglages du formateur enregistrés immédiatement
 
 - La case « Compléter les zones sans soumission » n'était prise en compte qu'après un clic sur « Enregistrer » ;

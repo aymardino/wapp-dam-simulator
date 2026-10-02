@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from engine.clearing import run_clearing, NTC, LINES, ZONES, PROF, DEFAULT_SUPPLY_24, DEFAULT_DEMAND_24, default_rows, \
     PRICING_MODES, PAB_RULES, TIE_RULES, P_MIN, P_MAX, ALPHA, ALPHA_LINES
 from .storage import Room, Participant, Order, ClearingRun, new_code, new_token, default_settings
+from .scenarios_bridge import scenario_rows, scenario_list
 
 
 def line_key(u, v):
@@ -16,6 +17,8 @@ def line_key(u, v):
 def effective_ntc(room: Room):
     """{(u, v): MW} : valeurs par défaut, surchargées par celles de la salle."""
     ntc = dict(NTC)
+    _, _, sc_ntc = scenario_rows(room.settings.get('scenario', 'reference'), zones=[])
+    ntc.update(sc_ntc)
     for k, mw in room.ntc_overrides.items():
         u, v = k.split('->')
         if (u, v) in ntc:
@@ -87,9 +90,11 @@ def run_room_clearing(db: Session, room: Room):
     if not (supply or demand or blocks) and not s['fill_missing']:
         from engine.clearing import ClearingError
         raise ClearingError("Aucun ordre déposé dans la salle et complétion par les données de référence désactivée : rien à calculer.")
+    ref_sup, ref_dem, _ = scenario_rows(s.get('scenario', 'reference'))
     result = run_clearing(supply, demand, block_rows=blocks, mic_rows=mic, hours=s['hours'],
                           ntc_override=effective_ntc(room), fill_missing_zones=bool(s['fill_missing']),
-                          pricing=s['pricing'], pab_rule=s['pab_rule'], tie_rule=s['tie_rule'])
+                          pricing=s['pricing'], pab_rule=s['pab_rule'], tie_rule=s['tie_rule'],
+                          reference_rows=(ref_sup, ref_dem))
     run = ClearingRun(room_id=room.id, settings_json=json.dumps(s), welfare=float(result['welfare']),
                       volume=float(result['volume']), result_json=json.dumps(result, default=float))
     room.phase = 'cleared'
@@ -112,6 +117,21 @@ def my_result(run: ClearingRun, p: Participant):
     prices = res['prices'].get(zone, {}) if zone else {}
     return dict(run_id=run.id, run_at=run.run_at, zone_prices=prices, actors=actors, blocks=blocks, mic=mics,
                 hours=summ.get('hours', []), currency=json.loads(run.settings_json).get('currency', 'USD'))
+
+
+def prices_csv(run: ClearingRun):
+    res = run.result; hours = res['summary']['hours']; zones = list(res['prices'].keys())
+    lines = ['hour,' + ','.join(zones)]
+    for h in hours:
+        lines.append(f"{h}," + ','.join(str(res['prices'][z][str(h)]) for z in zones))
+    return '\n'.join(lines) + '\n'
+
+
+def state_snapshot(db: Session, room: Room):
+    last = latest_run(db, room)
+    return dict(code=room.code, phase=room.phase, counts=counts(db, room), n_participants=len(room.participants),
+                last_run_id=last.id if last else None, last_run_at=last.run_at.isoformat() if last else None,
+                settings=room.settings)
 
 
 def reference():

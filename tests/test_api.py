@@ -121,3 +121,47 @@ def test_empty_room_without_fill_is_refused():
     assert client.put(API + f'/rooms/{code}/settings', json={'fill_missing': True}, headers=_auth(tok)).status_code == 200
     r = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok))
     assert r.status_code == 201 and len(r.json()['result']['summary']['reference_zones']) == 14
+
+
+def test_scenarios_and_csv_export(room):
+    code, tok = room['code'], room['trainer_token']
+    sc = client.get(API + '/scenarios?lang=en').json()
+    assert [x['key'] for x in sc][:2] == ['reference', 'secheresse_hydro'] and sc[1]['name'] == 'Hydro drought'
+    assert client.put(API + f'/rooms/{code}/settings', json={'scenario': 'inconnu'}, headers=_auth(tok)).status_code == 422
+    r = client.put(API + f'/rooms/{code}/settings', json={'scenario': 'ligne_nga_ben', 'fill_missing': True}, headers=_auth(tok))
+    assert r.status_code == 200 and r.json()['scenario'] == 'ligne_nga_ben'
+    assert client.get(API + f'/rooms/{code}').json()['ntc']['NGA->BEN'] == 0
+    run = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok)).json()
+    assert all(v == 0 for v in run['result']['flows']['NGA->BEN'].values())
+    csv = client.get(API + f"/rooms/{code}/results/{run['id']}/prices.csv")
+    assert csv.status_code == 200 and csv.text.splitlines()[0].startswith('hour,NGA') and len(csv.text.splitlines()) == 2
+    client.put(API + f'/rooms/{code}/settings', json={'scenario': 'reference'}, headers=_auth(tok))
+
+
+def test_events_stream_first_message(room):
+    code = room['code']
+    r = client.get(API + f'/rooms/{code}/events?once=true')
+    assert r.status_code == 200 and r.headers['content-type'].startswith('text/event-stream')
+    assert r.text.startswith('event: state') and '"code": "' + code + '"' in r.text
+
+
+def test_room_quota_per_ip():
+    from api import main as m
+    old = m.MAX_ROOMS_PER_IP_PER_DAY; m.MAX_ROOMS_PER_IP_PER_DAY = 2; m._room_creations.clear()
+    try:
+        assert client.post(API + '/rooms', json={'name': 'a'}).status_code == 201
+        assert client.post(API + '/rooms', json={'name': 'b'}).status_code == 201
+        assert client.post(API + '/rooms', json={'name': 'c'}).status_code == 429
+    finally:
+        m.MAX_ROOMS_PER_IP_PER_DAY = old; m._room_creations.clear()
+
+
+def test_purge_old_rooms():
+    from datetime import datetime, timedelta
+    from api.storage import SessionLocal, Room, purge_old_rooms
+    db = SessionLocal()
+    r = Room(id='old-room', code='OLDOLD', name='vieille'); r.settings = {}; r.created_at = datetime.utcnow() - timedelta(days=60)
+    db.add(r); db.commit()
+    assert purge_old_rooms(db, 30) == 1
+    assert client.get(API + '/rooms/OLDOLD').status_code == 404
+    db.close()

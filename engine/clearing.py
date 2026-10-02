@@ -765,7 +765,7 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
 def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=None, *,
                  block_rows=None, mic_rows=None, hours=None, fill_missing_zones=False,
                  pricing='complete', pab_rule='euphemia', tie_rule='prorata',
-                 max_pab_iter=10, max_mic_iter=None):
+                 max_pab_iter=10, max_mic_iter=None, reference_rows=None):
     """
     Clearing complet P1 → P1bis → P2.
 
@@ -780,6 +780,8 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     pab_rule     : 'euphemia' (rejet itératif des PAB, PRB tolérés), 'l2' (PAB fixés à 0 et
                    PRB fixés à 1, Livrable 2 §3.3) ou 'none' (détection seule).
     tie_rule     : partage des offres au même prix : 'prorata' (défaut), 'order', 'solver'.
+    reference_rows : (supply_rows, demand_rows) à utiliser comme données de référence à la place de celles
+                   du Livrable 2 (scénarios pédagogiques), pour la démonstration et la complétion des zones.
     Retourne dict : prices, flows, dispatch, welfare, volume, summary.
     """
     t_total = time.time()
@@ -800,8 +802,15 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
 
     # ── Données ───────────────────────────────────────────────────
     reference_zones = []
+    def _ref(zones=None):
+        if reference_rows is None:
+            return default_rows(zones)
+        rs, rd = reference_rows
+        if zones is None:
+            return list(rs), list(rd)
+        return [r for r in rs if r['zone'] in zones], [r for r in rd if r['zone'] in zones]
     if supply_rows is None and demand_rows is None:
-        supply_rows, demand_rows = default_rows()
+        supply_rows, demand_rows = _ref()
         reference_zones = list(ZONES)
         notes.append("Données de référence utilisées pour les 14 zones.")
     else:
@@ -812,7 +821,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                     | {r['zone'] for r in (block_rows or [])}
             missing = [z for z in ZONES if z not in covered]
             if missing:
-                ds, dd = default_rows(zones=missing)
+                ds, dd = _ref(zones=missing)
                 supply_rows += ds
                 demand_rows += dd
                 reference_zones = missing
