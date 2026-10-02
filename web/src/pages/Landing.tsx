@@ -33,7 +33,7 @@ const L = {
     loading: 'Calcul du cas de référence…', demo_err: 'Le serveur de démonstration ne répond pas.',
     ex_kicker: 'Explorer', ex_title: 'Pourquoi ce prix, dans cette zone, à cette heure',
     ex_lead: 'Les ordres du scénario de démonstration (centrales et demande de la zone, données 2024 reconstituées) forment une courbe d’offre et une courbe de demande. Le prix zonal ne se lit pas à leur croisement : le réseau déplace l’équilibre par les importations et les exportations.',
-    ex_cap: 'plafond réglementaire 500', ex_supply: 'Offre (centrales)', ex_demand: 'Demande (charge)', ex_price: 'prix zonal', ex_export: 'export', ex_import: 'import',
+    ex_cap: 'plafond réglementaire 500', ex_sup_end: 'capacité offerte :', ex_dem_end: 'demande totale :', ex_supply: 'Offre (centrales)', ex_demand: 'Demande (charge)', ex_price: 'prix zonal', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Ordres de la zone à l’heure choisie', ex_accepted: 'retenu', ex_marginal: 'marginal', ex_rejected: 'hors marché',
     ex_prices_title: 'Les quatorze prix sur vingt-quatre heures', ex_prices_hint: 'Prix simulés sur le scénario de démonstration, pas des prix observés. Une ligne par zone, une colonne par heure : les zones de même couleur partagent le même prix, un trait sépare les groupes isolés par une ligne saturée. Cliquez une zone pour l’explorer.',
     m_kicker: 'Le moteur', m_title: 'Trois questions, trois programmes, dans cet ordre',
@@ -98,7 +98,7 @@ const L = {
     loading: 'Computing the reference case…', demo_err: 'The demonstration server is not responding.',
     ex_kicker: 'Explore', ex_title: 'Why this price, in this zone, at this hour',
     ex_lead: 'The demonstration scenario’s orders (the zone’s plants and demand, reconstructed 2024 data) form a supply curve and a demand curve. The zonal price is not read at their crossing: the network shifts the balance through imports and exports.',
-    ex_cap: 'regulatory cap 500', ex_supply: 'Supply (plants)', ex_demand: 'Demand (load)', ex_price: 'zonal price', ex_export: 'export', ex_import: 'import',
+    ex_cap: 'regulatory cap 500', ex_sup_end: 'offered capacity:', ex_dem_end: 'total demand:', ex_supply: 'Supply (plants)', ex_demand: 'Demand (load)', ex_price: 'zonal price', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Orders of the zone at the chosen hour', ex_accepted: 'accepted', ex_marginal: 'marginal', ex_rejected: 'out of market',
     ex_prices_title: 'Fourteen prices over twenty-four hours', ex_prices_hint: 'Simulated prices on the demonstration scenario, not observed prices. One row per zone, one column per hour: zones sharing a colour share a price, a rule separates groups isolated by a saturated line. Click a zone to explore it.',
     m_kicker: 'The engine', m_title: 'Three questions, three programs, in that order',
@@ -275,7 +275,10 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
   const xMax = niceCeil(Math.max(totalS, totalD, c.demAt + Math.abs(c.net), 10) * 1.08)
   const yMax = 500   // regulatory price bounds of the market: the same frame for every zone
   const X = (q: number) => Lm + (q / xMax) * (W - Lm - Rm), Y = (p: number) => Tm + (1 - p / yMax) * (H - Tm - Bm)
-  const path = (segs: Seg[], endY: number) => { let x = 0; const d: string[] = []; segs.forEach((r, i) => { d.push(i === 0 ? `M${X(0)} ${Y(r.price)}` : `L${X(x)} ${Y(r.price)}`); x += r.qty; d.push(`L${X(x)} ${Y(r.price)}`) }); if (segs.length) d.push(`L${X(x)} ${endY}`); return d.join(' ') }
+  const path = (segs: Seg[]) => { let x = 0; const d: string[] = []; segs.forEach((r, i) => { d.push(i === 0 ? `M${X(0)} ${Y(r.price)}` : `L${X(x)} ${Y(r.price)}`); x += r.qty; d.push(`L${X(x)} ${Y(r.price)}`) }); return d.join(' ') }
+  const lastS = c.sup.length ? c.sup[c.sup.length - 1].price : 0, lastD = c.dem.length ? c.dem[c.dem.length - 1].price : 0
+  const endLabel = (q: number, label: string) => { const x = X(q); const right = x + 150 <= W - Rm; return { x: right ? x + 6 : x - 6, anchor: right ? 'start' : 'end', text: `${label} ${nf(q)} MW` } }
+  const sEnd = endLabel(totalS, s.ex_sup_end), dEnd = endLabel(totalD, s.ex_dem_end)
   const bx1 = X(Math.min(c.demAt, c.demAt + c.net)), bx2 = X(Math.max(c.demAt, c.demAt + c.net)); const by = Y(c.price)
   const netLabel = c.net > 1 ? `${s.ex_export} ${nf(Math.round(c.net))} MW` : c.net < -1 ? `${s.ex_import} ${nf(Math.round(-c.net))} MW` : null
   return (
@@ -285,8 +288,16 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
       <text x={W - Rm} y={H - 6} textAnchor="end" fontSize="11" fill="#5C5B56">MW</text>
       <text x={Lm - 8} y={Tm - 8} textAnchor="end" fontSize="11" fill="#5C5B56">$/MWh</text>
       <text x={W - Rm} y={Y(yMax) - 6} textAnchor="end" fontSize="11" fill="#8C8B84">{s.ex_cap}</text>
-      <path d={path(c.sup, Y(yMax))} fill="none" stroke="#0F6E56" strokeWidth={2.5} strokeLinejoin="round" />
-      <path d={path(c.dem, Y(0))} fill="none" stroke="#B5443C" strokeWidth={2.5} strokeLinejoin="round" />
+      <path d={path(c.sup)} fill="none" stroke="#0F6E56" strokeWidth={2.5} strokeLinejoin="round" />
+      <path d={path(c.dem)} fill="none" stroke="#B5443C" strokeWidth={2.5} strokeLinejoin="round" />
+      {c.sup.length > 0 && <>
+        <line x1={X(totalS)} x2={X(totalS)} y1={Y(lastS)} y2={Y(yMax)} stroke="#0F6E56" strokeWidth={1.5} strokeDasharray="4 4" />
+        <text x={sEnd.x} y={Tm + 14} textAnchor={sEnd.anchor as 'start' | 'end'} fontSize="11" fill="#0F6E56">{sEnd.text}</text>
+      </>}
+      {c.dem.length > 0 && <>
+        <line x1={X(totalD)} x2={X(totalD)} y1={Y(lastD)} y2={Y(0)} stroke="#B5443C" strokeWidth={1.5} strokeDasharray="4 4" />
+        <text x={dEnd.x} y={Y(0) - 8} textAnchor={dEnd.anchor as 'start' | 'end'} fontSize="11" fill="#B5443C">{dEnd.text}</text>
+      </>}
       <line x1={Lm} x2={W - Rm} y1={by} y2={by} stroke="#1B1B19" strokeDasharray="5 4" strokeWidth={1.2} />
       <text x={W - Rm - 4} y={by - 6} textAnchor="end" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#1B1B19">{`${s.ex_price} ${nf(c.price, 1)}`}</text>
       {netLabel && (() => {
