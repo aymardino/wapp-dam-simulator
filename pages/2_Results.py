@@ -1,5 +1,5 @@
 """
-Page 2 — Résultats du clearing : prix, flux, dispatch, ordres bloc, résultat du trader, analyse, tableaux.
+Page 2 — Clearing results: prices, flows, dispatch, block orders, trader result, analysis, tables.
 """
 import json
 import streamlit as st
@@ -56,7 +56,7 @@ def render():
     tabs = st.tabs([t('tab_prices'), t('tab_flows'), t('tab_dispatch'), t('tab_blocks_res'),
                     t('tab_mine'), t('tab_analysis'), t('tab_tables')])
 
-    # ── Prix ──────────────────────────────────────────────────────
+    # ── Prices ────────────────────────────────────────────────────
     with tabs[0]:
         if n == 1:
             h = str(hours[0])
@@ -98,7 +98,7 @@ def render():
         fig_net.update_layout(title=t('net_position_chart'), xaxis_title=t('zone'), yaxis_title="MWh", height=380, **PLOTLY_LAYOUT)
         st.plotly_chart(fig_net, use_container_width=True)
 
-    # ── Flux ──────────────────────────────────────────────────────
+    # ── Flows ─────────────────────────────────────────────────────
     with tabs[1]:
         st.markdown(f"#### {t('flows_title')}")
         rows = []
@@ -158,7 +158,7 @@ def render():
                 fig_pie.update_layout(title=t('mix_chart'), height=400, **PLOTLY_LAYOUT)
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-    # ── Ordres bloc ───────────────────────────────────────────────
+    # ── Block orders ──────────────────────────────────────────────
     with tabs[3]:
         blocks = summary.get('blocks', [])
         if not blocks:
@@ -201,7 +201,7 @@ def render():
             st.dataframe(df_mic, use_container_width=True, hide_index=True)
             st.caption(t('mic_explain'))
 
-    # ── Mon résultat ──────────────────────────────────────────────
+    # ── My result ─────────────────────────────────────────────────
     with tabs[4]:
         if 'my_zone' not in st.session_state:
             st.info(t('mine_login'))
@@ -243,7 +243,7 @@ def render():
                 st.markdown(f"**{t('zone_prices_mine', unit=unit)}**")
                 st.line_chart(pd.DataFrame({mz: [prices[mz].get(str(h), 0) for h in hours]}, index=hlabels))
 
-    # ── Analyse ───────────────────────────────────────────────────
+    # ── Analysis ──────────────────────────────────────────────────
     with tabs[5]:
         st.markdown(f"#### {t('analysis_zones')}")
         if zones_info:
@@ -289,7 +289,7 @@ def render():
         with st.expander(t('rules_title')):
             st.json(summary.get('rules', {}))
 
-    # ── Tableaux ──────────────────────────────────────────────────
+    # ── Tables ────────────────────────────────────────────────────
     with tabs[6]:
         st.markdown(f"#### {t('prices_table')}")
         pt = {t('hour'): hlabels}

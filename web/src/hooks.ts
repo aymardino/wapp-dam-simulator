@@ -3,7 +3,7 @@ import { api } from './api'
 
 export type RoomState = { code: string; phase: string; counts: Record<string, number>; n_participants: number; last_run_id: number | null; last_run_at: string | null; settings: any }
 
-/** Abonnement au flux d'événements de la salle (Server-Sent Events), avec repli sur un sondage toutes les 10 s. */
+/** Subscription to the room event stream (Server-Sent Events), with polling every 10 s as a fallback. */
 export function useRoomEvents(code: string, onState: (s: RoomState) => void) {
   const cb = useRef(onState); cb.current = onState
   useEffect(() => {

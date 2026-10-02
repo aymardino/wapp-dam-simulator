@@ -1,5 +1,5 @@
 """
-Page 1 — Soumission des offres : segments (stepwise) et ordres bloc (simples, liés, exclusifs).
+Page 1 — Order submission: stepwise segments and block orders (simple, linked, exclusive).
 """
 import streamlit as st
 import pandas as pd
@@ -150,7 +150,7 @@ with tab_step:
                 st.success(t('saved_demand', n=len(valid_d)))
                 st.rerun()
 
-# ═══════════════════════════════ Blocs ═══════════════════════════════
+# ═══════════════════════════════ Blocks ══════════════════════════════
 with tab_blocks:
     st.markdown(f'<span class="order-type-badge ot-block">Block orders · MILP</span> {t("blocks_badge")}', unsafe_allow_html=True)
     st.markdown(f"### {t('blocks_in_zone', zone=my_zone)}")
@@ -205,7 +205,7 @@ with tab_blocks:
         st.success(t('blocks_deleted'))
         st.rerun()
 
-# ═══════════════════════════════ Récapitulatif ═══════════════════════════════
+# ═══════════════════════════════ Summary ═══════════════════════════════
 with tab_preview:
     supply_data = get_zone_supply(my_zone)
     demand_data = get_zone_demand(my_zone)

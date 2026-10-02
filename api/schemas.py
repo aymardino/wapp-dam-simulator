@@ -1,4 +1,4 @@
-"""Schémas d'entrée et de sortie de l'API (pydantic v2)."""
+"""Input and output schemas of the API (pydantic v2)."""
 from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List, Optional, Literal, Any
@@ -164,7 +164,7 @@ class OrderBookOut(OrderBook):
 
 
 class NtcUpdate(BaseModel):
-    values: Dict[str, float] = Field(description='{"NGA->BEN": 800, ...} ; les lignes absentes gardent leur valeur par défaut')
+    values: Dict[str, float] = Field(description='{"NGA->BEN": 800, ...}; lines not listed keep their current value')
 
 
 class RunSummary(BaseModel):

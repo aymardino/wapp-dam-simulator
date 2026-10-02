@@ -1,2 +1,2 @@
-"""Pont vers les scénarios du moteur (évite un import circulaire dans service.py)."""
+"""Bridge to the engine scenarios (avoids a circular import in service.py)."""
 from engine.scenarios import scenario_rows, scenario_list, SCENARIOS  # noqa: F401

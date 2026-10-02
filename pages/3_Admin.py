@@ -1,5 +1,5 @@
 """
-Page 3 — Administration : phase, paramètres, règles, NTC, lancement du clearing, aperçu des offres.
+Page 3 — Administration: phase, settings, rules, NTC, clearing run, order overview.
 """
 import os
 from datetime import datetime, timedelta
@@ -23,7 +23,7 @@ def _admin_password():
     try:
         return st.secrets['admin_password']
     except Exception:
-        return None   # aucun mot de passe par défaut : la page reste verrouillée tant qu'il n'est pas configuré
+        return None   # no default password: the page stays locked until one is configured
 
 
 header(t('admin_title'), t('admin_subtitle'))
@@ -90,7 +90,7 @@ with cp2:
         st.error(t('click_again'))
 st.markdown("---")
 
-# ── 2. Paramètres ─────────────────────────────────────────────────
+# ── 2. Settings ───────────────────────────────────────────────────
 st.markdown(f"## {t('parameters')}")
 pa, pb, pc = st.columns(3)
 with pa:
@@ -121,7 +121,7 @@ with pc:
         st.success(t('display_set'))
 st.markdown("---")
 
-# ── 3. Règles de clearing ─────────────────────────────────────────
+# ── 3. Clearing rules ─────────────────────────────────────────────
 st.markdown(f"## {t('rules_section')}")
 r1, r2, r3 = st.columns(3)
 pricing_labels = {'complete': t('pricing_complete'), 'l2': t('pricing_l2')}
@@ -229,7 +229,7 @@ if last:
             st.markdown(f"- {note}")
 st.markdown("---")
 
-# ── 6. Aperçu ─────────────────────────────────────────────────────
+# ── 6. Overview ───────────────────────────────────────────────────
 st.markdown(f"## {t('all_offers')}")
 tab_s, tab_d, tab_b, tab_p = st.tabs([t('kpi_supply'), t('kpi_demand'), t('kpi_blocks'), t('kpi_participants')])
 with tab_s:

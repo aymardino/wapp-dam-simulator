@@ -1,4 +1,4 @@
-"""Adaptateur entre la salle de marché (API) et le moteur de clearing (engine.clearing)."""
+"""Adapter between the trading room (API) and the clearing engine (engine.clearing)."""
 from __future__ import annotations
 import json, uuid
 from datetime import datetime
@@ -15,7 +15,7 @@ def line_key(u, v):
 
 
 def scenario_ntc(room: Room):
-    """{(u, v): MW} : capacités du scénario de la salle (valeurs par défaut du moteur, puis celles du scénario)."""
+    """{(u, v): MW}: capacities of the room's scenario (engine defaults, then the scenario values)."""
     ntc = dict(NTC)
     _, _, sc_ntc = scenario_rows(room.settings.get('scenario', 'reference_2024'), zones=[])
     ntc.update(sc_ntc)
@@ -23,7 +23,7 @@ def scenario_ntc(room: Room):
 
 
 def effective_ntc(room: Room):
-    """{(u, v): MW} : capacités du scénario, surchargées par celles saisies dans la salle."""
+    """{(u, v): MW}: scenario capacities, overridden by those entered in the room."""
     ntc = scenario_ntc(room)
     for k, mw in room.ntc_overrides.items():
         u, v = k.split('->')
@@ -54,12 +54,12 @@ def create_room(db: Session, name: str, trainer_name: str, lang: str):
 
 def join_room(db: Session, room: Room, name: str, zone, role: str):
     if role == 'trader' and zone not in ZONES:
-        raise ValueError("Un trader doit choisir une zone")
+        raise ValueError("A trader must choose a zone")
     name = ' '.join(name.split())
     if not name:
-        raise ValueError("Le nom est vide")
+        raise ValueError("The name is empty")
     if any(p.name.lower() == name.lower() for p in room.participants):
-        raise ValueError(f"Le nom « {name} » est déjà utilisé dans cette salle ; choisissez-en un autre")
+        raise ValueError(f"The name \"{name}\" is already used in this room; choose another one")
     p = Participant(id=str(uuid.uuid4()), room_id=room.id, name=name, zone=zone if role == 'trader' else None,
                     role=role, token=new_token())
     db.add(p)
@@ -83,7 +83,7 @@ def order_book(db: Session, room: Room, p: Participant):
 
 
 def engine_rows(db: Session, room: Room):
-    """Ordres de la salle au format des lignes du moteur (zone et trader portés par le participant)."""
+    """Room orders in the engine row format (zone and trader carried by the participant)."""
     parts = {p.id: p for p in room.participants}
     supply, demand, blocks, mic = [], [], [], []
     for o in db.execute(select(Order).where(Order.room_id == room.id).order_by(Order.id)).scalars():
@@ -101,7 +101,7 @@ def run_room_clearing(db: Session, room: Room):
     mode = s.get('fill_mode') or ('zones' if s.get('fill_missing', True) else 'none')
     if not (supply or demand or blocks) and mode == 'none':
         from engine.clearing import ClearingError
-        raise ClearingError("Aucun ordre déposé dans la salle et complétion par les données de référence désactivée : rien à calculer.")
+        raise ClearingError("No order submitted in the room and reference-data filling disabled: nothing to compute.")
     ref_sup, ref_dem, _ = scenario_rows(s.get('scenario', 'reference_2024'))
     result = run_clearing(supply, demand, block_rows=blocks, mic_rows=mic, hours=s['hours'],
                           ntc_override=effective_ntc(room), fill_mode=mode,

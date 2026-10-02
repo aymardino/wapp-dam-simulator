@@ -1,4 +1,4 @@
-/** Système de design : palette neutre chaude, un accent vert, en-tête sombre, deux poids de police. */
+/** Design system: warm neutral palette, one green accent, dark header, two font weights. */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {

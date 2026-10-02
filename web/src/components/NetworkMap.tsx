@@ -1,5 +1,5 @@
-/** Carte du réseau WAPP sur fond géographique (Natural Earth, domaine public) : 14 zones colorées par prix,
- *  15 lignes dont l'épaisseur suit le flux à l'heure choisie, lignes saturées en rouge. */
+/** WAPP network map on a geographic background (Natural Earth, public domain): 14 zones coloured by price,
+ *  15 lines whose width follows the flow at the chosen hour, saturated lines in red. */
 import { useId, useMemo } from 'react'
 import { geoMercator, geoPath } from 'd3-geo'
 import westAfrica from '../data/west_africa.geo.json'
@@ -11,12 +11,12 @@ const NODES: Record<string, [number, number]> = {
 const LINES: [string, string][] = [['NGA', 'BEN'], ['NGA', 'NER'], ['BEN', 'TGO'], ['TGO', 'GHA'], ['GHA', 'CIV'], ['GHA', 'BFA'], ['CIV', 'BFA'], ['CIV', 'MLI'], ['CIV', 'LBR'], ['LBR', 'SLE'], ['SLE', 'GIN'], ['GIN', 'GNB'], ['GNB', 'GMB'], ['GMB', 'SEN'], ['SEN', 'MLI']]
 const W = 560, H = 340
 const R = 14
-/** Décalage (unités SVG) des nœuds des petits pays, vers la mer, pour éviter les chevauchements. */
+/** Offset (SVG units) of the small countries' nodes, towards the sea, to avoid overlaps. */
 const OFFSET: Record<string, [number, number]> = { GMB: [-30, 2], GNB: [-24, 24], TGO: [-4, 34], BEN: [14, 40], SLE: [-16, 8], LBR: [-8, 18] }
-const EXTENT: any = { type: 'Polygon', coordinates: [[[-18.5, 3.5], [-18.5, 24.5], [16.5, 24.5], [16.5, 3.5], [-18.5, 3.5]]] }  // anneau horaire (convention d3-geo)
+const EXTENT: any = { type: 'Polygon', coordinates: [[[-18.5, 3.5], [-18.5, 24.5], [16.5, 24.5], [16.5, 3.5], [-18.5, 3.5]]] }  // clockwise ring (d3-geo convention)
 
 type Theme = 'light' | 'dark'
-/** Palettes : claire (application) et sombre (site vitrine). Les nœuds vont de la couleur « lo » (prix bas) à « hi » (prix haut). */
+/** Palettes: light (application) and dark (website). Nodes go from colour "lo" (low price) to "hi" (high price). */
 const PALETTE = {
   light: { sea: '#DCE7EE', member: '#F6F5EF', other: '#E8E6DF', border: '#1B1B19', borderOp: [0.9, 0.5], lo: [225, 245, 238], hi: [11, 61, 48], flow: '#0F6E56', sat: '#A32D2D', nodeStroke: '#FFFFFF', selStroke: '#0F6E56', legendBg: '#FFFFFF', legendText: '#5C5B56', credit: '#8C8B84', leader: '#1B1B19' },
   dark: { sea: '#07241C', member: '#10493A', other: '#0C352A', border: '#D7E8E1', borderOp: [0.45, 0.2], lo: [168, 224, 196], hi: [242, 177, 52], flow: '#8FD3B5', sat: '#FF6B4A', nodeStroke: '#07241C', selStroke: '#FFFFFF', legendBg: '#07241C', legendText: '#D7E8E1', credit: '#8FA89F', leader: '#D7E8E1' },

@@ -1,4 +1,4 @@
-/** Client de l'API REST (voir api/main.py). Le jeton du participant est conservé par salle dans localStorage. */
+/** REST API client (see api/main.py). The participant token is kept per room in localStorage. */
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/api/v1'
 
 export type Participant = { id: string; name: string; zone: string | null; role: 'trainer' | 'trader' | 'observer'; joined_at: string }
@@ -16,7 +16,7 @@ export type MyResult = { run_id: number; run_at: string; participant: Participan
 export type RefRow = { zone: string; actor: string; segment: number; quantity: number; price: number; profile?: string }
 export type Reference = { zones: string[]; lines: { from: string; to: string; ntc: number }[]; profiles: Record<string, number[]>; price_bounds: number[]; rules: Record<string, string[]>; reference_supply: RefRow[]; reference_demand: RefRow[]; organisations: Record<string, string[]> }
 
-/** Valeurs par défaut d'un nouvel ordre, tirées des tailles types de la zone dans les données de référence. */
+/** Defaults of a new order, taken from the zone's typical sizes in the reference data. */
 export function zoneDefaults(ref: Reference | null, zone: string | null) {
   const med = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)] }
   const sup = ref && zone ? ref.reference_supply.filter(r => r.zone === zone) : []
@@ -27,7 +27,7 @@ export function zoneDefaults(ref: Reference | null, zone: string | null) {
   return { supplyQty: q ? round(q) : 50, supplyPrice: p ? Math.round(p) : 50, demandQty: dq ? round(dq * 0.6) : 100, demandPrice: dp ? Math.round(dp) : 150, blockQty: q ? round(q / 2) : 25 }
 }
 
-/** Un jeton par salle et par rôle : un formateur peut aussi rejoindre sa propre salle comme trader depuis le même navigateur. */
+/** One token per room and per role: a trainer can also join their own room as a trader from the same browser. */
 export type Role2 = 'trainer' | 'member'
 export type Member = { id: string; name: string; zone: string | null; role: string; token: string }
 export const session = {
@@ -36,7 +36,7 @@ export const session = {
     if (role === 'trainer') localStorage.setItem(`wapp:${code}:trainer:token`, token)
     if (name) localStorage.setItem(`wapp:${code}:name`, name)
   },
-  /** Identités de trader ou d'observateur mémorisées pour une salle (plusieurs possibles sur un même navigateur). */
+  /** Trader or observer identities remembered for a room (several possible in the same browser). */
   members: (code: string): Member[] => { try { return JSON.parse(localStorage.getItem(`wapp:${code}:members`) || '[]') } catch { return [] } },
   addMember: (code: string, m: Member) => {
     const list = session.members(code).filter(x => x.id !== m.id); list.push(m)

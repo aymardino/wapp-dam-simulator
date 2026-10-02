@@ -1,1 +1,1 @@
-"""API REST du simulateur Day-Ahead WAPP (FastAPI). Point d'entrée : api.main:app"""
+"""REST API of the WAPP Day-Ahead simulator (FastAPI). Entry point: api.main:app"""

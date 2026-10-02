@@ -1,6 +1,6 @@
-/** Page d'accueil publique (wapp-dam-simulator.org). Identité : titres en serif éditoriale, bandeau de cotations,
- *  carte sombre « salle de contrôle » pilotée par un sélecteur d'heure en histogramme, explorateur offre / demande
- *  par zone construit sur les ordres de référence, fiche technique, bloc terminal. Bilingue FR/EN. */
+/** Public home page (wapp-dam-simulator.org). Identity: editorial serif headings, price ticker, dark
+ *  "control room" map driven by a histogram hour selector, per-zone supply / demand explorer built on the
+ *  reference orders, spec sheet, terminal block. Bilingual FR/EN. */
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang, type Lang } from '../i18n'
@@ -153,7 +153,7 @@ const L = {
 }
 type Strings = typeof L.fr
 
-/* ── Calculs de l'explorateur ─────────────────────────────────────────── */
+/* ── Explorer computations ────────────────────────────────────────────── */
 type Seg = { actor: string; price: number; qty: number }
 type Curves = { sup: Seg[]; dem: Seg[]; price: number; net: number; lines: { other: string; flow: number; cap: number; sat: boolean }[]; supAt: number; demAt: number }
 
@@ -187,7 +187,7 @@ function sentence(c: Curves, zone: string, hour: number, lang: Lang) {
 const niceCeil = (v: number) => { const pow = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1)))); const f = v / pow; const m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10; return m * pow }
 const ticks = (max: number, n: number) => { const step = niceCeil(max / n); const out: number[] = []; for (let v = 0; v <= max + 1e-9; v += step) out.push(v); return out }
 
-/* ── Composants ───────────────────────────────────────────────────────── */
+/* ── Components ───────────────────────────────────────────────────────── */
 function Ticker({ demo, hour, s }: { demo: Demo; hour: number; s: Strings }) {
   const h = String(hour)
   const items: ReactNode[] = [

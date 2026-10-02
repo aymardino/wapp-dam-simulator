@@ -4,7 +4,7 @@ import { marked } from 'marked'
 import { useLang, useT } from '../i18n'
 import { Header } from '../components/ui'
 
-/** Guides du formateur et du trader, servis en Markdown depuis /guides/<qui>.<langue>.md */
+/** Trainer and trader guides, served as Markdown from /guides/<who>.<lang>.md */
 export default function Guide() {
   const { who = 'trader' } = useParams(); const { lang } = useLang(); const t = useT()
   const [html, setHtml] = useState('')

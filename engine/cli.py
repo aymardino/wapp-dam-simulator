@@ -1,10 +1,10 @@
 """
-Ligne de commande du moteur de clearing : fichiers CSV en entrée, JSON (et CSV des prix) en sortie.
+Command line of the clearing engine: CSV files in, JSON (and a prices CSV) out.
 
 Exemples :
     python -m engine.cli --reference --out resultat.json
     python -m engine.cli --supply vente.csv --demand achat.csv --blocks blocs.csv --hours 19 --out resultat.json
-Colonnes attendues (en-tête CSV) :
+Expected columns (CSV header):
     vente  : zone, player, actor, segment, quantity, price, profile
     achat  : zone, player, actor, segment, quantity, price
     blocs  : zone, player, name, side, quantity, price, h_start, h_end, parent_name, excl_group
@@ -25,14 +25,14 @@ def _read(path):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Clearing day-ahead WAPP (P1 → P1bis → P2)")
-    ap.add_argument('--reference', action='store_true', help="utiliser les données de référence des 14 zones")
+    ap = argparse.ArgumentParser(description="WAPP day-ahead clearing (P1 → P1bis → P2)")
+    ap.add_argument('--reference', action='store_true', help="use the reference data of the 14 zones")
     ap.add_argument('--supply'); ap.add_argument('--demand'); ap.add_argument('--blocks'); ap.add_argument('--mic'); ap.add_argument('--ntc')
-    ap.add_argument('--hours', type=int, nargs='*', help="heures simulées (défaut : 0..23)")
+    ap.add_argument('--hours', type=int, nargs='*', help="simulated hours (default: 0..23)")
     ap.add_argument('--pricing', default='complete'); ap.add_argument('--pab', default='euphemia'); ap.add_argument('--tie', default='prorata')
-    ap.add_argument('--fill-missing', action='store_true', help="compléter les zones sans soumission avec la référence")
-    ap.add_argument('--out', help="fichier JSON de sortie (défaut : sortie standard)")
-    ap.add_argument('--prices-csv', help="fichier CSV des prix zonaux")
+    ap.add_argument('--fill-missing', action='store_true', help="fill zones without submission from the reference data")
+    ap.add_argument('--out', help="output JSON file (default: standard output)")
+    ap.add_argument('--prices-csv', help="CSV file of zonal prices")
     a = ap.parse_args(argv)
 
     from engine.clearing import run_clearing, ClearingError

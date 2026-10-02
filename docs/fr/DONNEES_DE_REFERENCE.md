@@ -1,6 +1,6 @@
 # Données de référence : sources et hypothèses
 
-*Jeu « Référence 2024 (sources publiques) », scénario `reference_2024` dans `engine/scenarios.py`. Version du 2 octobre 2026. Scénario par défaut des salles et du site public depuis le 2 octobre 2026 ; le jeu du Livrable 2 (`reference`) reste le jeu de test de non-régression. Les valeurs marquées (est.) sont à valider avec SENELEC et le centre de coordination du WAPP.*
+*Jeu « Référence 2024 (sources publiques) », scénario `reference_2024` dans `engine/scenarios.py`. Version du 2 octobre 2026 (version anglaise : `docs/REFERENCE_DATA.md`). Scénario par défaut des salles et du site public depuis le 2 octobre 2026 ; le jeu du Livrable 2 (`reference`) reste le jeu de test de non-régression. Les valeurs marquées (est.) sont à valider avec SENELEC et le centre de coordination du WAPP.*
 
 **Principe.** Chaque zone offre ses centrales disponibles par technologie (quantité en MW disponible, prix en USD/MWh proche du coût variable) et demande sa pointe (quantité en MW à la pointe, modulée par le profil de charge horaire ; prix d'achat décroissants par tranche : 220 à 230 pour la base, 160 à 180 pour la tranche suivante, 110 à 130 pour la dernière, sous le plafond de 500). Les valeurs sans source directe sont marquées **(est.)**.
 

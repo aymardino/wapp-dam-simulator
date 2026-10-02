@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mise à jour du serveur après un git push : récupère le code, reconstruit l'image, redémarre sans interruption longue.
+# Server update after a git push: pulls the code, rebuilds the image, restarts with minimal downtime.
 set -euo pipefail
 cd /opt/wapp/app
 git pull --ff-only

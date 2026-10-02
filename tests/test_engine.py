@@ -1,7 +1,7 @@
 """
-Tests de non-régression du moteur de clearing.
-Valeurs de référence : Livrable 2 (8 mars 2026) et notebook wapp_market_clearing_final1.ipynb.
-Exécution : pytest -q
+Regression tests of the clearing engine.
+Reference values: Deliverable 2 (8 March 2026) and the notebook wapp_market_clearing_final1.ipynb.
+Run: pytest -q
 """
 import os, sys, tempfile
 os.environ['WAPP_DB_PATH'] = os.path.join(tempfile.mkdtemp(), 'test_market.db')
@@ -11,7 +11,7 @@ import pytest
 from engine import clearing as C
 from engine.clearing import run_clearing, ClearingError, default_rows
 
-# Blocs du Livrable 2, tableau 14 (step 4)
+# Deliverable 2 blocks, table 14 (step 4)
 BLOCKS_STEP4 = [
     dict(zone='NGA', player='t', name='NGA Baseload Block', side='S', quantity=300, price=35,  h_start=0,  h_end=23),
     dict(zone='GHA', player='t', name='GHA Night Block',    side='S', quantity=150, price=28,  h_start=0,  h_end=5),
@@ -20,7 +20,7 @@ BLOCKS_STEP4 = [
     dict(zone='SEN', player='t', name='SEN Day Block',      side='D', quantity=200, price=160, h_start=8,  h_end=17),
     dict(zone='NGA', player='t', name='NGA Industry Block', side='D', quantity=500, price=120, h_start=6,  h_end=21),
 ]
-# Blocs liés et exclusifs du Livrable 2, tableau 15 (step 5)
+# Deliverable 2 linked and exclusive blocks, table 15 (step 5)
 BLOCKS_STEP5 = [
     dict(zone='NGA', player='t', name='NGA Base Parent',   side='S', quantity=400, price=32,  h_start=0,  h_end=23),
     dict(zone='NGA', player='t', name='NGA Extra Child 1', side='S', quantity=200, price=38,  h_start=8,  h_end=19, parent_name='NGA Base Parent'),
@@ -39,21 +39,21 @@ def ref():
 
 
 def test_step3_reference_values(ref):
-    """Step 3 du Livrable 2 : welfare et volume identiques au notebook."""
+    """Deliverable 2 step 3: welfare and volume identical to the notebook."""
     assert round(ref['welfare']) == 22_317_910
     assert round(ref['volume']) == 167_900
     assert ref['summary']['n_supply'] == 64 and ref['summary']['n_demand'] == 44
 
 
 def test_prices_are_admissible(ref):
-    """P2 complet : aucun ordre simple paradoxal, aucune divergence de prix sans congestion."""
+    """Complete P2: no paradoxical simple order, no price divergence without congestion."""
     d = ref['summary']['diagnostics']
     assert d['pricing_feasible'] and d['tie_break'] == 'exact'
     assert d['pro'] == 0 and d['pao'] == 0 and d['unsaturated_price_gaps'] == 0
 
 
 def test_welfare_identity(ref):
-    """Welfare = surplus consommateur + surplus producteur + rente de congestion."""
+    """Welfare = consumer surplus + producer surplus + congestion rent."""
     assert abs(ref['summary']['diagnostics']['welfare_identity_gap']) < 1.0
 
 
@@ -74,14 +74,14 @@ def test_fill_missing_zones():
     dem = [dict(zone='SEN', player='x', actor='SENELEC Demand', segment=0, quantity=350, price=200)]
     r_fill = run_clearing(sup, dem, horizon=24, fill_missing_zones=True)
     r_part = run_clearing(sup, dem, horizon=24, fill_missing_zones=False)
-    # SEN de référence : 5 segments de vente et 3 d'achat remplacés par 1 et 1
+    # reference SEN: 5 sell segments and 3 buy segments replaced by 1 and 1
     assert r_fill['summary']['n_supply'] == 64 - 5 + 1
     assert r_fill['summary']['n_demand'] == 44 - 3 + 1
     assert r_part['summary']['n_supply'] == 1 and r_part['summary']['n_demand'] == 1
 
 
 def test_blocks_step4_reference():
-    """Step 4 du Livrable 2 : 5 blocs acceptés sur 6, NGA Industry paradoxalement rejeté (toléré)."""
+    """Deliverable 2 step 4: 5 blocks accepted out of 6, NGA Industry paradoxically rejected (tolerated)."""
     res = run_clearing(None, None, horizon=24, block_rows=BLOCKS_STEP4)
     assert round(res['welfare']) == 23_082_419
     acc = {b['name']: b['accepted'] for b in res['summary']['blocks']}
@@ -94,7 +94,7 @@ def test_blocks_step4_reference():
 
 
 def test_linked_exclusive_step5_reference():
-    """Step 5 du Livrable 2 : enfants acceptés avec leur parent, une seule option exclusive retenue."""
+    """Deliverable 2 step 5: children accepted with their parent, a single exclusive option kept."""
     res = run_clearing(None, None, horizon=24, block_rows=BLOCKS_STEP5)
     assert round(res['welfare']) == 23_775_223
     acc = {b['name']: b['accepted'] for b in res['summary']['blocks']}
@@ -104,7 +104,7 @@ def test_linked_exclusive_step5_reference():
 
 
 def test_child_rejected_when_parent_rejected():
-    """Un enfant ne peut pas être accepté sans son parent, même s'il est rentable seul."""
+    """A child cannot be accepted without its parent, even when profitable on its own."""
     blocks = [
         dict(zone='NGA', player='t', name='Parent cher', side='S', quantity=100, price=400, h_start=0, h_end=23),
         dict(zone='NGA', player='t', name='Enfant pas cher', side='S', quantity=100, price=1, h_start=0, h_end=23, parent_name='Parent cher'),
@@ -134,7 +134,7 @@ def test_unknown_zone_raises():
 
 
 def test_no_trade_market_has_consistent_price():
-    """Marché sans échange : prix entre la meilleure demande et la meilleure offre, volume nul."""
+    """Market without trade: price between the best bid and the best offer, zero volume."""
     sup = [dict(zone='NGA', player='x', actor='A', segment=0, quantity=100, price=150, profile='baseload')]
     dem = [dict(zone='NGA', player='y', actor='B', segment=0, quantity=100, price=100)]
     res = run_clearing(sup, dem, horizon=1)
@@ -158,8 +158,8 @@ def test_actor_results_consistent(ref):
     assert abs(total_supply - ref['volume']) < 5
 
 
-# ── Partage des ex æquo et Minimum Income Condition ────────────────
-NTC_ZERO = {k: 0 for k in C.NTC}   # isole chaque zone
+# ── Equal-price sharing and Minimum Income Condition ──────────────
+NTC_ZERO = {k: 0 for k in C.NTC}   # isolates every zone
 
 
 def _one_zone(supply, demand, **kw):
@@ -170,14 +170,14 @@ def test_tie_rule_prorata_shares_equal_price_offers():
     sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=100, price=50, profile='baseload'),
            dict(zone='NGA', player='b', actor='B', segment=0, quantity=100, price=50, profile='baseload')]
     dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=150, price=100)]
-    res = _one_zone(sup, dem)                                   # prorata par défaut
+    res = _one_zone(sup, dem)                                   # pro rata by default
     acc = {a['actor']: a['accepted_mwh'] for a in res['summary']['actors'] if a['side'] == 'S'}
-    assert abs(acc['A'] - acc['B']) < 0.2, acc                  # 132 MWh demandés, 95 + 95 offerts : 66 chacun
+    assert abs(acc['A'] - acc['B']) < 0.2, acc                  # 132 MWh demanded, 95 + 95 offered: 66 each
     assert res['prices']['NGA']['12'] == 50
     assert res['summary']['diagnostics']['tie_groups_adjusted'] >= 0
     res_o = _one_zone(sup, dem, tie_rule='order')
     acc_o = {a['actor']: a['accepted_mwh'] for a in res_o['summary']['actors'] if a['side'] == 'S'}
-    assert acc_o['A'] == 95 and abs(acc_o['B'] - 37) < 0.2, acc_o   # premier servi
+    assert acc_o['A'] == 95 and abs(acc_o['B'] - 37) < 0.2, acc_o   # first served
     assert round(res_o['welfare']) == round(res['welfare']) and round(res_o['volume']) == round(res['volume'])
 
 
@@ -187,11 +187,11 @@ def test_mic_withdraws_actor_and_reruns():
     dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=150, price=100)]
     mic = [dict(zone='NGA', player='b', actor='Peaker', fixed_term=3000, variable_term=0)]
     res0 = _one_zone(sup, dem)
-    assert res0['prices']['NGA']['12'] == 60                     # Peaker marginal : 37 MWh à 60 = 2 220 < 3 000
+    assert res0['prices']['NGA']['12'] == 60                     # marginal peaker: 37 MWh at 60 = 2,220 < 3,000
     res = _one_zone(sup, dem, mic_rows=mic)
     d = res['summary']['diagnostics']
     assert d['mic_iterations'] == 2 and d['mic_withdrawn'] == ['Peaker (NGA)']
-    assert res['prices']['NGA']['12'] == 100                     # la demande devient marginale
+    assert res['prices']['NGA']['12'] == 100                     # demand becomes marginal
     m = res['summary']['mic'][0]
     assert m['withdrawn'] is True and m['satisfied'] is False
     peaker = [a for a in res['summary']['actors'] if a['actor'] == 'Peaker'][0]
@@ -203,7 +203,7 @@ def test_mic_satisfied_keeps_actor():
     sup = [dict(zone='NGA', player='a', actor='Base', segment=0, quantity=100, price=30, profile='baseload'),
            dict(zone='NGA', player='b', actor='Peaker', segment=0, quantity=100, price=60, profile='baseload')]
     dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=150, price=100)]
-    mic = [dict(zone='NGA', player='b', actor='Peaker', fixed_term=1000, variable_term=20)]   # 1000 + 20×37 = 1 740 ≤ 2 220
+    mic = [dict(zone='NGA', player='b', actor='Peaker', fixed_term=1000, variable_term=20)]   # 1000 + 20×37 = 1,740 ≤ 2,220
     res = _one_zone(sup, dem, mic_rows=mic)
     m = res['summary']['mic'][0]
     assert m['satisfied'] is True and not m['withdrawn'] and res['summary']['diagnostics']['mic_iterations'] == 1
@@ -211,7 +211,7 @@ def test_mic_satisfied_keeps_actor():
 
 
 def test_mic_withdrawal_removes_child_blocks():
-    """Le bloc enfant d'un acteur retiré par la MIC est retiré aussi."""
+    """The child block of an actor withdrawn by the MIC is withdrawn too."""
     sup = [dict(zone='NGA', player='a', actor='Base', segment=0, quantity=100, price=30, profile='baseload')]
     dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=400, price=100)]
     blocks = [dict(zone='NGA', player='b', name='Parent', side='S', quantity=50, price=60, h_start=12, h_end=12),
@@ -220,7 +220,7 @@ def test_mic_withdrawal_removes_child_blocks():
     res = run_clearing(sup, dem, hours=[12], ntc_override=NTC_ZERO, block_rows=blocks, mic_rows=mic)
     assert res['summary']['diagnostics']['mic_withdrawn'] == ['Parent (NGA)']
     names = {b['name'] for b in res['summary']['blocks']}
-    assert names == set(), names                                  # parent et enfant retirés du clearing
+    assert names == set(), names                                  # parent and child withdrawn from the clearing
     withdrawn = {a['actor'] for a in res['summary']['actors'] if a['status'] == 'withdrawn_mic'}
     assert withdrawn == {'Parent', 'Enfant'}
 
@@ -237,9 +237,9 @@ def test_reference_zones_reported(ref):
 def test_scenarios_change_outcomes():
     from engine.scenarios import scenario_rows, SCENARIOS, scenario_list
     assert set(scenario_list('en')[0].keys()) == {'key', 'name', 'description'} and len(SCENARIOS) == 6
-    assert [x['key'] for x in scenario_list('fr')] == ['reference_2024', 'secheresse_hydro', 'ligne_nga_ben', 'gaz_cher', 'forte_demande']   # jeu L2 masqué
+    assert [x['key'] for x in scenario_list('fr')] == ['reference_2024', 'secheresse_hydro', 'ligne_nga_ben', 'gaz_cher', 'forte_demande']   # Deliverable 2 set hidden
     assert len(scenario_list('fr', include_hidden=True)) == 6
-    sup0, dem0, ntc0 = scenario_rows('reference_2024')   # les variantes dérivent du jeu de base 2024
+    sup0, dem0, ntc0 = scenario_rows('reference_2024')   # the variants derive from the 2024 base set
     base = run_clearing(None, None, horizon=24, reference_rows=(sup0, dem0), ntc_override=ntc0)
     sup, dem, ntc = scenario_rows('secheresse_hydro')
     assert sum(r['quantity'] for r in sup if r['profile'] == 'hydro') < sum(r['quantity'] for r in sup0 if r['profile'] == 'hydro') and ntc == ntc0
@@ -269,7 +269,7 @@ def test_reference_2024_dataset_is_plausible():
     d = res['summary']['diagnostics']
     assert d['pro'] == 0 and d['pao'] == 0 and d['unsaturated_price_gaps'] == 0
     assert 0 < res['volume'] < 24 * total_sup
-    # le Togo offre des unités de quelques dizaines de MW, pas de 100 MW par défaut
+    # Togo offers units of a few tens of MW, no 100 MW default
     tgo = [r['quantity'] for r in sup if r['zone'] == 'TGO']
     assert max(tgo) <= 80
 
@@ -279,14 +279,14 @@ def test_fill_mode_actors_keeps_background_and_replaces_matching_actors():
     dem = [dict(zone='SEN', player='SENELEC', actor='Ma charge', segment=0, quantity=300, price=200)]
     r = run_clearing(sup, dem, horizon=1, fill_mode='actors')
     actors = {(a['zone'], a['actor']) for a in r['summary']['actors']}
-    assert ('SEN', 'OMVS Manantali') in actors          # acteur de fond conservé dans la même zone
-    assert ('SEN', 'SENELEC Thermal') not in actors and ('SEN', 'SENELEC Demand') not in actors   # remplacés
-    assert ('NGA', 'Egbin Gas') in actors                # autres zones intactes
+    assert ('SEN', 'OMVS Manantali') in actors          # background actor kept in the same zone
+    assert ('SEN', 'SENELEC Thermal') not in actors and ('SEN', 'SENELEC Demand') not in actors   # replaced
+    assert ('NGA', 'Egbin Gas') in actors                # other zones untouched
     assert r['summary']['n_supply'] == 64 - 3 + 1 and r['summary']['n_demand'] == 44 - 3 + 1
-    # nom au hasard : rien n'est remplacé, les ordres s'ajoutent au marché
+    # arbitrary name: nothing is replaced, the orders are added to the market
     r2 = run_clearing([dict(sup[0], player='Equipe 1')], [dict(dem[0], player='Equipe 1')], horizon=1, fill_mode='actors')
     assert r2['summary']['n_supply'] == 65 and r2['summary']['n_demand'] == 45
-    # un ordre portant le nom d'un acteur de référence le remplace
+    # an order named after a reference actor replaces it
     r3 = run_clearing([dict(zone='NGA', player='Equipe 2', actor='Egbin Gas', segment=0, quantity=10, price=10, profile='baseload')], [], horizon=1, fill_mode='actors')
     assert ('NGA', 'Egbin Gas') in {(a['zone'], a['actor']) for a in r3['summary']['actors']}
     assert r3['summary']['n_supply'] == 64 - 4 + 1

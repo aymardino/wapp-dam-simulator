@@ -1,4 +1,4 @@
-# Le domaine vient de la variable DOMAIN du fichier .env ; Caddy obtient et renouvelle le certificat HTTPS tout seul.
+# The domain comes from the DOMAIN variable of the .env file; Caddy obtains and renews the HTTPS certificate by itself.
 {$DOMAIN:wapp-dam-simulator.org} {
     encode gzip
     header {

@@ -1,23 +1,23 @@
 """
-WAPP Day-Ahead Market Clearing Engine — v2 (octobre 2026)
+WAPP Day-Ahead Market Clearing Engine — v2 (October 2026)
 
-Décomposition séquentielle du Livrable 2 (8 mars 2026) :
-    P1    : maximisation du welfare (LP ; MILP en présence d'ordres bloc)
-    P1bis : maximisation du volume parmi les solutions de welfare optimal (LP, départage)
-    P2    : prix zonaux = prix admissibles les plus proches du milieu de l'intervalle (LP)
+Sequential decomposition of Deliverable 2 (8 March 2026):
+    P1    : welfare maximisation (LP; MILP when block orders are present)
+    P1bis : volume maximisation among welfare-optimal solutions (LP, tie-break)
+    P2    : zonal prices = admissible prices closest to the midpoint of the interval (LP)
 
-Changements v2 par rapport au moteur du Livrable 3 (détail dans CHANGELOG.md et docs/REGLES_DE_MARCHE.md) :
-    - P2 « complet » : l'ensemble des prix admissibles est décrit par les conditions KKT complètes
-      (ordres rejetés, égalité des prix sur les lignes non saturées, multiplicateur de la contrainte α).
-      Le mode 'l2' conserve les contraintes (8)-(12) du Livrable 2 pour comparaison.
-    - P1bis exact (ε = 0) au lieu de ε = 0,01 ; repli documenté si le solveur ne suit pas.
-    - Ordres bloc, liés et exclusifs (MILP) portés du notebook wapp_market_clearing_final1.ipynb ;
-      boucle de rejet des blocs paradoxalement acceptés (règle EUPHEMIA) ; PRB signalés.
-    - NTC paramétrables, heures simulées paramétrables, zones manquantes complétées par les
-      données de référence, validation des entrées.
-    - Contrôle du statut du solveur à chaque étape (ClearingError) et diagnostics de cohérence.
-    - Règle explicite de partage des offres au même prix (prorata par défaut) après P1bis.
-    - Minimum Income Condition (revenu ≥ terme fixe + terme variable × volume) avec retrait itératif.
+Changes in v2 compared with the Deliverable 3 engine (details in CHANGELOG.md and docs/MARKET_RULES.md):
+    - "Complete" P2: the set of admissible prices is described by the full KKT conditions
+      (rejected orders, price equality across unsaturated lines, multiplier of the α constraint).
+      Mode 'l2' keeps constraints (8)-(12) of Deliverable 2 for comparison.
+    - Exact P1bis (ε = 0) instead of ε = 0.01; documented fallback if the solver cannot follow.
+    - Block, linked and exclusive orders (MILP) ported from the notebook wapp_market_clearing_final1.ipynb;
+      rejection loop for paradoxically accepted blocks (EUPHEMIA rule); PRBs reported.
+    - Configurable NTC, configurable simulated hours, missing zones filled with reference data,
+      input validation.
+    - Solver status checked at every step (ClearingError) and consistency diagnostics.
+    - Explicit sharing rule for equal-price orders (pro rata by default) after P1bis.
+    - Minimum Income Condition (income ≥ fixed term + variable term × volume) with iterative withdrawal.
 """
 import time
 import logging
@@ -39,16 +39,16 @@ __all__ = [
     'PRICING_MODES', 'PAB_RULES', 'TIE_RULES',
 ]
 
-# ── Paramètres réglementaires et numériques ───────────────────────
-P_MIN, P_MAX = 0, 500      # bornes de prix (Livrable 2, tableau 2)
-ALPHA = 0.7                # facteur d'interdépendance CIV/GHA/BFA (contrainte C4)
-X_TOL = 1e-4               # fraction : x < X_TOL = rejeté, x > 1 - X_TOL = accepté en totalité
-F_TOL = 1e-3               # MW : une ligne est saturée si |f| >= NTC - F_TOL
-PRICE_TOL = 0.5            # EUR/MWh : tolérance des diagnostics de cohérence
+# ── Regulatory and numerical parameters ───────────────────────────
+P_MIN, P_MAX = 0, 500      # price bounds (Deliverable 2, table 2)
+ALPHA = 0.7                # CIV/GHA/BFA interdependence factor (constraint C4)
+X_TOL = 1e-4               # fraction: x < X_TOL = rejected, x > 1 - X_TOL = fully accepted
+F_TOL = 1e-3               # MW: a line is saturated when |f| >= NTC - F_TOL
+PRICE_TOL = 0.5            # currency/MWh: tolerance of the consistency diagnostics
 PRICING_MODES = ('complete', 'l2')
 PAB_RULES = ('euphemia', 'l2', 'none')
-TIE_RULES = ('prorata', 'order', 'solver')   # partage des offres au même prix
-MIC_TOL = 0.5              # unité monétaire : tolérance de la condition de revenu minimum
+TIE_RULES = ('prorata', 'order', 'solver')   # sharing of equal-price orders
+MIC_TOL = 0.5              # currency unit: tolerance of the minimum income condition
 
 ZONES = ['NGA','BEN','TGO','GHA','CIV','BFA','MLI','SEN','GIN','SLE','LBR','GNB','GMB','NER']
 
@@ -63,7 +63,7 @@ NTC   = {(u, v): c for u, v, c in LINES}
 PAIRS = list(NTC.keys())
 ALPHA_LINES = (('GHA', 'BFA'), ('CIV', 'BFA'))
 
-# ── Profils horaires (Livrable 2, tableaux 12 et 13) ──────────────
+# ── Hourly profiles (Deliverable 2, tables 12 and 13) ─────────────
 _HYDRO = [0.7,0.65,0.6,0.6,0.6,0.65,0.75,0.85,0.9,0.95,1.0,1.0,
           1.0,0.95,0.9,0.85,0.9,0.95,1.0,0.95,0.9,0.85,0.8,0.75]
 _SOLAR = [0,0,0,0,0,0.05,0.2,0.45,0.7,0.85,0.95,1.0,
@@ -80,7 +80,7 @@ PROF = {
 LOAD_WA = [0.55,0.50,0.48,0.47,0.48,0.52,0.62,0.75,0.85,0.90,0.92,0.90,
            0.88,0.85,0.82,0.80,0.82,0.88,0.95,1.00,0.98,0.90,0.78,0.65]
 
-# ── Données de référence (notebook / Livrable 2, step 3) ──────────
+# ── Reference data (notebook / Deliverable 2, step 3) ─────────────
 DEFAULT_SUPPLY_24 = [
     ("Mainstream Solar",  'NGA', [(400,18),(400,25)],                   _SOLAR),
     ("Egbin Gas",         'NGA', [(400,24),(300,28),(200,35),(100,48)], [0.95]*24),
@@ -134,8 +134,8 @@ REFERENCE_PLAYER = 'Référence'
 
 
 def _name_key(name):
-    """Forme normalisée d'un nom d'acteur ou d'organisation pour la correspondance (minuscules, sans
-    accents ni ponctuation, mots « demand », « gen », « réseau » retirés)."""
+    """Normalised form of an actor or organisation name for matching (lower case, no accents or
+    punctuation, generic words such as "demand", "gen", "réseau" removed)."""
     import unicodedata, re
     s = unicodedata.normalize('NFKD', str(name)).encode('ascii', 'ignore').decode().lower()
     s = re.sub(r'[^a-z0-9 ]+', ' ', s)
@@ -144,10 +144,10 @@ def _name_key(name):
 
 
 class ClearingError(Exception):
-    """Erreur de clearing avec un message lisible pour l'administrateur."""
+    """Clearing error with a message readable by the administrator."""
 
 
-# ── Structures internes ───────────────────────────────────────────
+# ── Internal structures ───────────────────────────────────────────
 @dataclass
 class Seg:
     actor: str
@@ -156,7 +156,7 @@ class Seg:
     q: float
     p: float
     profile: str
-    qty: dict                 # {heure: quantité effective}
+    qty: dict                 # {hour: effective quantity}
     player: str = ''
     side: str = 'S'
 
@@ -165,7 +165,7 @@ class Seg:
 class Block:
     name: str
     zone: str
-    side: str                 # 'S' vente, 'D' achat
+    side: str                 # 'S' sell, 'D' buy
     q: float
     p: float
     hours: list
@@ -176,7 +176,7 @@ class Block:
 
 
 def _profile_name(arr):
-    """Nom du profil pour un vecteur de 24 valeurs (peaker a priorité sur flat, identiques)."""
+    """Profile name for a 24-value vector (peaker takes precedence over flat, which are identical)."""
     t = tuple(arr)
     for name in ('solar', 'hydro', 'baseload', 'peaker'):
         if tuple(PROF[name]) == t:
@@ -185,21 +185,21 @@ def _profile_name(arr):
 
 
 def _profile_array(prof):
-    """Accepte un nom de profil ou un vecteur de 24 valeurs. Retourne (vecteur, nom)."""
+    """Accepts a profile name or a 24-value vector. Returns (vector, name)."""
     if prof is None:
         return PROF['baseload'], 'baseload'
     if isinstance(prof, str):
         if prof in PROF:
             return PROF[prof], prof
-        raise ClearingError(f"Profil horaire inconnu : '{prof}' (attendu : {', '.join(PROF)}).")
+        raise ClearingError(f"Unknown hourly profile: '{prof}' (expected: {', '.join(PROF)}).")
     arr = [float(v) for v in prof]
     if len(arr) != 24:
-        raise ClearingError("Un profil horaire personnalisé doit contenir 24 valeurs.")
+        raise ClearingError("A custom hourly profile must contain 24 values.")
     return arr, _profile_name(arr)
 
 
 def default_rows(zones=None):
-    """Données de référence au format des lignes de la base (offres et demandes)."""
+    """Reference data in the database row format (sell and buy orders)."""
     sup, dem = [], []
     for n, z, segs, prof in DEFAULT_SUPPLY_24:
         if zones is not None and z not in zones:
@@ -216,17 +216,17 @@ def default_rows(zones=None):
     return sup, dem
 
 
-# ── Validation des entrées ────────────────────────────────────────
+# ── Input validation ──────────────────────────────────────────────
 def validate_inputs(supply_rows, demand_rows, block_rows):
-    """Lève ClearingError avec un message précis si une entrée est hors spécification."""
-    for kind, rows in (('vente', supply_rows), ('achat', demand_rows)):
+    """Raises ClearingError with a precise message when an input is out of specification."""
+    for kind, rows in (('sell', supply_rows), ('buy', demand_rows)):
         for r in rows:
             who = f"{r.get('actor', '?')} ({r.get('zone', '?')})"
             if r.get('zone') not in ZONES:
                 raise ClearingError(f"Offre de {kind} {who} : zone inconnue.")
             q, p = float(r.get('quantity', 0)), float(r.get('price', 0))
             if q < 0:
-                raise ClearingError(f"Offre de {kind} {who} : quantité négative.")
+                raise ClearingError(f"{kind.capitalize()} order {who}: negative quantity.")
             if not (P_MIN <= p <= P_MAX):
                 raise ClearingError(f"Offre de {kind} {who} : prix {p:g} hors des bornes [{P_MIN}, {P_MAX}].")
     for r in block_rows:
@@ -237,7 +237,7 @@ def validate_inputs(supply_rows, demand_rows, block_rows):
             raise ClearingError(f"Bloc {who} : sens attendu 'S' (vente) ou 'D' (achat).")
         q, p = float(r.get('quantity', 0)), float(r.get('price', 0))
         if q < 0:
-            raise ClearingError(f"Bloc {who} : quantité négative.")
+            raise ClearingError(f"Block {who}: negative quantity.")
         if not (P_MIN <= p <= P_MAX):
             raise ClearingError(f"Bloc {who} : prix {p:g} hors des bornes [{P_MIN}, {P_MAX}].")
         h0, h1 = int(r.get('h_start', 0)), int(r.get('h_end', 23))
@@ -245,7 +245,7 @@ def validate_inputs(supply_rows, demand_rows, block_rows):
             raise ClearingError(f"Bloc {who} : plage horaire invalide ({h0}-{h1}).")
 
 
-# ── Construction des segments et des blocs ────────────────────────
+# ── Segment and block construction ────────────────────────────────
 def _build_segments(supply_rows, demand_rows, hours):
     seg_s, seg_d = [], []
     for r in supply_rows:
@@ -274,7 +274,7 @@ def _build_blocks(block_rows, hours):
 
 
 def _resolve_links(blocks, notes):
-    """Parent par nom au sein du même (zone, trader) ; groupes exclusifs idem."""
+    """Parent looked up by name within the same (zone, trader); exclusive groups likewise."""
     index = {}
     for i, b in enumerate(blocks):
         index.setdefault((b.zone, b.player, b.name), i)
@@ -283,7 +283,7 @@ def _resolve_links(blocks, notes):
         if b.parent:
             j = index.get((b.zone, b.player, b.parent))
             if j is None or j == i:
-                notes.append(f"Bloc '{b.name}' : parent '{b.parent}' introuvable, lien ignoré.")
+                notes.append(f"Block '{b.name}': parent '{b.parent}' not found, link ignored.")
             else:
                 parent_of[i] = j
     groups = {}
@@ -293,9 +293,9 @@ def _resolve_links(blocks, notes):
     return parent_of, [g for g in groups.values() if len(g) > 1]
 
 
-# ── Solveur ───────────────────────────────────────────────────────
+# ── Solver ────────────────────────────────────────────────────────
 def _get_solver():
-    """Gurobi → HiGHS (appsi) → GLPK → CBC. Retourne (solveur, nom)."""
+    """Gurobi → HiGHS (appsi) → GLPK → CBC. Returns (solver, name)."""
     candidates = [
         ('gurobi',      lambda: SolverFactory('gurobi')),
         ('appsi_highs', lambda: SolverFactory('appsi_highs')),
@@ -323,11 +323,11 @@ _OK = (_TC.optimal, _TC.globallyOptimal, _TC.locallyOptimal)
 
 
 def _try_solve(solver, model):
-    """Résout sans charger la solution ; charge si optimal. Retourne (ok, statut)."""
+    """Solves without loading the solution; loads it when optimal. Returns (ok, status)."""
     try:
         res = solver.solve(model, load_solutions=False, tee=False)
-    except Exception as e:                       # erreur interne du solveur
-        return False, f"erreur solveur : {e}"
+    except Exception as e:                       # internal solver error
+        return False, f"solver error: {e}"
     tc = res.solver.termination_condition
     if tc in _OK:
         model.solutions.load_from(res)
@@ -342,7 +342,7 @@ def _solve(solver, model, label):
     return status
 
 
-# ── Modèle primal (P1 / P1bis) ────────────────────────────────────
+# ── Primal model (P1 / P1bis) ─────────────────────────────────────
 def _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
                   objective='welfare', welfare_floor=None, fixed_y=None):
     S, D, B = range(len(seg_s)), range(len(seg_d)), range(len(blocks))
@@ -417,7 +417,7 @@ def _extract(m, seg_s, seg_d, blocks, hours, pairs):
     return xs, xd, fl, y
 
 
-# ── P2 : prix zonaux ──────────────────────────────────────────────
+# ── P2: zonal prices ──────────────────────────────────────────────
 def _classify(x):
     if x > 1 - X_TOL:
         return 'acc'
@@ -427,9 +427,9 @@ def _classify(x):
 
 
 def _reference_prices(seg_s, seg_d, xs, xd, hours, mode):
-    """Prix de référence = milieu de l'intervalle admissible local (Livrable 2 §2.4).
-    'l2' : bornes données par les seuls ordres acceptés ; 'complete' : les ordres rejetés
-    resserrent aussi l'intervalle (vente rejetée => borne haute, achat rejeté => borne basse)."""
+    """Reference price = midpoint of the local admissible interval (Deliverable 2 §2.4).
+    'l2': bounds given by accepted orders only; 'complete': rejected orders also tighten
+    the interval (rejected sell => upper bound, rejected buy => lower bound)."""
     ref, bounds = {}, {}
     for z in ZONES:
         for h in hours:
@@ -483,7 +483,7 @@ def _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, mo
             mp.refc.add(mp.pi[z, h] - ref[z, h] == mp.ep[z, h] - mp.en[z, h])
     mp.sc = ConstraintList()
     if mode == 'l2':
-        # Contraintes (8)-(12) du Livrable 2, telles qu'implémentées dans le notebook
+        # Constraints (8)-(12) of Deliverable 2, as implemented in the notebook
         for i, s in enumerate(seg_s):
             for h in hours:
                 if s.qty[h] <= 0:
@@ -511,7 +511,7 @@ def _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, mo
                     mp.sc.add(mp.pi[u, h] >= mp.pi[v, h])
         return mp
 
-    # Mode 'complete' : conditions KKT complètes
+    # Mode 'complete': full KKT conditions
     for i, s in enumerate(seg_s):
         for h in hours:
             if s.qty[h] <= 0:
@@ -534,9 +534,9 @@ def _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, mo
                 mp.sc.add(mp.pi[d.zone, h] >= d.p)
             else:
                 mp.sc.add(mp.pi[d.zone, h] == d.p)
-    mp.mup = Var(pairs, hours, domain=NonNegativeReals)   # multiplicateur de f <= NTC
-    mp.mum = Var(pairs, hours, domain=NonNegativeReals)   # multiplicateur de f >= -NTC
-    mp.lam = Var(hours, domain=NonNegativeReals)          # multiplicateur de la contrainte α
+    mp.mup = Var(pairs, hours, domain=NonNegativeReals)   # multiplier of f <= NTC
+    mp.mum = Var(pairs, hours, domain=NonNegativeReals)   # multiplier of f >= -NTC
+    mp.lam = Var(hours, domain=NonNegativeReals)          # multiplier of the α constraint
     alpha_cap = ALPHA * sum(ntc[l] for l in ALPHA_LINES) if alpha_active else None
     for h in hours:
         if not alpha_active or sum(fl[u, v, h] for u, v in ALPHA_LINES) < alpha_cap - F_TOL:
@@ -555,7 +555,7 @@ def _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, mo
 
 
 def _price_blocks(blocks, y, prices):
-    """Statut de chaque bloc aux prix donnés : OK, PAB, PRB, inactive."""
+    """Status of each block at the given prices: OK, PAB, PRB, inactive."""
     out = []
     for b, blk in enumerate(blocks):
         hb = blk.active_hours
@@ -582,7 +582,7 @@ def _price_blocks(blocks, y, prices):
     return out
 
 
-# ── Diagnostics de cohérence ──────────────────────────────────────
+# ── Consistency diagnostics ───────────────────────────────────────
 def _diagnostics(seg_s, seg_d, xs, xd, fl, prices, hours, ntc, pairs, alpha_active):
     pro = pao = 0
     max_viol = 0.0
@@ -619,13 +619,13 @@ def _diagnostics(seg_s, seg_d, xs, xd, fl, prices, hours, ntc, pairs, alpha_acti
     return dict(pro=pro, pao=pao, unsaturated_price_gaps=gaps, max_violation=round(max_viol, 3))
 
 
-# ── Règle de partage des ex æquo ──────────────────────────────────
+# ── Sharing rule for equal-price orders ───────────────────────────
 def _apply_tie_rule(seg_s, seg_d, xs, xd, hours, rule):
-    """Répartit, entre offres de même zone, même sens, même heure et même prix, la quantité que le solveur
-    a acceptée pour le groupe : 'prorata' (proportionnel aux quantités offertes), 'order' (dans l'ordre de
-    soumission, premier servi), 'solver' (répartition laissée au solveur). Le total accepté du groupe est
-    inchangé : ni le welfare, ni le volume, ni l'ensemble des prix admissibles ne bougent.
-    Retourne le nombre de groupes (zone, heure, sens, prix) dont la répartition a été modifiée."""
+    """Shares, among orders of the same zone, side, hour and price, the quantity the solver accepted for
+    the group: 'prorata' (proportional to offered quantities), 'order' (submission order, first come
+    first served), 'solver' (allocation left to the solver). The group's accepted total is unchanged:
+    neither welfare, nor volume, nor the set of admissible prices moves.
+    Returns the number of (zone, hour, side, price) groups whose allocation was modified."""
     if rule == 'solver':
         return 0
     adjusted = 0
@@ -641,11 +641,11 @@ def _apply_tie_rule(seg_s, seg_d, xs, xd, hours, rule):
                 total = sum(segs[i].qty[h] for i in idx)
                 acc = sum(segs[i].qty[h] * x[i, h] for i in idx)
                 if acc < X_TOL * total or acc > (1 - X_TOL) * total:
-                    continue                       # groupe entièrement rejeté ou accepté : rien à partager
+                    continue                       # group fully rejected or accepted: nothing to share
                 if rule == 'prorata':
                     share = acc / total
                     new = {i: share for i in idx}
-                else:                              # 'order' : premier soumis, premier servi
+                else:                              # 'order': first submitted, first served
                     new, rem = {}, acc
                     for i in idx:
                         take = min(segs[i].qty[h], rem)
@@ -679,8 +679,8 @@ def _build_mic(mic_rows):
 
 
 def _mic_check(mics, seg_s, blocks, xs, y, prices, hours, withdrawn):
-    """Revenu de chaque acteur sous MIC aux prix finals, comparé à terme fixe + terme variable × volume.
-    Un acteur dont rien n'est accepté satisfait trivialement sa condition (ordre inactif)."""
+    """Income of each actor under a MIC at final prices, compared with fixed term + variable term × volume.
+    An actor with nothing accepted trivially satisfies its condition (inactive order)."""
     results, to_withdraw = [], []
     for m in mics:
         key = (m.zone, m.player, m.actor)
@@ -709,7 +709,7 @@ def _mic_check(mics, seg_s, blocks, xs, y, prices, hours, withdrawn):
     return results, to_withdraw
 
 
-# ── Séquence P1 → P1bis → P2 avec boucle PAB ──────────────────────
+# ── P1 → P1bis → P2 sequence with the PAB loop ────────────────────
 def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, alpha_active,
                     solver, pricing, pab_rule, max_pab_iter, tie_rule, notes):
     fixed_y, iterations, unforceable = {}, 0, set()
@@ -721,17 +721,17 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
         if not ok:
             forced = [b for b, v in fixed_y.items() if v == 1]
             if not forced:
-                raise ClearingError(f"P1 (welfare) : pas de solution optimale ({status}).")
-            # L'acceptation forcée d'un ou plusieurs PRB (règle 'l2') est physiquement impossible : on la lève.
+                raise ClearingError(f"P1 (welfare): no optimal solution ({status}).")
+            # Forcing one or more PRBs to acceptance (rule 'l2') is physically impossible: release them.
             for b in forced:
                 del fixed_y[b]; unforceable.add(b)
-            notes.append("PRB non forçables (P1 infaisable), libérés : " + ", ".join(blocks[b].name for b in forced))
+            notes.append("Unforceable PRBs (P1 infeasible), released: " + ", ".join(blocks[b].name for b in forced))
             continue
         W_star = float(value(m1.welfare))
         xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
         tie_break = 'none'
 
-        # P1bis : volume maximal parmi les solutions de welfare optimal (ε = 0)
+        # P1bis: maximum volume among welfare-optimal solutions (ε = 0)
         if seg_s or seg_d:
             m2 = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
                                objective='volume', welfare_floor=W_star, fixed_y=dict(y))
@@ -740,7 +740,7 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
                 xs, xd, fl, _ = _extract(m2, seg_s, seg_d, blocks, hours, pairs)
                 tie_break = 'exact'
             else:
-                notes.append(f"P1bis : départage par volume impossible ({status}) ; solution de P1 conservée.")
+                notes.append(f"P1bis: volume tie-break impossible ({status}); P1 solution kept.")
         tie_groups = _apply_tie_rule(seg_s, seg_d, xs, xd, hours, tie_rule)
 
         # P2
@@ -754,76 +754,76 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
             mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing)
             ok, status = _try_solve(solver, mp)
             pricing_feasible = ok
-            notes.append("P2 : la solution de P1bis n'admettait aucun prix admissible ; prix calculés sur la solution de P1.")
+            notes.append("P2: the P1bis solution admitted no admissible price; prices computed on the P1 solution.")
         if not ok:
-            raise ClearingError(f"P2 (prix) : pas de solution ({status}). Vérifiez les offres (prix hors bornes, incohérences).")
+            raise ClearingError(f"P2 (prices): no solution ({status}). Check the orders (prices out of bounds, inconsistencies).")
         prices = {(z, h): float(value(mp.pi[z, h])) for z in ZONES for h in hours}
 
-        # Blocs paradoxaux
+        # Paradoxical blocks
         block_results = _price_blocks(blocks, y, prices) if blocks else []
         to_fix = {}
         for b, br in enumerate(block_results):
-            # Un PAB est toujours rejeté, même s'il avait été forcé à l'acceptation par la règle 'l2' (au plus
-            # deux changements par bloc, donc terminaison garantie) ; un PRB n'est forcé qu'une fois.
+            # A PAB is always rejected, even if rule 'l2' had forced it to acceptance (at most two changes
+            # per block, hence guaranteed termination); a PRB is forced only once.
             if br['status'] == 'PAB' and pab_rule in ('euphemia', 'l2') and fixed_y.get(b) != 0:
                 to_fix[b] = 0
             elif br['status'] == 'PRB' and pab_rule == 'l2' and b not in fixed_y and b not in unforceable:
                 to_fix[b] = 1
         if not to_fix or iterations > max_pab_iter:
             if to_fix:
-                notes.append("Boucle PAB/PRB arrêtée au nombre maximal d'itérations.")
+                notes.append("PAB/PRB loop stopped at the maximum number of iterations.")
             break
         fixed_y.update(to_fix)
-        notes.append("Itération %d : blocs fixés %s" % (iterations, {blocks[b].name: v for b, v in to_fix.items()}))
+        notes.append("Iteration %d: blocks fixed %s" % (iterations, {blocks[b].name: v for b, v in to_fix.items()}))
     return dict(xs=xs, xd=xd, fl=fl, y=y, prices=prices, block_results=block_results, W_star=W_star,
                 iterations=iterations, fixed_y=fixed_y, tie_break=tie_break,
                 pricing_feasible=pricing_feasible, tie_groups=tie_groups)
 
 
-# ── Moteur principal ──────────────────────────────────────────────
+# ── Main engine ───────────────────────────────────────────────────
 def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=None, *,
                  block_rows=None, mic_rows=None, hours=None, fill_missing_zones=False, fill_mode=None,
                  pricing='complete', pab_rule='euphemia', tie_rule='prorata',
                  max_pab_iter=None, max_mic_iter=None, reference_rows=None):
     """
-    Clearing complet P1 → P1bis → P2.
+    Full clearing P1 → P1bis → P2.
 
-    supply_rows / demand_rows : lignes au format de la base (None pour les données de référence).
-    block_rows   : ordres bloc, liés, exclusifs (format table block_orders) ; None = aucun.
-    mic_rows     : conditions de revenu minimum (zone, player, actor, fixed_term, variable_term) ; None = aucune.
-    horizon      : 24 (jour complet) ou 1 ; ignoré si `hours` est fourni.
-    hours        : liste d'heures simulées (ex. [19]) ; par défaut range(horizon).
-    ntc_override : {(u, v): MW} ; sinon NTC de la base (si définies), sinon valeurs par défaut.
-    fill_missing_zones : (compatibilité) True équivaut à fill_mode='zones'.
-    fill_mode    : 'none' (ordres des participants seulement), 'zones' (zones sans aucune soumission complétées
-                   par la référence), 'actors' (acteurs de fond : tous les acteurs de référence sont conservés,
-                   sauf ceux de la zone d'un participant dont le nom correspond à son organisation ou à l'un de
-                   ses ordres, qui sont remplacés par ses ordres).
-    pricing      : 'complete' (KKT complètes, v2) ou 'l2' (contraintes (8)-(12) du Livrable 2).
-    pab_rule     : 'euphemia' (rejet itératif des PAB, PRB tolérés), 'l2' (PAB fixés à 0 et
-                   PRB fixés à 1, Livrable 2 §3.3) ou 'none' (détection seule).
-    tie_rule     : partage des offres au même prix : 'prorata' (défaut), 'order', 'solver'.
-    reference_rows : (supply_rows, demand_rows) à utiliser comme données de référence à la place de celles
-                   du Livrable 2 (scénarios pédagogiques), pour la démonstration et la complétion des zones.
-    Retourne dict : prices, flows, dispatch, welfare, volume, summary.
+    supply_rows / demand_rows : rows in the database format (None to use the reference data).
+    block_rows   : block, linked and exclusive orders (block_orders table format); None = none.
+    mic_rows     : minimum income conditions (zone, player, actor, fixed_term, variable_term); None = none.
+    horizon      : 24 (full day) or 1; ignored when `hours` is given.
+    hours        : list of simulated hours (e.g. [19]); defaults to range(horizon).
+    ntc_override : {(u, v): MW}; otherwise the database NTC (if defined), otherwise the defaults.
+    fill_missing_zones : (compatibility) True is equivalent to fill_mode='zones'.
+    fill_mode    : 'none' (participants' orders only), 'zones' (zones without any submission filled from the
+                   reference), 'actors' (background actors: every reference actor is kept, except those of a
+                   participant's zone whose name matches the participant's organisation or one of its orders,
+                   which are replaced by the participant's orders).
+    pricing      : 'complete' (full KKT, v2) or 'l2' (constraints (8)-(12) of Deliverable 2).
+    pab_rule     : 'euphemia' (iterative rejection of PABs, PRBs tolerated), 'l2' (PABs fixed to 0 and
+                   PRBs fixed to 1, Deliverable 2 §3.3) or 'none' (detection only).
+    tie_rule     : sharing of equal-price orders: 'prorata' (default), 'order', 'solver'.
+    reference_rows : (supply_rows, demand_rows) to use as reference data instead of the Deliverable 2 set
+                   (teaching scenarios), for the demonstration and for filling zones.
+    Returns a dict: prices, flows, dispatch, welfare, volume, summary.
     """
     t_total = time.time()
     if pricing not in PRICING_MODES:
-        raise ClearingError(f"Mode de prix inconnu : {pricing}")
+        raise ClearingError(f"Unknown pricing mode: {pricing}")
     if pab_rule not in PAB_RULES:
-        raise ClearingError(f"Règle PAB inconnue : {pab_rule}")
+        raise ClearingError(f"Unknown PAB rule: {pab_rule}")
     if tie_rule not in TIE_RULES:
-        raise ClearingError(f"Règle de partage inconnue : {tie_rule}")
+        raise ClearingError(f"Unknown sharing rule: {tie_rule}")
     notes = []
 
-    # ── Heures simulées ───────────────────────────────────────────
+    # ── Simulated hours ───────────────────────────────────────────
     if hours is None:
         hours = list(range(int(horizon)))
     hours = [int(h) for h in hours]
     if not hours or any(h < 0 or h > 23 for h in hours):
-        raise ClearingError("Les heures simulées doivent être comprises entre 0 et 23.")
+        raise ClearingError("Simulated hours must be between 0 and 23.")
 
-    # ── Données ───────────────────────────────────────────────────
+    # ── Data ──────────────────────────────────────────────────────
     reference_zones = []
     def _ref(zones=None):
         if reference_rows is None:
@@ -835,14 +835,14 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     if supply_rows is None and demand_rows is None:
         supply_rows, demand_rows = _ref()
         reference_zones = list(ZONES)
-        notes.append("Données de référence utilisées pour les 14 zones.")
+        notes.append("Reference data used for all 14 zones.")
     else:
         supply_rows = list(supply_rows or [])
         demand_rows = list(demand_rows or [])
         if fill_mode is None:
             fill_mode = 'zones' if fill_missing_zones else 'none'
         if fill_mode not in ('none', 'zones', 'actors'):
-            raise ClearingError(f"Mode de complétion inconnu : {fill_mode}")
+            raise ClearingError(f"Unknown fill mode: {fill_mode}")
         if fill_mode == 'zones':
             covered = {r['zone'] for r in supply_rows} | {r['zone'] for r in demand_rows} \
                     | {r['zone'] for r in (block_rows or [])}
@@ -852,7 +852,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                 supply_rows += ds
                 demand_rows += dd
                 reference_zones = missing
-                notes.append(f"Zones complétées par les données de référence : {', '.join(missing)}.")
+                notes.append(f"Zones filled with reference data: {', '.join(missing)}.")
         elif fill_mode == 'actors':
             keys = {}
             for r in supply_rows + demand_rows + list(block_rows or []):
@@ -869,8 +869,8 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
             supply_rows += kept_s
             demand_rows += kept_d
             reference_zones = sorted({r['zone'] for r in kept_s + kept_d}, key=ZONES.index)
-            notes.append(f"Acteurs de fond : {len(kept_s) + len(kept_d)} segments de référence conservés"
-                         + (f" ; acteurs remplacés par les participants : {', '.join(gone)}." if gone else "."))
+            notes.append(f"Background actors: {len(kept_s) + len(kept_d)} reference segments kept"
+                         + (f"; actors replaced by participants: {', '.join(gone)}." if gone else "."))
     block_rows = list(block_rows or [])
     validate_inputs(supply_rows, demand_rows, block_rows)
 
@@ -882,7 +882,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     if max_pab_iter is None:
         max_pab_iter = 2 * len(blocks_all) + 1
 
-    # ── NTC : override > base > défaut ────────────────────────────
+    # ── NTC: override > database > defaults ───────────────────────
     ntc = dict(NTC)
     if ntc_override:
         ntc.update({tuple(k): float(v) for k, v in ntc_override.items()})
@@ -894,9 +894,9 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                 ntc.update(db_ntc)
                 changed = [f"{u}->{v}" for (u, v), mw in db_ntc.items() if abs(mw - NTC.get((u, v), mw)) > 1e-9]
                 if changed:
-                    notes.append("NTC modifiées par l'administrateur sur : " + ", ".join(changed) + ".")
-        except Exception as e:          # base absente : valeurs par défaut
-            logger.debug("NTC par défaut (%s)", e)
+                    notes.append("NTC modified by the administrator on: " + ", ".join(changed) + ".")
+        except Exception as e:          # no database: default values
+            logger.debug("Default NTC (%s)", e)
     pairs = list(ntc.keys())
     alpha_active = all(l in ntc for l in ALPHA_LINES)
 
@@ -904,13 +904,13 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     logger.info("Solveur %s | %d segments vente, %d segments achat, %d blocs, %d MIC, %d heures",
                 solver_name, len(seg_s_all), len(seg_d), len(blocks_all), len(mics), len(hours))
 
-    # ── Boucle MIC autour de la séquence P1 → P1bis → P2 ──────────
+    # ── MIC loop around the P1 → P1bis → P2 sequence ──────────────
     withdrawn = set()
     mic_iter = 0
     while True:
         mic_iter += 1
         seg_s = [s for s in seg_s_all if (s.zone, s.player, s.actor) not in withdrawn]
-        # Blocs retirés : ceux de l'acteur retiré, puis leurs enfants (un enfant sans parent ne peut être accepté)
+        # Withdrawn blocks: those of the withdrawn actor, then their children (a child without parent cannot be accepted)
         gone = {(b.zone, b.player, b.name) for b in blocks_all if b.side == 'S' and (b.zone, b.player, b.name) in withdrawn}
         changed = True
         while changed:
@@ -925,10 +925,10 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         mic_results, to_withdraw = _mic_check(mics, seg_s, blocks, sol['xs'], sol['y'], sol['prices'], hours, withdrawn)
         if not to_withdraw or mic_iter > max_mic_iter:
             if to_withdraw:
-                notes.append("Boucle MIC arrêtée au nombre maximal d'itérations.")
+                notes.append("MIC loop stopped at the maximum number of iterations.")
             break
         withdrawn |= set(to_withdraw)
-        notes.append("MIC non satisfaite, offres retirées : " + ", ".join(f"{a} ({z})" for z, _, a in to_withdraw) + ".")
+        notes.append("MIC not satisfied, orders withdrawn: " + ", ".join(f"{a} ({z})" for z, _, a in to_withdraw) + ".")
 
     xs, xd, fl, y, prices = sol['xs'], sol['xd'], sol['fl'], sol['y'], sol['prices']
     block_results = sol['block_results']
@@ -936,7 +936,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     vol = sum(seg_s[s].qty[h] * xs[s, h] for s in S for h in hours if seg_s[s].qty[h] > 0) \
         + sum(blocks[b].q * len(blocks[b].active_hours) * y.get(b, 0) for b in B if blocks[b].side == 'S')
 
-    # ── Résultats ─────────────────────────────────────────────────
+    # ── Results ───────────────────────────────────────────────────
     prices_out = {z: {str(h): round(prices[z, h], 2) for h in hours} for z in ZONES}
     flows_out = {f"{u}->{v}": {str(h): round(fl[u, v, h], 1) for h in hours} for u, v in pairs}
 
@@ -961,7 +961,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                     demand_accepted[idx[h]] += blocks[b].q
     dispatch['demand'] = demand_accepted
 
-    # Résultats par acteur (vue trader)
+    # Results per actor (trader view)
     actors = {}
     def _acc(key, **kw):
         a = actors.setdefault(key, dict(zone=key[0], player=key[1], actor=key[2], side=key[3],
@@ -984,7 +984,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
             _acc(key, offered_mwh=Q, accepted_mwh=q, money=prices[seg_s[s].zone, h] * q, value=seg_s[s].p * q)
         if all(_classify(xs[s, h]) == 'rej' for h in hours if seg_s[s].qty[h] > 0):
             _acc(key, rejected=dict(segment=seg_s[s].k, quantity=seg_s[s].q, price=seg_s[s].p))
-    for s in seg_s_all:                       # acteurs retirés par la MIC
+    for s in seg_s_all:                       # actors withdrawn by the MIC
         key = (s.zone, s.player, s.actor, 'S')
         if (s.zone, s.player, s.actor) in withdrawn:
             _acc(key, offered_mwh=sum(s.qty[h] for h in hours), status='withdrawn_mic',
@@ -1027,7 +1027,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         actor_list.append(a)
     actor_list.sort(key=lambda a: (a['zone'], a['player'], a['side'], a['actor']))
 
-    # Décomposition par zone et rente de congestion
+    # Breakdown per zone and congestion rent
     zones_out = {}
     for z in ZONES:
         gen = sum(seg_s[s].qty[h] * xs[s, h] for s in S for h in hours if seg_s[s].zone == z and seg_s[s].qty[h] > 0) \
@@ -1103,7 +1103,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                                 ntc=dict((f"{u}->{v}", ntc[(u, v)]) for u, v in pairs)),
         'diagnostics':     diag,
     }
-    logger.info("Clearing terminé en %.2fs | W=%.0f | Vol=%.0f MWh | %s",
+    logger.info("Clearing finished in %.2fs | W=%.0f | Vol=%.0f MWh | %s",
                 summary['elapsed'], W_final, vol, diag)
     return {
         'prices':   prices_out,

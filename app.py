@@ -1,5 +1,5 @@
 """
-WAPP Day-Ahead Market Simulator — page d'accueil
+WAPP Day-Ahead Market Simulator — home page
 """
 from datetime import datetime, timedelta
 import streamlit as st
@@ -10,13 +10,13 @@ from ui_common import inject_css, header, logo_b64, map_b64, lang_selector, t, m
 st.set_page_config(page_title="WAPP Market Simulator", page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
 inject_css()
 
-# ── Date de livraison J+1 par défaut ──────────────────────────────
+# ── Default delivery date D+1 ─────────────────────────────────────
 session = get_session()
 if session.get('market_date', '') in ('', datetime.now().strftime('%Y-%m-%d')):
     set_session('market_date', (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'))
     session = get_session()
 
-# ── Barre latérale ────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(f'<div style="text-align:center;margin-bottom:16px;"><img src="data:image/png;base64,{logo_b64()}" width="80"/></div>', unsafe_allow_html=True)
     lang_selector()
@@ -65,7 +65,7 @@ with st.sidebar:
     st.page_link("pages/2_Results.py", label=t('nav_results'), icon="📊")
     st.page_link("pages/3_Admin.py", label=t('nav_admin'), icon="⚙️")
 
-# ── En-tête et indicateurs ────────────────────────────────────────
+# ── Header and indicators ─────────────────────────────────────────
 header(t('app_title'), t('app_subtitle'), height=60)
 
 players = get_players()
@@ -78,7 +78,7 @@ c4.metric(t('kpi_welfare'), money(results['welfare'], millions=True) if results 
 
 st.markdown("---")
 
-# ── Carte et participants ─────────────────────────────────────────
+# ── Map and participants ──────────────────────────────────────────
 col_map, col_players = st.columns([2, 1])
 with col_map:
     st.markdown(f"## {t('network')}")

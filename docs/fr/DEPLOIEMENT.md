@@ -1,6 +1,6 @@
 # Mettre en ligne wapp-dam-simulator.org
 
-*Guide pratique, 2 octobre 2026. Quatre parties : ce qu'il faut acheter, publier le dépôt, installer le serveur, exploiter. Les sections sur l'exécution locale et en salle de formation sont à la fin.*
+*Guide pratique, 2 octobre 2026 (version anglaise à jour : `docs/DEPLOYMENT.md` ; le nettoyage d'historique décrit en section 3 a été effectué le 3 octobre 2026). Quatre parties : ce qu'il faut acheter, publier le dépôt, installer le serveur, exploiter. Les sections sur l'exécution locale et en salle de formation sont à la fin.*
 
 ## 1. Architecture en production
 

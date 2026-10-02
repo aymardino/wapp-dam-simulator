@@ -1,14 +1,14 @@
 """
-Scénarios pédagogiques : variantes des données de référence du Livrable 2.
-Chaque scénario renvoie (offres de vente, offres d'achat, NTC surchargées) au format des lignes du moteur ;
-il sert à compléter les zones sans soumission et à la démonstration.
+Teaching scenarios: the Reference 2024 base set and its variants.
+Each scenario returns (sell orders, buy orders, NTC) in the engine row format; it is used to fill zones
+without submission and for the demonstration.
 """
 import re
 from .clearing import default_rows, P_MAX
 
-# ── Jeu « Référence 2024 » : capacités disponibles et pointes de demande d'après des sources publiques ──
-# Détail et sources : docs/DONNEES_DE_REFERENCE.md. Les valeurs marquées (est.) sont des estimations.
-# Format : zone → ('S', nom, [(MW, prix USD/MWh), ...], profil) ou ('D', nom, [(MW, prix max), ...])
+# ── "Reference 2024" set: available capacities and peak demands from public sources ──────────────────
+# Details and sources: docs/REFERENCE_DATA.md. Values marked (est.) are estimates.
+# Format: zone → ('S', name, [(MW, price USD/MWh), ...], profile) or ('D', name, [(MW, max price), ...])
 REFERENCE_2024 = {
     'NGA': [
         ('S', 'Hydro Kainji-Jebba-Shiroro-Zungeru', [(800, 15), (700, 25)], 'hydro'),
@@ -103,7 +103,7 @@ REFERENCE_2024 = {
         ('D', 'EAGB Demand', [(40, 230), (15, 180), (8, 130)]),
     ],
 }
-# NTC « Référence 2024 » en MW (valeurs marquées (est.) dans docs/DONNEES_DE_REFERENCE.md)
+# "Reference 2024" NTC in MW (values marked (est.) in docs/REFERENCE_DATA.md)
 NTC_2024 = {
     ('NGA', 'BEN'): 200, ('NGA', 'NER'): 120, ('BEN', 'TGO'): 300, ('TGO', 'GHA'): 300, ('GHA', 'CIV'): 200,
     ('GHA', 'BFA'): 100, ('CIV', 'BFA'): 100, ('CIV', 'MLI'): 200, ('CIV', 'LBR'): 290, ('LBR', 'SLE'): 290,
@@ -112,7 +112,7 @@ NTC_2024 = {
 
 
 def reference_2024_rows(zones=None):
-    """Lignes du moteur pour le jeu « Référence 2024 »."""
+    """Engine rows for the "Reference 2024" set."""
     sup, dem = [], []
     for z, items in REFERENCE_2024.items():
         if zones is not None and z not in zones:
@@ -133,8 +133,8 @@ GAS_PLANTS = {'Egbin Gas', 'Delta Gas', 'Geregu', 'Afam VI', 'Olorunsogo', 'Suno
 
 SCENARIOS = {
     'reference_2024': {
-        'fr': ('Référence 2024 (sources publiques)', "Scénario de base : capacités disponibles, pointes de demande, coûts par technologie et capacités des lignes d'après des sources publiques 2023-2025 ; estimations signalées dans docs/DONNEES_DE_REFERENCE.md."),
-        'en': ('Reference 2024 (public sources)', "Base scenario: available capacities, peak demands, costs by technology and line capacities from public 2023-2025 sources; estimates flagged in docs/DONNEES_DE_REFERENCE.md."),
+        'fr': ('Référence 2024 (sources publiques)', "Scénario de base : capacités disponibles, pointes de demande, coûts par technologie et capacités des lignes d'après des sources publiques 2023-2025 ; estimations signalées dans docs/fr/DONNEES_DE_REFERENCE.md."),
+        'en': ('Reference 2024 (public sources)', "Base scenario: available capacities, peak demands, costs by technology and line capacities from public 2023-2025 sources; estimates flagged in docs/REFERENCE_DATA.md."),
     },
     'secheresse_hydro': {
         'fr': ('Sécheresse hydraulique', "Variante du scénario 2024 : disponibilité des centrales hydrauliques réduite de moitié (Kainji, Akosombo, Soubré, Souapiti, Manantali, Nangbéto…)."),
@@ -152,7 +152,7 @@ SCENARIOS = {
         'fr': ('Forte demande', "Variante du scénario 2024 : quantités demandées majorées de 15 % dans toutes les zones."),
         'en': ('High demand', "Variant of the 2024 scenario: demand quantities raised by 15% in all zones."),
     },
-    'reference': {   # jeu de test historique, absent des listes proposées aux formateurs (hidden)
+    'reference': {   # historical test set, absent from the lists offered to trainers (hidden)
         'fr': ('Jeu de test (Livrable 2)', "Données synthétiques du Livrable 2, conservées pour les tests de non-régression."),
         'en': ('Test set (Livrable 2)', "Synthetic Livrable 2 data, kept for regression tests."),
         'hidden': True,
@@ -163,11 +163,11 @@ _GAS = re.compile(r'ccgt|gaz|gas', re.I)
 
 
 def scenario_rows(key='reference_2024', zones=None):
-    """(supply_rows, demand_rows, {(u, v): mw}) pour le scénario `key`, limité aux `zones` si fournies.
-    Un seul jeu de base (Référence 2024) ; les variantes pédagogiques n'en modifient qu'un élément.
-    `reference` est le jeu synthétique du Livrable 2, conservé pour les tests."""
+    """(supply_rows, demand_rows, {(u, v): mw}) for scenario `key`, restricted to `zones` when given.
+    A single base set (Reference 2024); the teaching variants change one element only.
+    `reference` is the synthetic Deliverable 2 set, kept for the tests."""
     if key not in SCENARIOS:
-        raise KeyError(f"Scénario inconnu : {key}")
+        raise KeyError(f"Unknown scenario: {key}")
     if key == 'reference':
         sup, dem = default_rows(zones)
         return sup, dem, {}
@@ -190,6 +190,6 @@ def scenario_rows(key='reference_2024', zones=None):
 
 
 def scenario_list(lang='fr', include_hidden=False):
-    """Scénarios proposés aux formateurs, dans l'ordre du menu (le jeu de test est masqué sauf demande)."""
+    """Scenarios offered to trainers, in menu order (the test set is hidden unless requested)."""
     return [{'key': k, 'name': v.get(lang, v['fr'])[0], 'description': v.get(lang, v['fr'])[1]}
             for k, v in SCENARIOS.items() if include_hidden or not v.get('hidden')]

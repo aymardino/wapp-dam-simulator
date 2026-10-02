@@ -1,4 +1,4 @@
-/** Graphiques ECharts (rendu SVG, modules réduits) : prix par zone, dispatch empilé, flux par ligne. */
+/** ECharts charts (SVG renderer, tree-shaken modules): prices per zone, stacked dispatch, flows per line. */
 import { useEffect, useMemo, useRef } from 'react'
 import * as echarts from 'echarts/core'
 import { LineChart, BarChart } from 'echarts/charts'

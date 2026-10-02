@@ -96,7 +96,7 @@ export function Header({ title, code, meta, phase, switchTo, extra }: { title: s
   )
 }
 
-/** Mini graphique en barres sans dépendance. */
+/** Dependency-free mini bar chart. */
 export function Bars({ values, labels, height = 48 }: { values: number[]; labels: (string | number)[]; height?: number }) {
   const max = Math.max(1, ...values)
   return (

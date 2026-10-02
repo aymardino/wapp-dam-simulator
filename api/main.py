@@ -4,12 +4,12 @@ API REST du simulateur Day-Ahead WAPP.
 Lancement : uvicorn api.main:app --reload --port 8000
 Documentation interactive : http://localhost:8000/docs
 
-Parcours : POST /api/v1/rooms (le formateur crée une salle et reçoit son jeton) →
-           POST /api/v1/rooms/{code}/join (les traders rejoignent et reçoivent un jeton) →
-           PUT  /api/v1/rooms/{code}/orders/me (chaque trader dépose son carnet d'ordres) →
+Flow: POST /api/v1/rooms (the trainer creates a room and receives a token) →
+      POST /api/v1/rooms/{code}/join (traders join and receive a token) →
+      PUT  /api/v1/rooms/{code}/orders/me (each trader submits an order book) →
            POST /api/v1/rooms/{code}/clearing (le formateur lance le clearing) →
            GET  /api/v1/rooms/{code}/results/latest et /results/latest/me
-Si le dossier web/dist existe (front compilé), il est servi à la racine.
+If the web/dist folder exists (compiled front end), it is served at the root.
 """
 from __future__ import annotations
 import os
@@ -34,8 +34,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIST = os.path.join(ROOT, 'web', 'dist')
 
 app = FastAPI(title="WAPP Day-Ahead Market Simulator API", version="2.0.0",
-              description="Implémentation ouverte de référence du couplage de marché day-ahead zonal du WAPP : "
-                          "salles de marché multi-participants, ordres par segments, blocs, MIC, clearing P1 → P1bis → P2.")
+              description="Open reference implementation of the WAPP day-ahead zonal market coupling: "
+                          "multi-participant trading rooms, stepwise orders, blocks, MIC, P1 → P1bis → P2 clearing.")
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get('WAPP_CORS_ORIGINS', '*').split(','),
                    allow_methods=['*'], allow_headers=['*'])
 init_db()
@@ -64,13 +64,13 @@ def _room_out(db: Session, room: Room):
                 created_at=room.created_at)
 
 
-# ── Référence ─────────────────────────────────────────────────────
+# ── Reference ─────────────────────────────────────────────────────
 @app.get(API + '/health')
 def health():
     return {'status': 'ok', 'time': datetime.utcnow().isoformat()}
 
 
-@app.get(API + '/reference', summary="Zones, lignes, profils, règles et données de référence")
+@app.get(API + '/reference', summary="Zones, lines, profiles, rules and reference data")
 def reference():
     return service.reference()
 
@@ -78,7 +78,7 @@ def reference():
 _demo_cache: dict = {}
 
 
-@app.get(API + '/demo', summary="Clearing de démonstration (scénario Référence 2024, 24 h), mis en cache pour le site")
+@app.get(API + '/demo', summary="Demonstration clearing (Reference 2024 scenario, 24 h), cached for the website")
 def demo():
     if 'result' not in _demo_cache:
         from engine.clearing import run_clearing, PROF, LOAD_WA
@@ -99,31 +99,31 @@ def demo():
     return _demo_cache['result']
 
 
-@app.get(API + '/scenarios', summary="Scénarios pédagogiques disponibles")
+@app.get(API + '/scenarios', summary="Available teaching scenarios")
 def scenarios(lang: str = 'fr'):
     return service.scenario_list(lang if lang in ('fr', 'en') else 'fr')
 
 
-# ── Salles ────────────────────────────────────────────────────────
-@app.post(API + '/rooms', response_model=S.RoomCreated, status_code=201, summary="Créer une salle (formateur)")
+# ── Rooms ─────────────────────────────────────────────────────────
+@app.post(API + '/rooms', response_model=S.RoomCreated, status_code=201, summary="Create a room (trainer)")
 def create_room(body: S.RoomCreate, request: Request, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else 'local'
     now = time.time()
     _room_creations[ip] = [t for t in _room_creations[ip] if now - t < 86400]
     if len(_room_creations[ip]) >= MAX_ROOMS_PER_IP_PER_DAY:
-        raise HTTPException(status_code=429, detail="Trop de salles créées depuis cette adresse aujourd'hui")
+        raise HTTPException(status_code=429, detail="Too many rooms created from this address today")
     _room_creations[ip].append(now)
     purge_old_rooms(db, ROOM_TTL_DAYS)
     room, trainer = service.create_room(db, body.name, body.trainer_name, body.lang)
     return S.RoomCreated(**_room_out(db, room), trainer_token=trainer.token)
 
 
-@app.get(API + '/rooms/{code}', response_model=S.RoomOut, summary="État complet d'une salle")
+@app.get(API + '/rooms/{code}', response_model=S.RoomOut, summary="Full state of a room")
 def get_room_info(room: Room = Depends(get_room), db: Session = Depends(get_db)):
     return S.RoomOut(**_room_out(db, room))
 
 
-@app.get(API + '/rooms/{code}/state', response_model=S.StateOut, summary="État léger (pour rafraîchissement)")
+@app.get(API + '/rooms/{code}/state', response_model=S.StateOut, summary="Light state (for refreshing)")
 def get_state(room: Room = Depends(get_room), db: Session = Depends(get_db)):
     last = service.latest_run(db, room)
     return S.StateOut(code=room.code, phase=room.phase, counts=S.Counts(**service.counts(db, room)),
@@ -131,7 +131,7 @@ def get_state(room: Room = Depends(get_room), db: Session = Depends(get_db)):
                       last_run_at=last.run_at if last else None)
 
 
-@app.post(API + '/rooms/{code}/join', response_model=S.JoinResponse, status_code=201, summary="Rejoindre une salle")
+@app.post(API + '/rooms/{code}/join', response_model=S.JoinResponse, status_code=201, summary="Join a room")
 def join(body: S.JoinRequest, room: Room = Depends(get_room), db: Session = Depends(get_db)):
     try:
         p = service.join_room(db, room, body.name, body.zone, body.role)
@@ -140,19 +140,19 @@ def join(body: S.JoinRequest, room: Room = Depends(get_room), db: Session = Depe
     return S.JoinResponse(**_participant_out(p).model_dump(), token=p.token, room_code=room.code)
 
 
-@app.delete(API + '/rooms/{code}/participants/{participant_id}', status_code=204, summary="Retirer un participant et ses ordres (formateur)")
+@app.delete(API + '/rooms/{code}/participants/{participant_id}', status_code=204, summary="Remove a participant and its orders (trainer)")
 def remove_participant(participant_id: str, room: Room = Depends(get_room), _: Participant = Depends(require_trainer), db: Session = Depends(get_db)):
     if not service.remove_participant(db, room, participant_id):
         raise HTTPException(status_code=404, detail="Participant introuvable")
 
 
-@app.get(API + '/rooms/{code}/me', response_model=S.ParticipantOut, summary="Qui suis-je dans cette salle ?")
+@app.get(API + '/rooms/{code}/me', response_model=S.ParticipantOut, summary="Who am I in this room?")
 def me(p: Participant = Depends(current_participant)):
     return _participant_out(p)
 
 
-# ── Paramètres (formateur) ────────────────────────────────────────
-@app.put(API + '/rooms/{code}/settings', response_model=S.Settings, summary="Modifier les paramètres et règles")
+# ── Settings (trainer) ────────────────────────────────────────────
+@app.put(API + '/rooms/{code}/settings', response_model=S.Settings, summary="Change settings and rules")
 def update_settings(body: S.SettingsUpdate, room: Room = Depends(get_room), _: Participant = Depends(require_trainer),
                     db: Session = Depends(get_db)):
     s = room.settings
@@ -160,13 +160,13 @@ def update_settings(body: S.SettingsUpdate, room: Room = Depends(get_room), _: P
     try:
         s = S.Settings(**s).model_dump()
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=e.errors()[0].get('msg', 'paramètres invalides'))
+        raise HTTPException(status_code=422, detail=e.errors()[0].get('msg', 'invalid settings'))
     room.settings = s
     db.commit()
     return S.Settings(**s)
 
 
-@app.put(API + '/rooms/{code}/phase', response_model=S.RoomOut, summary="Ouvrir ou clôturer la soumission")
+@app.put(API + '/rooms/{code}/phase', response_model=S.RoomOut, summary="Open or close submission")
 def update_phase(body: S.PhaseUpdate, room: Room = Depends(get_room), _: Participant = Depends(require_trainer),
                  db: Session = Depends(get_db)):
     room.phase = body.phase
@@ -174,7 +174,7 @@ def update_phase(body: S.PhaseUpdate, room: Room = Depends(get_room), _: Partici
     return S.RoomOut(**_room_out(db, room))
 
 
-@app.put(API + '/rooms/{code}/ntc', response_model=dict, summary="Modifier les NTC de la salle")
+@app.put(API + '/rooms/{code}/ntc', response_model=dict, summary="Change the room's NTC")
 def update_ntc(body: S.NtcUpdate, room: Room = Depends(get_room), _: Participant = Depends(require_trainer),
                db: Session = Depends(get_db)):
     valid = {service.line_key(u, v) for u, v, _c in LINES}
@@ -182,7 +182,7 @@ def update_ntc(body: S.NtcUpdate, room: Room = Depends(get_room), _: Participant
     if bad:
         raise HTTPException(status_code=422, detail=f"Lignes inconnues : {', '.join(bad)}")
     if any(v < 0 for v in body.values.values()):
-        raise HTTPException(status_code=422, detail="Une NTC ne peut pas être négative")
+        raise HTTPException(status_code=422, detail="An NTC cannot be negative")
     overrides = room.ntc_overrides
     overrides.update({k: float(v) for k, v in body.values.items()})
     room.ntc_overrides = overrides
@@ -190,37 +190,37 @@ def update_ntc(body: S.NtcUpdate, room: Room = Depends(get_room), _: Participant
     return {service.line_key(u, v): mw for (u, v), mw in service.effective_ntc(room).items()}
 
 
-@app.delete(API + '/rooms/{code}/ntc', response_model=dict, summary="Revenir aux NTC par défaut")
+@app.delete(API + '/rooms/{code}/ntc', response_model=dict, summary="Reset the NTC to the scenario values")
 def reset_ntc(room: Room = Depends(get_room), _: Participant = Depends(require_trainer), db: Session = Depends(get_db)):
     room.ntc_overrides = {}
     db.commit()
     return {service.line_key(u, v): mw for (u, v), mw in service.effective_ntc(room).items()}
 
 
-# ── Ordres ────────────────────────────────────────────────────────
-@app.get(API + '/rooms/{code}/orders/me', response_model=S.OrderBookOut, summary="Mon carnet d'ordres")
+# ── Orders ────────────────────────────────────────────────────────
+@app.get(API + '/rooms/{code}/orders/me', response_model=S.OrderBookOut, summary="My order book")
 def get_my_orders(room: Room = Depends(get_room), p: Participant = Depends(current_participant), db: Session = Depends(get_db)):
     return S.OrderBookOut(**service.order_book(db, room, p), participant=_participant_out(p))
 
 
-@app.put(API + '/rooms/{code}/orders/me', response_model=S.OrderBookOut, summary="Remplacer mon carnet d'ordres")
+@app.put(API + '/rooms/{code}/orders/me', response_model=S.OrderBookOut, summary="Replace my order book")
 def put_my_orders(body: S.OrderBook, room: Room = Depends(get_room), p: Participant = Depends(current_participant),
                   db: Session = Depends(get_db)):
     if p.role != 'trader':
-        raise HTTPException(status_code=403, detail="Seuls les traders déposent des ordres")
+        raise HTTPException(status_code=403, detail="Only traders submit orders")
     if room.phase != 'submission':
-        raise HTTPException(status_code=409, detail="La soumission est clôturée")
+        raise HTTPException(status_code=409, detail="Submission is closed")
     service.replace_orders(db, room, p, body)
     return S.OrderBookOut(**service.order_book(db, room, p), participant=_participant_out(p))
 
 
-@app.get(API + '/rooms/{code}/orders', response_model=List[S.OrderBookOut], summary="Tous les carnets (formateur)")
+@app.get(API + '/rooms/{code}/orders', response_model=List[S.OrderBookOut], summary="All order books (trainer)")
 def get_all_orders(room: Room = Depends(get_room), _: Participant = Depends(require_trainer), db: Session = Depends(get_db)):
     return [S.OrderBookOut(**service.order_book(db, room, p), participant=_participant_out(p))
             for p in room.participants if p.role == 'trader']
 
 
-@app.delete(API + '/rooms/{code}/orders', status_code=204, summary="Supprimer tous les ordres (formateur)")
+@app.delete(API + '/rooms/{code}/orders', status_code=204, summary="Delete all orders (trainer)")
 def delete_all_orders(room: Room = Depends(get_room), _: Participant = Depends(require_trainer), db: Session = Depends(get_db)):
     from sqlalchemy import delete
     from .storage import Order
@@ -228,15 +228,15 @@ def delete_all_orders(room: Room = Depends(get_room), _: Participant = Depends(r
     db.commit()
 
 
-# ── Clearing et résultats ─────────────────────────────────────────
-@app.post(API + '/rooms/{code}/clearing', response_model=S.ClearingRunOut, status_code=201, summary="Lancer le clearing (formateur)")
+# ── Clearing and results ──────────────────────────────────────────
+@app.post(API + '/rooms/{code}/clearing', response_model=S.ClearingRunOut, status_code=201, summary="Run the clearing (trainer)")
 def run_clearing_endpoint(room: Room = Depends(get_room), _: Participant = Depends(require_trainer), db: Session = Depends(get_db)):
     run = service.run_room_clearing(db, room)
     return S.ClearingRunOut(id=run.id, run_at=run.run_at, welfare=run.welfare, volume=run.volume,
                             settings=room.settings, result=run.result)
 
 
-@app.get(API + '/rooms/{code}/results', response_model=List[S.RunSummary], summary="Historique des clearings")
+@app.get(API + '/rooms/{code}/results', response_model=List[S.RunSummary], summary="Clearing history")
 def list_runs(room: Room = Depends(get_room), db: Session = Depends(get_db)):
     runs = db.execute(select(ClearingRun).where(ClearingRun.room_id == room.id).order_by(ClearingRun.id.desc())).scalars()
     return [S.RunSummary(id=r.id, run_at=r.run_at, welfare=r.welfare, volume=r.volume) for r in runs]
@@ -252,7 +252,7 @@ def _run_or_404(db, room, run_id):
     return run
 
 
-@app.get(API + '/rooms/{code}/results/{run_id}', response_model=S.ClearingRunOut, summary="Résultats complets d'un clearing")
+@app.get(API + '/rooms/{code}/results/{run_id}', response_model=S.ClearingRunOut, summary="Full results of a clearing")
 def get_run(run_id: str, room: Room = Depends(get_room), db: Session = Depends(get_db)):
     run = _run_or_404(db, room, run_id)
     import json
@@ -260,24 +260,24 @@ def get_run(run_id: str, room: Room = Depends(get_room), db: Session = Depends(g
                             settings=json.loads(run.settings_json), result=run.result)
 
 
-@app.get(API + '/rooms/{code}/results/{run_id}/me', response_model=S.MyResultOut, summary="Mon résultat")
+@app.get(API + '/rooms/{code}/results/{run_id}/me', response_model=S.MyResultOut, summary="My result")
 def get_my_result(run_id: str, room: Room = Depends(get_room), p: Participant = Depends(current_participant),
                   db: Session = Depends(get_db)):
     run = _run_or_404(db, room, run_id)
     return S.MyResultOut(participant=_participant_out(p), **service.my_result(run, p))
 
 
-@app.get(API + '/rooms/{code}/results/{run_id}/prices.csv', summary="Prix zonaux d'un clearing en CSV")
+@app.get(API + '/rooms/{code}/results/{run_id}/prices.csv', summary="Zonal prices of a clearing as CSV")
 def get_run_csv(run_id: str, room: Room = Depends(get_room), db: Session = Depends(get_db)):
     run = _run_or_404(db, room, run_id)
     return PlainTextResponse(service.prices_csv(run), media_type='text/csv',
                              headers={'Content-Disposition': f'attachment; filename="prices_{room.code}_{run.id}.csv"'})
 
 
-# ── Flux d'événements (temps réel) ────────────────────────────────
-@app.get(API + '/rooms/{code}/events', summary="Flux SSE : état de la salle à chaque changement")
+# ── Event stream (real time) ──────────────────────────────────────
+@app.get(API + '/rooms/{code}/events', summary="SSE stream: room state on every change")
 async def room_events(room: Room = Depends(get_room), once: bool = False):
-    """`once=true` : un seul état puis fin (tests, diagnostics)."""
+    """`once=true`: a single state then end (tests, diagnostics)."""
     room_id, code = room.id, room.code
 
     async def gen():
@@ -305,7 +305,7 @@ async def room_events(room: Room = Depends(get_room), once: bool = False):
                              headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
-# ── Front compilé (optionnel) ─────────────────────────────────────
+# ── Compiled front end (optional) ─────────────────────────────────
 if os.path.isdir(WEB_DIST):
     app.mount('/assets', StaticFiles(directory=os.path.join(WEB_DIST, 'assets')), name='assets')
 

@@ -1,7 +1,7 @@
 """
-Persistance de l'API : salles de marché, participants, ordres, clearings (SQLAlchemy 2, SQLite par défaut).
+API persistence: trading rooms, participants, orders, clearings (SQLAlchemy 2, SQLite by default).
 Base distincte de celle de l'application Streamlit historique (engine/db.py).
-Variable d'environnement WAPP_API_DATABASE_URL : sqlite:///chemin.db (défaut : data/rooms.db) ou URL Postgres.
+Environment variable WAPP_API_DATABASE_URL: sqlite:///path.db (default: data/rooms.db) or a Postgres URL.
 """
 from __future__ import annotations
 import os, json, secrets, string
@@ -128,7 +128,7 @@ def init_db():
 
 
 def purge_old_rooms(db, ttl_days):
-    """Supprime les salles sans activité (ordres, clearings, participants) depuis plus de ttl_days jours."""
+    """Deletes rooms without activity (orders, clearings, participants) for more than ttl_days days."""
     from sqlalchemy import select, func
     if ttl_days <= 0:
         return 0

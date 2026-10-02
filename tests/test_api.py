@@ -1,4 +1,4 @@
-"""Parcours complet de l'API : création de salle, participants, ordres, règles, NTC, clearing, résultats, droits."""
+"""End-to-end API flow: room creation, participants, orders, rules, NTC, clearing, results, permissions."""
 import os, sys, tempfile
 os.environ['WAPP_API_DATABASE_URL'] = 'sqlite:///' + os.path.join(tempfile.mkdtemp(), 'rooms_test.db')
 os.environ['WAPP_DB_PATH'] = os.path.join(tempfile.mkdtemp(), 'legacy_test.db')
@@ -40,9 +40,9 @@ def test_join_and_orders(room):
     trader = r.json()
     assert trader['role'] == 'trader' and trader['token']
     room['trader_token'] = trader['token']
-    # un trader sans zone est refusé
+    # a trader without a zone is refused
     assert client.post(API + f'/rooms/{code}/join', json={'name': 'X'}).status_code == 422
-    # un second trader dans la même zone est accepté
+    # a second trader in the same zone is accepted
     r2 = client.post(API + f'/rooms/{code}/join', json={'name': 'OMVS Manantali', 'zone': 'SEN'})
     assert r2.status_code == 201
     room['trader2_token'] = r2.json()['token']
@@ -58,10 +58,10 @@ def test_join_and_orders(room):
     r = client.put(API + f'/rooms/{code}/orders/me', json={'supply': [{'actor': 'Manantali', 'quantity': 100, 'price': 32, 'profile': 'hydro'}]},
                    headers=_auth(room['trader2_token']))
     assert r.status_code == 200
-    # prix hors bornes refusé par le schéma
+    # out-of-bounds price refused by the schema
     bad = {'supply': [{'actor': 'A', 'quantity': 10, 'price': 600}]}
     assert client.put(API + f'/rooms/{code}/orders/me', json=bad, headers=_auth(trader['token'])).status_code == 422
-    # sans jeton
+    # without a token
     assert client.get(API + f'/rooms/{code}/orders/me').status_code == 401
     info = client.get(API + f'/rooms/{code}').json()
     assert info['counts'] == {'supply': 2, 'demand': 1, 'blocks': 1, 'mic': 1}
@@ -70,12 +70,12 @@ def test_join_and_orders(room):
 
 def test_trainer_settings_and_ntc(room):
     code, tok = room['code'], room['trainer_token']
-    # un trader ne peut pas changer les règles
+    # a trader cannot change the rules
     assert client.put(API + f'/rooms/{code}/settings', json={'tie_rule': 'order'}, headers=_auth(room['trader_token'])).status_code == 403
     r = client.put(API + f'/rooms/{code}/settings', json={'hours': [19], 'tie_rule': 'order', 'currency': 'XOF'}, headers=_auth(tok))
     assert r.status_code == 200 and r.json()['hours'] == [19] and r.json()['tie_rule'] == 'order'
     assert client.put(API + f'/rooms/{code}/settings', json={'hours': [25]}, headers=_auth(tok)).status_code == 422
-    # capacités : celles du scénario de la salle (2024 par défaut), surchargées ligne par ligne
+    # capacities: those of the room's scenario (2024 by default), overridden line by line
     r = client.put(API + f'/rooms/{code}/ntc', json={'values': {'SEN->MLI': 0}}, headers=_auth(tok))
     assert r.status_code == 200 and r.json()['SEN->MLI'] == 0 and r.json()['NGA->BEN'] == 200
     client.put(API + f'/rooms/{code}/settings', json={'scenario': 'reference'}, headers=_auth(tok))
@@ -95,7 +95,7 @@ def test_clearing_and_results(room):
     assert d['pro'] == 0 and d['pao'] == 0 and d['tie_rule'] == 'order'
     assert 'SEN' in run['result']['prices'] and run['result']['summary']['n_blocks'] == 1
     assert client.get(API + f'/rooms/{code}').json()['phase'] == 'cleared'
-    # la soumission est fermée
+    # submission is closed
     assert client.put(API + f'/rooms/{code}/orders/me', json={'supply': []}, headers=_auth(room['trader_token'])).status_code == 409
     r = client.get(API + f'/rooms/{code}/results')
     assert r.status_code == 200 and len(r.json()) == 1
@@ -107,7 +107,7 @@ def test_clearing_and_results(room):
     assert mine['participant']['name'] == 'SENELEC' and set(mine['zone_prices'].keys()) == {'19'}
     assert {a['actor'] for a in mine['actors']} >= {'SENELEC Thermal', 'SENELEC Demand'}
     assert mine['currency'] == 'XOF' and mine['mic'][0]['actor'] == 'SENELEC Thermal'
-    # réouverture puis nouveau clearing : historique de 2
+    # reopening then a new clearing: history of 2
     assert client.put(API + f'/rooms/{code}/phase', json={'phase': 'submission'}, headers=_auth(tok)).status_code == 200
     assert client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok)).status_code == 201
     assert len(client.get(API + f'/rooms/{code}/results').json()) == 2
@@ -121,7 +121,7 @@ def test_empty_room_without_fill_is_refused():
     r = client.post(API + '/rooms', json={'name': 'Vide', 'trainer_name': 'T'}); code, tok = r.json()['code'], r.json()['trainer_token']
     assert client.put(API + f'/rooms/{code}/settings', json={'fill_mode': 'none'}, headers=_auth(tok)).status_code == 200
     r = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok))
-    assert r.status_code == 422 and 'Aucun ordre' in r.json()['detail']
+    assert r.status_code == 422 and 'No order' in r.json()['detail']
     assert client.put(API + f'/rooms/{code}/settings', json={'fill_mode': 'zones'}, headers=_auth(tok)).status_code == 200
     r = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok))
     assert r.status_code == 201 and len(r.json()['result']['summary']['reference_zones']) == 14
@@ -131,7 +131,7 @@ def test_scenarios_and_csv_export(room):
     code, tok = room['code'], room['trainer_token']
     sc = client.get(API + '/scenarios?lang=en').json()
     keys = [x['key'] for x in sc]
-    assert keys[0] == 'reference_2024' and 'reference' not in keys and 'secheresse_hydro' in keys   # jeu L2 masqué
+    assert keys[0] == 'reference_2024' and 'reference' not in keys and 'secheresse_hydro' in keys   # Deliverable 2 set hidden
     assert next(x for x in sc if x['key'] == 'secheresse_hydro')['name'] == 'Hydro drought'
     assert client.put(API + f'/rooms/{code}/settings', json={'scenario': 'inconnu'}, headers=_auth(tok)).status_code == 422
     r = client.put(API + f'/rooms/{code}/settings', json={'scenario': 'ligne_nga_ben', 'fill_missing': True}, headers=_auth(tok))
@@ -190,7 +190,7 @@ def test_duplicate_name_refused_and_participant_removal():
 
 def test_fill_mode_actors_in_room():
     r = client.post(API + '/rooms', json={'name': 'Fond'}); code, tok = r.json()['code'], r.json()['trainer_token']
-    client.put(API + f'/rooms/{code}/settings', json={'scenario': 'reference'}, headers=_auth(tok))   # acteurs du jeu Livrable 2
+    client.put(API + f'/rooms/{code}/settings', json={'scenario': 'reference'}, headers=_auth(tok))   # actors of the Deliverable 2 set
     tr = client.post(API + f'/rooms/{code}/join', json={'name': 'CEB', 'zone': 'TGO'}).json()
     client.put(API + f'/rooms/{code}/orders/me', json={'supply': [{'actor': 'Nangbeto', 'quantity': 30, 'price': 20, 'profile': 'hydro'}]}, headers=_auth(tr['token']))
     assert client.get(API + f'/rooms/{code}').json()['settings']['fill_mode'] == 'actors'
@@ -210,6 +210,6 @@ def test_demo_endpoint_is_cached():
 def test_default_scenario_is_reference_2024():
     r = client.post(API + '/rooms', json={'name': 'Défaut', 'trainer_name': 'F', 'lang': 'fr'}).json()
     assert r['settings']['scenario'] == 'reference_2024'
-    assert r['ntc']['NGA->NER'] == 120 and r['ntc_default']['NGA->NER'] == 120   # capacités 2024, pas celles du Livrable 2 (300)
+    assert r['ntc']['NGA->NER'] == 120 and r['ntc_default']['NGA->NER'] == 120   # 2024 capacities, not the Deliverable 2 ones (300)
     info = client.get(API + f"/rooms/{r['code']}").json()
     assert info['ntc_default']['NGA->NER'] == 120

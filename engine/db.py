@@ -1,9 +1,9 @@
 """
-WAPP Market Simulator — état partagé via SQLite
-Toutes les sessions Streamlit (traders, admin) lisent et écrivent la même base.
+WAPP Market Simulator — shared state through SQLite
+Every Streamlit session (traders, admin) reads and writes the same database.
 
-v2 : table ntc (capacités modifiables), table block_orders (ordres bloc / liés / exclusifs),
-clé (zone, trader) pour les participants, mode WAL, chemin configurable (WAPP_DB_PATH).
+v2: ntc table (editable capacities), block_orders table (block / linked / exclusive orders),
+(zone, trader) key for participants, WAL mode, configurable path (WAPP_DB_PATH).
 """
 import sqlite3, json, os
 from datetime import datetime
@@ -13,15 +13,15 @@ DB_PATH = os.environ.get('WAPP_DB_PATH') or os.path.join(os.path.dirname(__file_
 SESSION_DEFAULTS = {
     'phase': 'submission',      # submission | cleared
     'market_date': datetime.now().strftime('%Y-%m-%d'),
-    'horizon': '24',            # 1 ou 24
-    'hour': '19',               # heure simulée en mode 1 h
+    'horizon': '24',            # 1 or 24
+    'hour': '19',               # simulated hour in 1-hour mode
     'mode': 'multizone',
-    'currency': 'USD',          # libellé monétaire affiché
+    'currency': 'USD',          # displayed currency label
     'lang': 'fr',               # fr | en
     'pricing': 'complete',      # complete | l2
     'pab_rule': 'euphemia',     # euphemia | l2 | none
     'tie_rule': 'prorata',      # prorata | order | solver
-    'fill_missing': '1',        # 1 : zones sans soumission complétées par les données de référence
+    'fill_missing': '1',        # 1: zones without submission filled with reference data
 }
 
 
@@ -32,7 +32,7 @@ def get_conn():
     return conn
 
 
-# Colonnes attendues par cette version pour chaque table gérée ici
+# Columns expected by this version for each table managed here
 EXPECTED_COLUMNS = {
     'session':       ['key', 'value'],
     'supply_offers': ['zone', 'player', 'actor', 'segment', 'quantity', 'price', 'profile'],
@@ -49,9 +49,9 @@ def _columns(c, table):
 
 
 def _migrate_legacy_tables(c):
-    """Une table portant le même nom qu'une table de cette version mais avec d'autres colonnes
-    (créée par une version antérieure du code) est convertie si on sait le faire, sinon renommée
-    en <table>_legacy_<horodatage> pour ne jamais perdre de données."""
+    """A table with the same name as one of this version but different columns (created by an
+    earlier version of the code) is converted when possible, otherwise renamed
+    <table>_legacy_<timestamp> so that no data is ever lost."""
     stamp = datetime.now().strftime('%Y%m%d%H%M%S')
     for table, cols in EXPECTED_COLUMNS.items():
         existing = _columns(c, table)
@@ -149,7 +149,7 @@ def init_db():
             PRIMARY KEY (zone, player)
         );
     """)
-    # Migration : ancienne table players (clé = zone seule) → clé (zone, player)
+    # Migration: old players table (key = zone only) → (zone, player) key
     row = c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='players'").fetchone()
     if row and 'PRIMARY KEY (zone, player)' not in row['sql']:
         c.executescript("""
@@ -219,9 +219,9 @@ def get_players():
     return [dict(r) for r in rows]
 
 
-# ── Offres stepwise ───────────────────────────────────────────────
+# ── Stepwise orders ───────────────────────────────────────────────
 def save_supply_offers(zone, player, offers):
-    """offers : liste de dicts {actor, segment, quantity, price, profile}"""
+    """offers: list of dicts {actor, segment, quantity, price, profile}"""
     conn = get_conn()
     conn.execute("DELETE FROM supply_offers WHERE zone=? AND player=?", (zone, player))
     now = datetime.now().isoformat()
@@ -234,7 +234,7 @@ def save_supply_offers(zone, player, offers):
 
 
 def save_demand_bids(zone, player, bids):
-    """bids : liste de dicts {actor, segment, quantity, price}"""
+    """bids: list of dicts {actor, segment, quantity, price}"""
     conn = get_conn()
     conn.execute("DELETE FROM demand_bids WHERE zone=? AND player=?", (zone, player))
     now = datetime.now().isoformat()
@@ -269,9 +269,9 @@ def get_zone_demand(zone):
     return _rows("SELECT * FROM demand_bids WHERE zone=? ORDER BY price DESC", (zone,))
 
 
-# ── Ordres bloc, liés, exclusifs ──────────────────────────────────
+# ── Block, linked and exclusive orders ────────────────────────────
 def save_block_orders(zone, player, blocks):
-    """blocks : liste de dicts {name, side ('S'|'D'), quantity, price, h_start, h_end, parent_name, excl_group}"""
+    """blocks: list of dicts {name, side ('S'|'D'), quantity, price, h_start, h_end, parent_name, excl_group}"""
     conn = get_conn()
     conn.execute("DELETE FROM block_orders WHERE zone=? AND player=?", (zone, player))
     now = datetime.now().isoformat()
@@ -302,9 +302,9 @@ def get_zone_blocks(zone, player=None):
     return _rows("SELECT * FROM block_orders WHERE zone=? AND player=? ORDER BY id", (zone, player))
 
 
-# ── Conditions de revenu minimum (MIC) ────────────────────────────
+# ── Minimum income conditions (MIC) ───────────────────────────────
 def save_mic_conditions(zone, player, conditions):
-    """conditions : liste de dicts {actor, fixed_term, variable_term} ; remplace celles du trader."""
+    """conditions: list of dicts {actor, fixed_term, variable_term}; replaces the trader's conditions."""
     conn = get_conn()
     conn.execute("DELETE FROM mic_conditions WHERE zone=? AND player=?", (zone, player))
     now = datetime.now().isoformat()
@@ -325,14 +325,14 @@ def get_zone_mic(zone, player=None):
     return _rows("SELECT * FROM mic_conditions WHERE zone=? AND player=? ORDER BY id", (zone, player))
 
 
-# ── NTC modifiables ───────────────────────────────────────────────
+# ── Editable NTC ──────────────────────────────────────────────────
 def get_ntc():
-    """{(u, v): MW} définies par l'administrateur ; {} si aucune (le moteur utilise alors les valeurs par défaut)."""
+    """{(u, v): MW} set by the administrator; {} when none (the engine then uses the defaults)."""
     return {(r['u'], r['v']): float(r['mw']) for r in _rows("SELECT u, v, mw FROM ntc")}
 
 
 def set_ntc(values):
-    """values : {(u, v): MW}. Remplace l'ensemble des valeurs personnalisées."""
+    """values: {(u, v): MW}. Replaces the whole set of custom values."""
     conn = get_conn()
     conn.execute("DELETE FROM ntc")
     for (u, v), mw in values.items():
@@ -348,7 +348,7 @@ def reset_ntc():
     conn.close()
 
 
-# ── Résultats ─────────────────────────────────────────────────────
+# ── Results ───────────────────────────────────────────────────────
 def save_results(welfare, volume, prices, flows, dispatch, summary):
     conn = get_conn()
     conn.execute("DELETE FROM results")
@@ -375,5 +375,5 @@ def get_results():
     return r
 
 
-# Initialisation à l'import
+# Initialisation at import time
 init_db()

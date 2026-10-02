@@ -1,5 +1,5 @@
-/** Carte de chaleur des prix : une ligne par zone (triées par prix moyen décroissant), une colonne par heure,
- *  couleur = prix. Les zones couplées forment des bandes de même couleur ; un trait sépare les groupes de prix. */
+/** Price heatmap: one row per zone (sorted by decreasing mean price), one column per hour, colour = price.
+ *  Coupled zones form bands of the same colour; a rule separates the price groups. */
 const NAMES: Record<string, [string, string]> = { SEN: ['Sénégal', 'Senegal'], GMB: ['Gambie', 'The Gambia'], GNB: ['Guinée-Bissau', 'Guinea-Bissau'], GIN: ['Guinée', 'Guinea'], SLE: ['Sierra Leone', 'Sierra Leone'], LBR: ['Liberia', 'Liberia'], MLI: ['Mali', 'Mali'], BFA: ['Burkina Faso', 'Burkina Faso'], NER: ['Niger', 'Niger'], CIV: ['Côte d’Ivoire', 'Côte d’Ivoire'], GHA: ['Ghana', 'Ghana'], TGO: ['Togo', 'Togo'], BEN: ['Bénin', 'Benin'], NGA: ['Nigeria', 'Nigeria'] }
 const STOPS = [[232, 244, 238], [245, 215, 122], [181, 68, 60]]
 

@@ -1,4 +1,4 @@
-"""Migration des bases créées par les versions antérieures (tables de même nom, colonnes différentes)."""
+"""Migration of databases created by earlier versions (same table names, different columns)."""
 import os, sys, sqlite3, tempfile, importlib
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 def _fresh_db_module(path):
     os.environ['WAPP_DB_PATH'] = path
     import engine.db as db
-    importlib.reload(db)       # init_db() s'exécute sur la nouvelle base
+    importlib.reload(db)       # init_db() runs on the new database
     return db
 
 

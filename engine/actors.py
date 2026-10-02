@@ -1,5 +1,5 @@
 """
-Acteurs prédéfinis par zone pour la liste déroulante de connexion.
+Predefined actors per zone for the sign-in suggestion list.
 """
 
 ZONE_ACTORS = {

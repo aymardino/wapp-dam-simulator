@@ -1,6 +1,6 @@
 """
-Tests de propriétés : cas aléatoires (segments, blocs simples, liés, exclusifs, MIC, règles, scénarios, heures)
-vérifiés par engine.checks.verify_result. Nombre de cas : WAPP_PROPERTY_CASES (défaut 25).
+Property tests: random cases (segments, simple, linked and exclusive blocks, MIC, rules, scenarios, hours)
+checked by engine.checks.verify_result. Number of cases: WAPP_PROPERTY_CASES (default 25).
 """
 import os, sys, random, tempfile
 os.environ.setdefault('WAPP_DB_PATH', os.path.join(tempfile.mkdtemp(), 'props.db'))
@@ -42,9 +42,9 @@ def random_case(rng):
                 row = dict(zone=z, player=player, name=f"Blk{z}{b}", side=side, quantity=rng.choice([10, 50, 100, 250]),
                            price=rng.choice([5, 30, 45, 80, 120, 180, 300]), h_start=h0, h_end=h1)
                 if names and rng.random() < 0.4:
-                    row['parent_name'] = rng.choice(names)          # bloc lié
+                    row['parent_name'] = rng.choice(names)          # linked block
                 if rng.random() < 0.3:
-                    row['excl_group'] = rng.choice(['G1', 'G2'])     # groupe exclusif
+                    row['excl_group'] = rng.choice(['G1', 'G2'])     # exclusive group
                 blocks.append(row); names.append(row['name'])
     rules = dict(pricing=rng.choice(['complete', 'complete', 'l2']), pab_rule=rng.choice(['euphemia', 'euphemia', 'l2', 'none']),
                  tie_rule=rng.choice(['prorata', 'order', 'solver']))
@@ -66,19 +66,19 @@ def test_random_case_is_consistent(seed):
     if case['ntc']:
         ntc.update(case['ntc'])
     if not (case['supply'] or case['demand'] or case['blocks']) and not case['fill']:
-        return      # rien à calculer : l'API refuse ce cas en amont
+        return      # nothing to compute: the API refuses this case upstream
     res = run_clearing(case['supply'], case['demand'], block_rows=case['blocks'], mic_rows=case['mic'], hours=case['hours'],
                        fill_missing_zones=case['fill'], ntc_override=ntc or None, reference_rows=(sup_ref, dem_ref), **case['rules'])
     problems = verify_result(res)
-    # Le mode 'l2' (prix du Livrable 2) n'a pas l'ensemble admissible complet : on ne lui impose pas les propriétés de prix.
+    # Mode 'l2' (Deliverable 2 prices) lacks the complete admissible set: price properties are not imposed on it.
     if case['rules']['pricing'] == 'l2':
         problems = [p for p in problems if not p.startswith('prix')]
     assert not problems, f"seed {seed} : " + " | ".join(problems)
 
 
 def test_edge_cases():
-    # Quantité nulle, prix aux bornes, bloc hors des heures simulées, parent manquant, groupe à un seul membre, MIC sans acceptation.
-    # Rappel : un bloc tout-ou-rien plus grand que la demande d'une zone isolée est rejeté à juste titre (statut PRB).
+    # Zero quantity, prices at the bounds, block outside the simulated hours, missing parent, single-member group, MIC without acceptance.
+    # Reminder: an all-or-nothing block larger than an isolated zone's demand is rightly rejected (PRB status).
     sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=0, price=0, profile='solar'),
            dict(zone='NGA', player='a', actor='B', segment=0, quantity=100, price=300, profile='peaker')]
     dem = [dict(zone='NGA', player='b', actor='L', segment=0, quantity=100, price=500)]

@@ -1,6 +1,6 @@
 # Règles de marché appliquées par le moteur
 
-*Document de référence pour la note technique et pour toute comparaison avec une autre plateforme de clearing. Chaque règle ci-dessous est implémentée dans `engine/clearing.py` et vérifiée par `tests/test_engine.py`. Version du 2 octobre 2026.*
+*Document de référence pour la note technique et pour toute comparaison avec une autre plateforme de clearing. Chaque règle ci-dessous est implémentée dans `engine/clearing.py` et vérifiée par `tests/test_engine.py`. Version du 2 octobre 2026. Version de référence en anglais : `docs/MARKET_RULES.md`.*
 
 **Summary (English).** This document states every rule the clearing engine applies: inputs, order types, the three sequential problems (welfare maximisation, volume tie-break, pricing), the complete characterisation of admissible prices, the treatment of paradoxical blocks, tolerances, and what is deliberately not modelled. It is the counterpart of the formulation in Livrable 2 and is meant to be testable: the public test cases in `tests/` give expected outcomes for each rule.
 

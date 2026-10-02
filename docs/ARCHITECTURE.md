@@ -1,95 +1,92 @@
-# Architecture v2 : moteur, API, salle de marché
+# Architecture v2: engine, API, trading rooms
 
-*2 octobre 2026. Complète `docs/REGLES_DE_MARCHE.md` (règles) et `CHANGELOG.md` (historique).*
+*October 2026. Complements `docs/MARKET_RULES.md` (rules) and `CHANGELOG.md` (history). Version française : [fr/ARCHITECTURE.md](fr/ARCHITECTURE.md).*
 
-## Vue d'ensemble
+## Overview
 
 ```
-engine/            moteur de clearing (Pyomo + HiGHS), règles explicites, tests      → inchangé par l'API
+engine/            clearing engine (Pyomo + HiGHS), explicit rules, tests           → untouched by the API
    clearing.py     run_clearing(...)  →  prices, flows, dispatch, summary
-   cli.py          python -m engine.cli : CSV en entrée, JSON en sortie
-api/               FastAPI : salles de marché multi-participants, ordres, clearings    → uvicorn api.main:app
-   storage.py      SQLAlchemy (SQLite par défaut, Postgres via WAPP_API_DATABASE_URL)
-   schemas.py      contrats d'entrée/sortie (pydantic), validation des ordres
-   service.py      adaptateur salle → lignes du moteur, exécution, résultat du trader
-   auth.py         jeton de participant (Authorization: Bearer)
-   main.py         routes /api/v1, sert web/dist si présent
-web/               front React (Vite, Tailwind) : hall, salle de marché, poste du formateur
-app.py, pages/     application Streamlit historique (formation locale), toujours fonctionnelle
+   scenarios.py    Reference 2024 set and teaching variants
+   checks.py       solver-independent verification of a result
+   cli.py          python -m engine.cli: CSV in, JSON out
+api/               FastAPI: multi-participant trading rooms, orders, clearings       → uvicorn api.main:app
+   storage.py      SQLAlchemy (SQLite by default, Postgres through WAPP_API_DATABASE_URL)
+   schemas.py      input/output contracts (pydantic), order validation
+   service.py      room → engine rows adapter, execution, trader result
+   auth.py         participant token (Authorization: Bearer)
+   main.py         /api/v1 routes, serves web/dist when present
+web/               React front end (Vite, Tailwind): landing page, hall, trading floor, trainer desk
+app.py, pages/     historical Streamlit application (local training), still functional
 ```
 
-Le moteur ne connaît ni les salles ni les participants : l'API lui passe des lignes (zone, trader, acteur, …) exactement comme l'application Streamlit. Les deux interfaces partagent donc les mêmes règles et les mêmes tests.
+The engine knows nothing about rooms or participants: the API hands it rows (zone, trader, actor, …) exactly as the Streamlit application does. Both interfaces therefore share the same rules and the same tests.
 
-## Modèle de données de l'API
+## API data model
 
-| Objet | Champs | Rôle |
-|-------|--------|------|
-| Salle (`rooms`) | code à 6 caractères, nom, phase (`submission` / `cleared`), paramètres (heures, règles, monnaie, langue, date), NTC surchargées | une formation ou une démonstration |
-| Participant (`participants`) | nom (organisation), zone, rôle (`trainer` / `trader` / `observer`), jeton | une personne connectée ; plusieurs traders par zone possibles |
-| Ordre (`orders`) | participant, type (`supply` / `demand` / `block` / `mic`), contenu JSON | le carnet d'ordres d'un trader, remplacé en bloc à chaque dépôt |
-| Clearing (`clearing_runs`) | date, paramètres figés, welfare, volume, résultat complet JSON | historique des exécutions d'une salle |
+| Object | Fields | Role |
+|--------|--------|------|
+| Room (`rooms`) | 6-character code, name, phase (`submission` / `cleared`), settings (hours, rules, currency, language, date, scenario, fill mode), NTC overrides | a training session or a demonstration |
+| Participant (`participants`) | name (organisation), zone, role (`trainer` / `trader` / `observer`), token | a connected person; several traders per zone are possible |
+| Order (`orders`) | participant, kind (`supply` / `demand` / `block` / `mic`), JSON content | a trader's order book, replaced as a whole on each submission |
+| Clearing (`clearing_runs`) | date, frozen settings, welfare, volume, full JSON result | history of a room's runs |
 
-Le formateur reçoit son jeton à la création de la salle ; les traders le reçoivent en rejoignant. Le jeton est porté dans l'en-tête `Authorization: Bearer …`. Il n'y a pas de comptes ni de mots de passe : une salle est une pièce fermée dont le code est la clé, ce qui correspond à l'usage en formation. Pour une exposition publique durable, ajouter une expiration des salles et un quota par adresse.
+The trainer receives a token when creating the room; traders receive one when joining. The token travels in the `Authorization: Bearer …` header. There are no accounts and no passwords: a room is a closed space whose code is the key, which matches training usage. For a durable public exposure, rooms expire and creation is rate-limited (see below).
 
 ## Routes
 
-| Méthode et route | Qui | Effet |
-|------------------|-----|-------|
-| `GET /api/v1/reference` | tous | zones, lignes et NTC par défaut, profils, bornes de prix, règles disponibles, données de référence |
-| `POST /api/v1/rooms` | formateur | crée une salle, renvoie le code et le jeton du formateur |
-| `GET /api/v1/rooms/{code}` | tous | état complet (paramètres, NTC effectives, participants, compteurs, dernier clearing) |
-| `GET /api/v1/rooms/{code}/state` | tous | état léger pour le rafraîchissement périodique |
-| `POST /api/v1/rooms/{code}/join` | trader, observateur | rejoint la salle, renvoie un jeton |
-| `GET /api/v1/rooms/{code}/me` | participant | identité liée au jeton |
-| `PUT /api/v1/rooms/{code}/settings` | formateur | heures simulées, scénario, règles de prix, de blocs paradoxaux et de partage, mode de complétion (`actors`, `zones`, `none`), monnaie, langue, date |
-| `PUT /api/v1/rooms/{code}/phase` | formateur | ouvre ou clôture la soumission |
-| `PUT` / `DELETE /api/v1/rooms/{code}/ntc` | formateur | surcharge ou restaure les NTC |
-| `GET` / `PUT /api/v1/rooms/{code}/orders/me` | trader | lit ou remplace son carnet d'ordres (refusé si la soumission est clôturée) |
-| `GET` / `DELETE /api/v1/rooms/{code}/orders` | formateur | tous les carnets ; suppression générale |
-| `POST /api/v1/rooms/{code}/clearing` | formateur | exécute le moteur avec les ordres de la salle, enregistre, clôture |
-| `GET /api/v1/rooms/{code}/results` | tous | historique des clearings |
-| `GET /api/v1/rooms/{code}/results/{id|latest}` | tous | résultat complet (prix, flux, dispatch, résumé, diagnostics) |
-| `GET /api/v1/rooms/{code}/results/{id|latest}/me` | participant | résultat du trader : ses acteurs, ses blocs, ses MIC, les prix de sa zone |
-| `GET /api/v1/rooms/{code}/results/{id}/prices.csv` | tous | prix zonaux en CSV |
-| `GET /api/v1/rooms/{code}/events` | tous | flux Server-Sent Events de l'état de la salle |
-| `GET /api/v1/scenarios` | tous | scénarios pédagogiques (référence, sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande) |
+| Method and route | Who | Effect |
+|------------------|-----|--------|
+| `GET /api/v1/reference` | all | zones, lines and default NTC, profiles, price bounds, available rules, reference data |
+| `GET /api/v1/demo` | all | clearing of the Reference 2024 scenario (prices, flows, NTC, welfare, volume, saturated lines, reference orders, profiles, load), computed on first call and cached in the process |
+| `GET /api/v1/scenarios` | all | teaching scenarios (Reference 2024 and its four variants) |
+| `POST /api/v1/rooms` | trainer | creates a room, returns the code and the trainer token |
+| `GET /api/v1/rooms/{code}` | all | full state (settings, effective NTC and scenario NTC, participants, counts, last clearing) |
+| `GET /api/v1/rooms/{code}/state` | all | light state for periodic refresh |
+| `POST /api/v1/rooms/{code}/join` | trader, observer | joins the room, returns a token |
+| `GET /api/v1/rooms/{code}/me` | participant | identity bound to the token |
+| `DELETE /api/v1/rooms/{code}/participants/{id}` | trainer | removes a participant and its orders |
+| `PUT /api/v1/rooms/{code}/settings` | trainer | simulated hours, scenario, pricing, paradoxical-block and sharing rules, fill mode (`actors`, `zones`, `none`), currency, language, date |
+| `PUT /api/v1/rooms/{code}/phase` | trainer | opens or closes submission |
+| `PUT` / `DELETE /api/v1/rooms/{code}/ntc` | trainer | overrides or restores the NTC |
+| `GET` / `PUT /api/v1/rooms/{code}/orders/me` | trader | reads or replaces the trader's order book (refused when submission is closed) |
+| `GET` / `DELETE /api/v1/rooms/{code}/orders` | trainer | all order books; general deletion |
+| `POST /api/v1/rooms/{code}/clearing` | trainer | runs the engine on the room's orders, stores the result, closes submission |
+| `GET /api/v1/rooms/{code}/results` | all | clearing history |
+| `GET /api/v1/rooms/{code}/results/{id|latest}` | all | full result (prices, flows, dispatch, summary, diagnostics) |
+| `GET /api/v1/rooms/{code}/results/{id|latest}/me` | participant | the trader's result: its actors, blocks, MIC, the prices of its zone |
+| `GET /api/v1/rooms/{code}/results/{id}/prices.csv` | all | zonal prices as CSV |
+| `GET /api/v1/rooms/{code}/events` | all | Server-Sent Events stream of the room state |
 
-Les erreurs du moteur (`ClearingError`) reviennent en 422 avec le message en clair. La documentation interactive est servie sur `/docs`.
+Engine errors (`ClearingError`) come back as 422 with the message in clear. The interactive documentation is served on `/docs`.
 
-## Front
+## Front end
 
-Trois écrans, un seul système de design :
+Four screens, one design system:
 
-- **Hall** (`/`) : créer une salle ou en rejoindre une ; liens vers les guides du formateur et du trader (`/guide/formateur`, `/guide/trader`, servis depuis `docs/guides/` en Markdown).
-- **Salle de marché** (`/room/:code`) : à gauche le carnet d'ordres du trader (segments, blocs, MIC), au centre le marché (prix par zone et par heure, positions nettes, dernier clearing), à droite son résultat (volumes, surplus, ordres rejetés, prix de sa zone).
-- **Poste du formateur** (`/desk/:code`) : indicateurs, lancement du clearing, phase, paramètres et règles, NTC, participants et ordres, vérifications de cohérence, synthèse par zone.
+- **Landing page** (`/`): public presentation, live map of the Reference 2024 case driven by `GET /api/v1/demo`, per-zone supply / demand explorer, price heatmap, engine description, spec sheet, disclaimers. Public links (repository, technical note, documentation) are in `web/src/links.ts`.
+- **Hall** (`/app`): create a room or join one; links to the trainer and trader guides (`/guide/formateur`, `/guide/trader`, served from `docs/guides/` as Markdown).
+- **Trading floor** (`/room/:code`): on the left the trader's order book (segments, blocks, MIC), in the middle the market (map, price heatmap and curves, dispatch, flows, last clearing), on the right the trader's result (volumes, surplus, rejected orders, zone prices).
+- **Trainer desk** (`/desk/:code`): indicators, clearing run, phase, settings and rules, NTC, participants and orders, consistency checks, per-zone summary.
 
-Système de design : palette neutre (`page`, `surface`, `panel`, `ink`, `line`) et un seul accent (vert profond), deux poids de police (400, 500), chiffres en police à chasse fixe, filets fins plutôt que cartes bordées, couleur réservée au sens (position nette, statut d'un bloc). L'ensemble est défini dans `web/tailwind.config.js` et `web/src/styles.css`.
+Design system: neutral palette (`page`, `surface`, `panel`, `ink`, `line`) and a single accent (deep green), two font weights (400, 500), figures in a monospace font, thin rules rather than bordered cards, colour reserved for meaning (net position, block status). The landing page adds an editorial serif (Instrument Serif), a dark map theme and amber highlights. Everything is defined in `web/tailwind.config.js` and `web/src/styles.css`.
 
-Le front s'abonne au flux d'événements de la salle (`/rooms/{code}/events`, Server-Sent Events) et recharge l'état à chaque changement ; sans ce flux il revient à un sondage toutes les dix secondes. Les graphiques (prix, dispatch, flux) sont rendus par ECharts en SVG ; la carte s'appuie sur les contours Natural Earth (domaine public) extraits à la compilation.
+The front end subscribes to the room event stream (`/rooms/{code}/events`, Server-Sent Events) and reloads the state on every change; without the stream it falls back to polling every ten seconds. Charts (prices, dispatch, flows) are rendered by ECharts in SVG; the price heatmap is plain HTML; the map relies on Natural Earth outlines (public domain) extracted at build time.
 
-## Lancer l'ensemble en développement
+## Running everything in development
 
 ```bash
 pip install -r requirements.txt
-uvicorn api.main:app --reload --port 8000        # API + documentation sur /docs
-cd web && npm install && npm run dev             # front sur http://localhost:5173 (proxy /api → 8000)
+uvicorn api.main:app --reload --port 8000        # API + documentation on /docs
+cd web && npm install && npm run dev             # front end on http://localhost:5173 (proxy /api → 8000)
 ```
 
-En production : `npm run build` produit `web/dist`, que l'API sert à la racine ; une seule image Docker suffit (`Dockerfile.app`).
+In production, `npm run build` produces `web/dist`, which the API serves at the root; a single Docker image is enough (`Dockerfile.app`). Hosting options are in `docs/DEPLOYMENT.md`.
 
-## Garde-fous pour l'exposition publique
+## Safeguards for public exposure
 
-Purge des salles sans activité depuis `WAPP_ROOM_TTL_DAYS` jours (30), au plus `WAPP_MAX_ROOMS_PER_IP_PER_DAY` créations par adresse et par jour (20), origines autorisées par `WAPP_CORS_ORIGINS`.
+Rooms without activity for `WAPP_ROOM_TTL_DAYS` days (30) are purged, at most `WAPP_MAX_ROOMS_PER_IP_PER_DAY` rooms per address and per day (20), allowed origins through `WAPP_CORS_ORIGINS`.
 
-## Ce qui reste
+## What remains
 
-Tests de bout en bout du front, chargement différé d'ECharts pour alléger le premier affichage, bac à sable pédagogique à deux pays, site vitrine, licence et nom public.
-
-## Site vitrine et point de démonstration (étape 12)
-
-- `GET /api/v1/demo` renvoie le clearing du scénario Référence 2024 (prix, flux, NTC, welfare, volume, lignes
-  saturées, temps de calcul), calculé au premier appel et conservé en mémoire du processus.
-- `web/src/pages/Landing.tsx` (route `/`) consomme ce point pour la carte animée et le graphique des prix ; le
-  hall des salles est à `/app`. Les liens publics (dépôt, note technique, documentation) sont dans `web/src/links.ts`.
-- Production : `docker-compose.yml` (image `Dockerfile.app` + Caddy), variables dans `.env`, scripts dans `deploy/`.
+End-to-end tests of the front end, lazy loading of ECharts to lighten the first paint, a two-country teaching sandbox.

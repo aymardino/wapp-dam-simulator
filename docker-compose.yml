@@ -1,5 +1,5 @@
-# Déploiement sur un serveur : API + front dans une image, Caddy pour le HTTPS automatique.
-# Remplacer le domaine dans Caddyfile, puis : docker compose up -d
+# Server deployment: API + front end in one image, Caddy for automatic HTTPS.
+# Set DOMAIN in .env (see .env.example), then: docker compose up -d
 services:
   api:
     build:

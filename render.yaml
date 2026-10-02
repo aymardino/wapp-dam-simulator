@@ -1,7 +1,7 @@
-# Déploiement sur Render en un clic (Blueprint) : Dashboard → New → Blueprint → ce dépôt.
-# Service web Docker (API + site compilé), disque persistant pour les salles (data/rooms.db), contrôle de santé.
-# Coût indicatif : plan Starter (7 $/mois) + disque 1 Go (0,25 $/mois). Le plan Free n'a pas de disque :
-# les salles seraient perdues à chaque redémarrage et le service s'endort après 15 min d'inactivité.
+# One-click deployment on Render (Blueprint): Dashboard → New → Blueprint → this repository.
+# Docker web service (API + compiled website), persistent disk for the rooms (data/rooms.db), health check.
+# Indicative cost: Starter plan ($7/month) + 1 GB disk ($0.25/month). The Free plan has no disk:
+# rooms would be lost at every restart and the service sleeps after 15 min of inactivity.
 services:
   - type: web
     name: wapp-dam-simulator

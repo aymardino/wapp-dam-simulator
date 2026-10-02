@@ -1,4 +1,4 @@
-// Extrait, depuis Natural Earth (world-atlas, domaine public), les pays d'Afrique de l'Ouest en GeoJSON léger.
+// Extracts the West African countries from Natural Earth (world-atlas, public domain) as a light GeoJSON.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { feature } from 'topojson-client'
 const topo = JSON.parse(readFileSync(new URL('../node_modules/world-atlas/countries-50m.json', import.meta.url)))
