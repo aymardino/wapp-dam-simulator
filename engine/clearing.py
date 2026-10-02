@@ -670,7 +670,9 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
             db_ntc = get_ntc()
             if db_ntc:
                 ntc.update(db_ntc)
-                notes.append("NTC lues depuis la base (valeurs modifiées par l'administrateur).")
+                changed = [f"{u}->{v}" for (u, v), mw in db_ntc.items() if abs(mw - NTC.get((u, v), mw)) > 1e-9]
+                if changed:
+                    notes.append("NTC modifiées par l'administrateur sur : " + ", ".join(changed) + ".")
         except Exception as e:          # base absente : valeurs par défaut
             logger.debug("NTC par défaut (%s)", e)
     pairs = list(ntc.keys())

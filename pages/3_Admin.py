@@ -136,8 +136,9 @@ st.markdown("---")
 st.markdown(f"## {t('ntc_section')}")
 st.caption(t('ntc_help'))
 custom = get_ntc()
-if custom:
-    st.info(t('ntc_custom_active', n=len(custom)))
+n_changed = sum(1 for k, v in custom.items() if abs(v - NTC.get(k, v)) > 1e-9)
+if n_changed:
+    st.info(t('ntc_custom_active', n=n_changed))
 df_ntc = pd.DataFrame([{t('line'): f"{u}->{v}", t('ntc_default'): float(c), t('ntc_current'): float(custom.get((u, v), c))}
                        for u, v, c in LINES])
 edited = st.data_editor(df_ntc, use_container_width=True, hide_index=True, disabled=[t('line'), t('ntc_default')],

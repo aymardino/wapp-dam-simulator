@@ -31,6 +31,41 @@ def get_conn():
     return conn
 
 
+# Colonnes attendues par cette version pour chaque table gérée ici
+EXPECTED_COLUMNS = {
+    'session':       ['key', 'value'],
+    'supply_offers': ['zone', 'player', 'actor', 'segment', 'quantity', 'price', 'profile'],
+    'demand_bids':   ['zone', 'player', 'actor', 'segment', 'quantity', 'price'],
+    'block_orders':  ['zone', 'player', 'name', 'side', 'quantity', 'price', 'h_start', 'h_end', 'parent_name', 'excl_group'],
+    'ntc':           ['u', 'v', 'mw'],
+    'results':       ['run_at', 'welfare', 'volume', 'prices_json', 'flows_json', 'dispatch_json', 'summary_json'],
+}
+
+
+def _columns(c, table):
+    return [r[1] for r in c.execute(f"PRAGMA table_info({table})").fetchall()]
+
+
+def _migrate_legacy_tables(c):
+    """Une table portant le même nom qu'une table de cette version mais avec d'autres colonnes
+    (créée par une version antérieure du code) est convertie si on sait le faire, sinon renommée
+    en <table>_legacy_<horodatage> pour ne jamais perdre de données."""
+    stamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    for table, cols in EXPECTED_COLUMNS.items():
+        existing = _columns(c, table)
+        if not existing or set(cols) <= set(existing):
+            continue
+        if table == 'ntc' and {'zone_from', 'zone_to', 'value_mw'} <= set(existing):
+            c.executescript("""
+                CREATE TABLE ntc_v2 (u TEXT NOT NULL, v TEXT NOT NULL, mw REAL NOT NULL, PRIMARY KEY (u, v));
+                INSERT OR IGNORE INTO ntc_v2 SELECT zone_from, zone_to, value_mw FROM ntc;
+                DROP TABLE ntc;
+                ALTER TABLE ntc_v2 RENAME TO ntc;
+            """)
+        else:
+            c.execute(f"ALTER TABLE {table} RENAME TO {table}_legacy_{stamp}")
+
+
 def init_db():
     conn = get_conn()
     c = conn.cursor()
@@ -38,6 +73,7 @@ def init_db():
         c.execute("PRAGMA journal_mode=WAL")
     except sqlite3.DatabaseError:
         pass
+    _migrate_legacy_tables(c)
     c.executescript("""
         CREATE TABLE IF NOT EXISTS session (
             key   TEXT PRIMARY KEY,

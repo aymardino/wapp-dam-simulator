@@ -5,6 +5,17 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Correctif — base de données héritée (2 octobre 2026, soir)
+
+- Une base créée par une version antérieure du code contenait déjà une table `ntc` avec les colonnes
+  `zone_from, zone_to, value_mw` ; `CREATE TABLE IF NOT EXISTS` la laissait en place et la page
+  Administration plantait (`no such column: u`). `init_db()` compare désormais les colonnes de chaque table
+  à celles attendues : la table `ntc` héritée est convertie, toute autre table incompatible est renommée en
+  `<table>_legacy_<horodatage>` sans perte de données, puis la table attendue est créée.
+- Les NTC lues en base ne sont signalées comme « modifiées » (note du moteur, bandeau d'administration) que si
+  elles diffèrent réellement des valeurs par défaut.
+- Tests `tests/test_db.py` : migration d'une base héritée (participants, NTC, table incompatible), idempotence.
+
 ### Étape 3 — Documentation et publication
 
 **Ajouté**
