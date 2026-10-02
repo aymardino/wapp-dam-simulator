@@ -49,7 +49,7 @@ docker run -p 8501:8501 -e WAPP_ADMIN_PASSWORD=motdepasse wapp-simulator
 
 ### Mot de passe administrateur
 
-Défini par la variable d'environnement `WAPP_ADMIN_PASSWORD` ou par la clé `admin_password` dans `.streamlit/secrets.toml`. À défaut : `<mot-de-passe-retire>` (à changer avant toute mise en ligne).
+Défini par la variable d'environnement `WAPP_ADMIN_PASSWORD` ou par la clé `admin_password` dans `.streamlit/secrets.toml`. Sans l'un des deux, la page Administration reste verrouillée (aucun mot de passe par défaut).
 
 ### Accès multi-utilisateurs en formation
 

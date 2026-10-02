@@ -23,13 +23,18 @@ def _admin_password():
     try:
         return st.secrets['admin_password']
     except Exception:
-        return '<mot-de-passe-retire>'
+        return None   # aucun mot de passe par défaut : la page reste verrouillée tant qu'il n'est pas configuré
 
 
 header(t('admin_title'), t('admin_subtitle'))
 
 if not st.session_state.get('admin_auth', False):
     st.markdown(f"### {t('admin_access')}")
+    if not _admin_password():
+        st.warning("Mot de passe administrateur non configuré : définissez la variable d'environnement WAPP_ADMIN_PASSWORD "
+                   "ou la clé admin_password dans .streamlit/secrets.toml, puis relancez l'application. / "
+                   "Administrator password not configured: set WAPP_ADMIN_PASSWORD or admin_password in .streamlit/secrets.toml.")
+        st.stop()
     pwd = st.text_input(t('password'), type="password")
     if st.button(t('connect'), type="primary"):
         if pwd == _admin_password():
