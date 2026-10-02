@@ -96,7 +96,7 @@ wapp_simulator/
 └── data/                   local SQLite databases (created at first run, never published)
 ```
 
-Details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); hosting (domain, Render, virtual server, Docker, HTTPS) in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Two-page overview in [docs/TECHNICAL_SHEET.md](docs/TECHNICAL_SHEET.md). Details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); hosting (domain, Render, virtual server, Docker, HTTPS) in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Data and privacy
 

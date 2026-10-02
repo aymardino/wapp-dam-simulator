@@ -66,7 +66,7 @@ const L = {
     guide_trainer: 'Guide du formateur', guide_trader: 'Guide du trader',
     o_kicker: 'Ouvert et vérifiable', o_title: 'Rien à croire sur parole',
     o_lead: 'Le code est public sous licence Apache 2.0, les données et la documentation sous CC BY 4.0. Les valeurs du cas de référence sont fixées par des tests, et une campagne de cas aléatoires contrôle les propriétés du clearing à chaque modification.',
-    o_links: ['Règles de marché', 'Données de référence', 'Architecture', 'Déploiement', 'Dépôt GitHub'],
+    o_links: ['Fiche technique', 'Règles de marché', 'Données de référence', 'Architecture', 'Déploiement', 'Dépôt GitHub'],
     o_note: 'Trois commandes suffisent pour rejouer sur votre poste le cas de test qui fixe les valeurs de non-régression du moteur : welfare 22 317 910 USD, volume 167 900 MWh.',
     d_title: 'Avertissements',
     d1: 'Simulateur pédagogique indépendant. Ce projet n’est pas affilié au West African Power Pool, à son Centre d’Information et de Coordination ni à aucun fournisseur de plateforme de marché. « WAPP » et « West African Power Pool » appartiennent au WAPP.',
@@ -131,7 +131,7 @@ const L = {
     guide_trainer: 'Trainer guide', guide_trader: 'Trader guide',
     o_kicker: 'Open and verifiable', o_title: 'Nothing to take on faith',
     o_lead: 'The code is public under the Apache 2.0 licence, data and documentation under CC BY 4.0. Reference-case values are pinned by tests, and a campaign of random cases checks clearing properties on every change.',
-    o_links: ['Market rules', 'Reference data', 'Architecture', 'Deployment', 'GitHub repository'],
+    o_links: ['Technical sheet', 'Market rules', 'Reference data', 'Architecture', 'Deployment', 'GitHub repository'],
     o_note: 'Three commands replay on your machine the test case that pins the engine’s regression values: welfare 22,317,910 USD, volume 167,900 MWh.',
     d_title: 'Disclaimers',
     d1: 'Independent educational simulator. This project is not affiliated with the West African Power Pool, its Information and Coordination Centre, or any market platform vendor. “WAPP” and “West African Power Pool” belong to the WAPP.',
@@ -412,7 +412,7 @@ export default function Landing() {
   useEffect(() => { fetch(`${BASE}/demo`).then(r => { if (!r.ok) throw new Error(); return r.json() }).then(setDemo).catch(() => setErr(true)) }, [])
   useEffect(() => { document.title = lang === 'fr' ? 'Simulateur de marché day-ahead du WAPP' : 'WAPP day-ahead market simulator' }, [lang])
   const ext = (href: string, children: ReactNode, cls = '') => <a href={href} target="_blank" rel="noreferrer" className={cls}>{children}</a>
-  const docLinks = [LINKS.rules, LINKS.data, LINKS.architecture, LINKS.deploy, LINKS.github]
+  const docLinks = [lang === 'fr' ? LINKS.sheet_fr : LINKS.sheet, LINKS.rules, LINKS.data, LINKS.architecture, LINKS.deploy, LINKS.github]
   const repo = LINKS.github.replace(/^https?:\/\//, '')
 
   return (

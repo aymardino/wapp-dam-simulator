@@ -7,6 +7,8 @@ export const LINKS = {
   data: 'https://github.com/aymardino/wapp-dam-simulator/blob/main/docs/REFERENCE_DATA.md',
   architecture: 'https://github.com/aymardino/wapp-dam-simulator/blob/main/docs/ARCHITECTURE.md',
   deploy: 'https://github.com/aymardino/wapp-dam-simulator/blob/main/docs/DEPLOYMENT.md',
+  sheet: 'https://github.com/aymardino/wapp-dam-simulator/blob/main/docs/TECHNICAL_SHEET.md',
+  sheet_fr: 'https://github.com/aymardino/wapp-dam-simulator/blob/main/docs/fr/FICHE_TECHNIQUE.md',
   licence: 'https://www.apache.org/licenses/LICENSE-2.0',
   paper: null as string | null,   // note technique / working paper : renseigner l'URL quand elle est publiée
 }
