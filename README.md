@@ -65,6 +65,10 @@ Limite connue de Streamlit : rafraîchir la page du navigateur déconnecte le tr
 
 ---
 
+## Guides
+
+[Guide du formateur](docs/guides/formateur.fr.md) et [guide du trader](docs/guides/trader.fr.md), en français et en anglais, aussi accessibles depuis l'application (menu Guides).
+
 ## Déroulé d'une session
 
 1. **Connexion** : chaque trader choisit son pays et son organisation (plusieurs organisations par pays possibles).

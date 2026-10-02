@@ -41,7 +41,7 @@ Le formateur reçoit son jeton à la création de la salle ; les traders le reç
 | `GET /api/v1/rooms/{code}/state` | tous | état léger pour le rafraîchissement périodique |
 | `POST /api/v1/rooms/{code}/join` | trader, observateur | rejoint la salle, renvoie un jeton |
 | `GET /api/v1/rooms/{code}/me` | participant | identité liée au jeton |
-| `PUT /api/v1/rooms/{code}/settings` | formateur | heures simulées, règles de prix, de blocs paradoxaux et de partage, complétion, monnaie, langue, date |
+| `PUT /api/v1/rooms/{code}/settings` | formateur | heures simulées, scénario, règles de prix, de blocs paradoxaux et de partage, mode de complétion (`actors`, `zones`, `none`), monnaie, langue, date |
 | `PUT /api/v1/rooms/{code}/phase` | formateur | ouvre ou clôture la soumission |
 | `PUT` / `DELETE /api/v1/rooms/{code}/ntc` | formateur | surcharge ou restaure les NTC |
 | `GET` / `PUT /api/v1/rooms/{code}/orders/me` | trader | lit ou remplace son carnet d'ordres (refusé si la soumission est clôturée) |
@@ -60,7 +60,7 @@ Les erreurs du moteur (`ClearingError`) reviennent en 422 avec le message en cla
 
 Trois écrans, un seul système de design :
 
-- **Hall** (`/`) : créer une salle ou en rejoindre une.
+- **Hall** (`/`) : créer une salle ou en rejoindre une ; liens vers les guides du formateur et du trader (`/guide/formateur`, `/guide/trader`, servis depuis `docs/guides/` en Markdown).
 - **Salle de marché** (`/room/:code`) : à gauche le carnet d'ordres du trader (segments, blocs, MIC), au centre le marché (prix par zone et par heure, positions nettes, dernier clearing), à droite son résultat (volumes, surplus, ordres rejetés, prix de sa zone).
 - **Poste du formateur** (`/desk/:code`) : indicateurs, lancement du clearing, phase, paramètres et règles, NTC, participants et ordres, vérifications de cohérence, synthèse par zone.
 

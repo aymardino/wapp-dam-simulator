@@ -5,6 +5,21 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 11 — Guides, mode « acteurs de fond », nom de domaine
+
+**Ajouté**
+- Guides du formateur et du trader, en français et en anglais (`docs/guides/`), accessibles dans l'application
+  (menu Guides du bandeau et liens de l'accueil, pages `/guide/formateur` et `/guide/trader`) : préparation
+  d'une séance, déroulé type en trois manches, réglages expliqués, lecture des résultats, questions fréquentes ;
+  côté trader, comment déposer chaque type d'ordre et comprendre son résultat.
+- Mode de complétion « acteurs de fond » (nouveau défaut des salles) : tous les acteurs du scénario restent dans
+  le marché, sauf ceux de la zone d'un participant dont le nom correspond au sien ou à l'un de ses ordres, qui
+  sont remplacés. Un nom libre n'efface rien ; un nom choisi dans la liste prend la place de l'acteur réel.
+  Les deux autres modes (« zones sans soumission », « aucune ») restent disponibles ; sélecteur avec
+  explication dans le poste du formateur, règle décrite dans `docs/REGLES_DE_MARCHE.md`.
+- Nom de domaine retenu : wapp-dam-simulator.org (Caddyfile, docker-compose, guide de déploiement).
+- Suite : 64 passed in 14.96s.
+
 ### Étape 10 — Campagne de simulations, noms de participants, licence
 
 **Ajouté**

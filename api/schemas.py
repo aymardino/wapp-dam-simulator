@@ -29,6 +29,7 @@ class Settings(BaseModel):
     pab_rule: PabRule = 'euphemia'
     tie_rule: TieRule = 'prorata'
     fill_missing: bool = True
+    fill_mode: Literal['none', 'zones', 'actors'] = 'actors'
     currency: str = Field(default='USD', max_length=8)
     lang: Lang = 'fr'
     market_date: str = Field(default='', max_length=10)
@@ -49,6 +50,7 @@ class SettingsUpdate(BaseModel):
     pab_rule: Optional[PabRule] = None
     tie_rule: Optional[TieRule] = None
     fill_missing: Optional[bool] = None
+    fill_mode: Optional[Literal['none', 'zones', 'actors']] = None
     currency: Optional[str] = Field(default=None, max_length=8)
     lang: Optional[Lang] = None
     market_date: Optional[str] = Field(default=None, max_length=10)

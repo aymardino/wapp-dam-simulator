@@ -133,6 +133,16 @@ DEFAULT_DEMAND_24 = [
 REFERENCE_PLAYER = 'Référence'
 
 
+def _name_key(name):
+    """Forme normalisée d'un nom d'acteur ou d'organisation pour la correspondance (minuscules, sans
+    accents ni ponctuation, mots « demand », « gen », « réseau » retirés)."""
+    import unicodedata, re
+    s = unicodedata.normalize('NFKD', str(name)).encode('ascii', 'ignore').decode().lower()
+    s = re.sub(r'[^a-z0-9 ]+', ' ', s)
+    words = [w for w in s.split() if w not in ('demand', 'gen', 'reseau', 'network', 'distribution', 'thermal', 'hydro', 'solar')]
+    return ' '.join(words) or s.strip()
+
+
 class ClearingError(Exception):
     """Erreur de clearing avec un message lisible pour l'administrateur."""
 
@@ -772,7 +782,7 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
 
 # ── Moteur principal ──────────────────────────────────────────────
 def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=None, *,
-                 block_rows=None, mic_rows=None, hours=None, fill_missing_zones=False,
+                 block_rows=None, mic_rows=None, hours=None, fill_missing_zones=False, fill_mode=None,
                  pricing='complete', pab_rule='euphemia', tie_rule='prorata',
                  max_pab_iter=None, max_mic_iter=None, reference_rows=None):
     """
@@ -784,7 +794,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     horizon      : 24 (jour complet) ou 1 ; ignoré si `hours` est fourni.
     hours        : liste d'heures simulées (ex. [19]) ; par défaut range(horizon).
     ntc_override : {(u, v): MW} ; sinon NTC de la base (si définies), sinon valeurs par défaut.
-    fill_missing_zones : complète les zones sans aucune soumission avec les données de référence.
+    fill_missing_zones : (compatibilité) True équivaut à fill_mode='zones'.
+    fill_mode    : 'none' (ordres des participants seulement), 'zones' (zones sans aucune soumission complétées
+                   par la référence), 'actors' (acteurs de fond : tous les acteurs de référence sont conservés,
+                   sauf ceux de la zone d'un participant dont le nom correspond à son organisation ou à l'un de
+                   ses ordres, qui sont remplacés par ses ordres).
     pricing      : 'complete' (KKT complètes, v2) ou 'l2' (contraintes (8)-(12) du Livrable 2).
     pab_rule     : 'euphemia' (rejet itératif des PAB, PRB tolérés), 'l2' (PAB fixés à 0 et
                    PRB fixés à 1, Livrable 2 §3.3) ou 'none' (détection seule).
@@ -825,7 +839,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     else:
         supply_rows = list(supply_rows or [])
         demand_rows = list(demand_rows or [])
-        if fill_missing_zones:
+        if fill_mode is None:
+            fill_mode = 'zones' if fill_missing_zones else 'none'
+        if fill_mode not in ('none', 'zones', 'actors'):
+            raise ClearingError(f"Mode de complétion inconnu : {fill_mode}")
+        if fill_mode == 'zones':
             covered = {r['zone'] for r in supply_rows} | {r['zone'] for r in demand_rows} \
                     | {r['zone'] for r in (block_rows or [])}
             missing = [z for z in ZONES if z not in covered]
@@ -835,6 +853,24 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                 demand_rows += dd
                 reference_zones = missing
                 notes.append(f"Zones complétées par les données de référence : {', '.join(missing)}.")
+        elif fill_mode == 'actors':
+            keys = {}
+            for r in supply_rows + demand_rows + list(block_rows or []):
+                for nm in (r.get('player'), r.get('actor'), r.get('name')):
+                    if nm:
+                        keys.setdefault(r['zone'], set()).add(_name_key(nm))
+            def replaced(row):
+                k = _name_key(row['actor'])
+                return any(k == other or k.split(' ')[0] == other.split(' ')[0] or other in k or k in other
+                           for other in keys.get(row['zone'], ()) if other)
+            ds, dd = _ref()
+            kept_s = [r for r in ds if not replaced(r)]; kept_d = [r for r in dd if not replaced(r)]
+            gone = sorted({r['actor'] for r in ds + dd if replaced(r)})
+            supply_rows += kept_s
+            demand_rows += kept_d
+            reference_zones = sorted({r['zone'] for r in kept_s + kept_d}, key=ZONES.index)
+            notes.append(f"Acteurs de fond : {len(kept_s) + len(kept_d)} segments de référence conservés"
+                         + (f" ; acteurs remplacés par les participants : {', '.join(gone)}." if gone else "."))
     block_rows = list(block_rows or [])
     validate_inputs(supply_rows, demand_rows, block_rows)
 

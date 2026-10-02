@@ -115,10 +115,10 @@ def test_unknown_room():
 
 def test_empty_room_without_fill_is_refused():
     r = client.post(API + '/rooms', json={'name': 'Vide', 'trainer_name': 'T'}); code, tok = r.json()['code'], r.json()['trainer_token']
-    assert client.put(API + f'/rooms/{code}/settings', json={'fill_missing': False}, headers=_auth(tok)).status_code == 200
+    assert client.put(API + f'/rooms/{code}/settings', json={'fill_mode': 'none'}, headers=_auth(tok)).status_code == 200
     r = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok))
     assert r.status_code == 422 and 'Aucun ordre' in r.json()['detail']
-    assert client.put(API + f'/rooms/{code}/settings', json={'fill_missing': True}, headers=_auth(tok)).status_code == 200
+    assert client.put(API + f'/rooms/{code}/settings', json={'fill_mode': 'zones'}, headers=_auth(tok)).status_code == 200
     r = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok))
     assert r.status_code == 201 and len(r.json()['result']['summary']['reference_zones']) == 14
 
@@ -182,3 +182,14 @@ def test_duplicate_name_refused_and_participant_removal():
     assert info['counts']['supply'] == 0 and all(p['role'] == 'trainer' for p in info['participants'])
     assert client.get(API + f'/rooms/{code}/orders/me', headers=_auth(a.json()['token'])).status_code == 401
     assert 'SENELEC' in client.get(API + '/reference').json()['organisations']['SEN']
+
+
+def test_fill_mode_actors_in_room():
+    r = client.post(API + '/rooms', json={'name': 'Fond'}); code, tok = r.json()['code'], r.json()['trainer_token']
+    tr = client.post(API + f'/rooms/{code}/join', json={'name': 'CEB', 'zone': 'TGO'}).json()
+    client.put(API + f'/rooms/{code}/orders/me', json={'supply': [{'actor': 'Nangbeto', 'quantity': 30, 'price': 20, 'profile': 'hydro'}]}, headers=_auth(tr['token']))
+    assert client.get(API + f'/rooms/{code}').json()['settings']['fill_mode'] == 'actors'
+    run = client.post(API + f'/rooms/{code}/clearing', headers=_auth(tok)).json()
+    names = {(a['zone'], a['actor']) for a in run['result']['summary']['actors']}
+    assert ('TGO', 'ContourGlobal') in names and ('TGO', 'CEB Nangbeto') not in names and ('TGO', 'Nangbeto') in names
+    assert 'TGO' in run['result']['summary']['reference_zones']

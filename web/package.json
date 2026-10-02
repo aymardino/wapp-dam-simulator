@@ -4,8 +4,8 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "node scripts/copy_guides.mjs && tsc --noEmit && vite build",
+    "dev": "node scripts/copy_guides.mjs && vite",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -13,6 +13,7 @@
     "@types/topojson-client": "^3.1.5",
     "d3-geo": "^3.1.1",
     "echarts": "^6.1.0",
+    "marked": "^18.0.14",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",

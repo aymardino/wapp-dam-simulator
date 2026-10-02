@@ -12,6 +12,7 @@
 - Horizon : la journée J+1, 24 pas horaires, ou tout sous-ensemble d'heures (mode 1 h pour la formation).
 - Une offre vaut pour toutes les heures simulées ; la quantité effective d'une heure est la quantité soumise multipliée par le profil horaire (production) ou par le profil de charge ouest-africain (demande), arrondie au MW.
 - Prix bornés : 0 et 500 par MWh (monnaie paramétrable, sans effet sur le calcul).
+- Acteurs non joués : trois modes de complétion. `actors` (défaut des salles) conserve tous les acteurs du scénario sauf ceux de la zone d'un participant dont le nom normalisé correspond au nom du participant ou à l'un de ses ordres (même premier mot, ou nom contenu dans l'autre ; les mots « demand », « gen », « réseau », « distribution », « thermal », « hydro », « solar » sont ignorés) ; `zones` complète seulement les zones sans aucun ordre ; `none` ne complète rien.
 - Contrainte d'interdépendance : flux GHA→BFA + flux CIV→BFA ≤ α × (NTC GHA-BFA + NTC CIV-BFA), α = 0,7.
 
 ## 2. Types d'ordres

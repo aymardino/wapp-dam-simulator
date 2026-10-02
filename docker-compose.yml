@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.app
     restart: unless-stopped
     environment:
-      WAPP_CORS_ORIGINS: "https://simulateur.exemple.org"
+      WAPP_CORS_ORIGINS: "https://wapp-dam-simulator.org"
     volumes:
       - wapp-data:/app/data
     expose:

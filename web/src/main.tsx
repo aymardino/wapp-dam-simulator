@@ -6,6 +6,7 @@ import { LangProvider } from './i18n'
 import Hall from './pages/Hall'
 import Room from './pages/Room'
 import Desk from './pages/Desk'
+import Guide from './pages/Guide'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -15,6 +16,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<Hall />} />
           <Route path="/room/:code" element={<Room />} />
           <Route path="/desk/:code" element={<Desk />} />
+          <Route path="/guide/:who" element={<Guide />} />
         </Routes>
       </BrowserRouter>
     </LangProvider>

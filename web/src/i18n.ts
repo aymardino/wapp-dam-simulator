@@ -55,6 +55,12 @@ const STR: Record<string, [string, string]> = {
   export_json: ['Résultats (JSON)', 'Results (JSON)'], export_csv: ['Prix (CSV)', 'Prices (CSV)'], live: ['En direct', 'Live'],
   p_solar: ['Solaire', 'Solar'], p_hydro: ['Hydraulique', 'Hydro'], p_baseload: ['Base thermique', 'Thermal baseload'], p_flat: ['Constant', 'Flat'], p_custom: ['Autre', 'Other'], p_peaker: ['Pointe', 'Peaking'], p_block: ['Blocs', 'Blocks'], p_demand: ['Demande acceptée', 'Accepted demand'],
   name_hint: ['Nom affiché aux autres participants, unique dans la salle', 'Name shown to other participants, unique in the room'],
+  guide_trainer: ['Guide du formateur', 'Trainer guide'], guide_trader: ['Guide du trader', 'Trader guide'], guides: ['Guides', 'Guides'],
+  fill_mode: ['Complétion', 'Fill mode'], fill_actors: ['Acteurs de fond (recommandé)', 'Background actors (recommended)'],
+  fill_zones: ['Zones sans soumission', 'Zones without submission'], fill_none: ['Aucune', 'None'],
+  fill_actors_hint: ['Tous les acteurs du scénario restent, sauf ceux qu\u2019un participant remplace par son nom ou ses ordres.', 'All scenario actors stay, except those a participant replaces by name or by orders.'],
+  fill_zones_hint: ['Une zone avec au moins un ordre ne contient que les ordres des participants ; les autres sont complétées.', 'A zone with at least one order contains only participants\u2019 orders; the others are filled.'],
+  fill_none_hint: ['Seuls les ordres des participants comptent.', 'Only participants\u2019 orders count.'],
   autosave: ['Enregistré automatiquement', 'Saved automatically'],
   order_book_hint: ['Vos ordres sont remplacés à chaque enregistrement.', 'Your orders are replaced on each save.'],
 }

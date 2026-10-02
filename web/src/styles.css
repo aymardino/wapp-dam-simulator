@@ -16,4 +16,14 @@
   label { @apply text-sm text-ink-2; }
 }
 .num { @apply font-mono tabular-nums text-right; }
+.guide h1 { @apply text-3xl mb-6; }
+.guide h2 { @apply text-xl mt-8 mb-3; }
+.guide p, .guide li { @apply text-base leading-7 text-ink; }
+.guide p { @apply mb-3; }
+.guide ul, .guide ol { @apply pl-6 mb-4 list-disc; }
+.guide ol { @apply list-decimal; }
+.guide table { @apply my-4; }
+.guide th, .guide td { @apply text-sm; }
+.guide strong { @apply font-semibold; }
+.guide em { @apply italic text-ink-2; }
 .kpi-value { @apply font-mono text-xl font-medium tabular-nums; }

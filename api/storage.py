@@ -36,6 +36,7 @@ def default_settings(lang='fr'):
         'pab_rule': 'euphemia',
         'tie_rule': 'prorata',
         'fill_missing': True,
+        'fill_mode': 'actors',
         'currency': 'USD',
         'lang': lang,
         'market_date': (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'),

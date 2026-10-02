@@ -265,3 +265,22 @@ def test_reference_2024_dataset_is_plausible():
     # le Togo offre des unités de quelques dizaines de MW, pas de 100 MW par défaut
     tgo = [r['quantity'] for r in sup if r['zone'] == 'TGO']
     assert max(tgo) <= 80
+
+
+def test_fill_mode_actors_keeps_background_and_replaces_matching_actors():
+    sup = [dict(zone='SEN', player='SENELEC', actor='Ma centrale', segment=0, quantity=50, price=90, profile='baseload')]
+    dem = [dict(zone='SEN', player='SENELEC', actor='Ma charge', segment=0, quantity=300, price=200)]
+    r = run_clearing(sup, dem, horizon=1, fill_mode='actors')
+    actors = {(a['zone'], a['actor']) for a in r['summary']['actors']}
+    assert ('SEN', 'OMVS Manantali') in actors          # acteur de fond conservé dans la même zone
+    assert ('SEN', 'SENELEC Thermal') not in actors and ('SEN', 'SENELEC Demand') not in actors   # remplacés
+    assert ('NGA', 'Egbin Gas') in actors                # autres zones intactes
+    assert r['summary']['n_supply'] == 64 - 3 + 1 and r['summary']['n_demand'] == 44 - 3 + 1
+    # nom au hasard : rien n'est remplacé, les ordres s'ajoutent au marché
+    r2 = run_clearing([dict(sup[0], player='Equipe 1')], [dict(dem[0], player='Equipe 1')], horizon=1, fill_mode='actors')
+    assert r2['summary']['n_supply'] == 65 and r2['summary']['n_demand'] == 45
+    # un ordre portant le nom d'un acteur de référence le remplace
+    r3 = run_clearing([dict(zone='NGA', player='Equipe 2', actor='Egbin Gas', segment=0, quantity=10, price=10, profile='baseload')], [], horizon=1, fill_mode='actors')
+    assert ('NGA', 'Egbin Gas') in {(a['zone'], a['actor']) for a in r3['summary']['actors']}
+    assert r3['summary']['n_supply'] == 64 - 4 + 1
+    assert run_clearing(sup, dem, horizon=1, fill_mode='none')['summary']['n_supply'] == 1

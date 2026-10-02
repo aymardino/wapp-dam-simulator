@@ -73,8 +73,11 @@ export default function Desk() {
           <div className="flex flex-col gap-5">
             <Panel title={t('run_clearing')}>
               <p className="text-ink-2 mb-3">{t('run_hint')}</p>
-              {s && <label className="flex items-center gap-2 mb-3 text-base text-ink cursor-pointer"><input type="checkbox" className="h-4 w-4" checked={s.fill_missing} onChange={e => patchSettings({ fill_missing: e.target.checked })} />{t('fill_missing')}</label>}
-              <p className="mb-4"><span className="font-mono font-medium">{coveredZones.size}</span> {t('with_orders')} · <span className="font-mono font-medium">{nZones - coveredZones.size}</span> {t('without_orders')}, {s?.fill_missing ? t('will_fill') : t('will_ignore')}</p>
+              {s && <div className="mb-3 max-w-md"><Field label={t('fill_mode')} hint={t(`fill_${s.fill_mode || 'actors'}_hint`)}>
+                <select value={s.fill_mode || 'actors'} onChange={e => patchSettings({ fill_mode: e.target.value as any })}>
+                  <option value="actors">{t('fill_actors')}</option><option value="zones">{t('fill_zones')}</option><option value="none">{t('fill_none')}</option>
+                </select></Field></div>}
+              <p className="mb-4"><span className="font-mono font-medium">{coveredZones.size}</span> {t('with_orders')} · <span className="font-mono font-medium">{nZones - coveredZones.size}</span> {t('without_orders')}</p>
               <div className="flex items-center gap-3">
                 <Button primary onClick={clear} disabled={busy}>{busy ? t('running') : t('run_clearing')}</Button>
                 <Button onClick={togglePhase}>{room?.phase === 'submission' ? t('close_market') : t('open_market')}</Button>

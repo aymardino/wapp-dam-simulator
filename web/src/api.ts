@@ -2,7 +2,7 @@
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/api/v1'
 
 export type Participant = { id: string; name: string; zone: string | null; role: 'trainer' | 'trader' | 'observer'; joined_at: string }
-export type Settings = { hours: number[]; pricing: string; pab_rule: string; tie_rule: string; fill_missing: boolean; currency: string; lang: 'fr' | 'en'; market_date: string; scenario: string }
+export type Settings = { hours: number[]; pricing: string; pab_rule: string; tie_rule: string; fill_missing: boolean; fill_mode?: 'none' | 'zones' | 'actors'; currency: string; lang: 'fr' | 'en'; market_date: string; scenario: string }
 export type Scenario = { key: string; name: string; description: string }
 export type Counts = { supply: number; demand: number; blocks: number; mic: number }
 export type RoomInfo = { code: string; name: string; phase: 'submission' | 'cleared'; settings: Settings; ntc: Record<string, number>; participants: Participant[]; counts: Counts; last_run_id: number | null; created_at: string }

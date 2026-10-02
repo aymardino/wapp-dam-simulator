@@ -51,7 +51,7 @@ Le volume `wapp-data` conserve les salles entre deux redémarrages.
 
 1. Louer un petit serveur (OVH, Hetzner, Scaleway : 1 vCPU et 2 Go suffisent, 5 à 10 € par mois) sous Ubuntu, et y installer Docker.
 2. Acheter le nom de domaine choisi et faire pointer un enregistrement A vers l'adresse du serveur.
-3. Copier le dépôt sur le serveur et lancer `docker compose up -d` avec le fichier `docker-compose.yml` fourni : il démarre l'API et un serveur Caddy qui obtient et renouvelle le certificat HTTPS automatiquement. Remplacer `simulateur.exemple.org` dans `Caddyfile` par votre domaine.
+3. Copier le dépôt sur le serveur et lancer `docker compose up -d` avec le fichier `docker-compose.yml` fourni : il démarre l'API et un serveur Caddy qui obtient et renouvelle le certificat HTTPS automatiquement. Remplacer `wapp-dam-simulator.org` dans `Caddyfile` par votre domaine.
 4. Mises à jour : `git pull && docker compose up -d --build`.
 5. Sauvegardes : copier régulièrement le volume `wapp-data` (une commande `docker run --rm -v wapp-data:/data -v $PWD:/backup alpine tar czf /backup/wapp-data.tgz /data`).
 
