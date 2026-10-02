@@ -43,8 +43,9 @@ Avant le premier push, vérifications faites le 2 octobre 2026 et à refaire apr
 
 - `data/`, `*.db`, `.env`, `.venv/`, `web/node_modules`, `web/dist` sont ignorés (`.gitignore`) ;
 - aucun mot de passe dans le code ni dans l'historique : l'ancien mot de passe administrateur du Livrable 3
-  (celui de la page Administration de l'application Streamlit livrée) figure encore dans les deux premiers commits (`pages/3_Admin.py`, `README.md`, `Dockerfile`), et
-  les deux premiers commits contiennent aussi le logo du WAPP et la carte Tractebel/CEDEAO. Les retirer de
+  (valeur par défaut de la page Administration de l'application Streamlit livrée) figure dans tous les commits
+  antérieurs au 2 octobre 2026 au soir (`pages/3_Admin.py`, `README.md`, `Dockerfile`), et les anciens commits
+  contiennent aussi le logo du WAPP et la carte Tractebel/CEDEAO. Les retirer de
   l'historique **avant** le premier push, depuis le dossier du projet (le dépôt n'a pas encore de remote, rien
   n'est perdu : une branche de sauvegarde est créée d'abord) :
 
