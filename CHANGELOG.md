@@ -5,6 +5,22 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 5 — API REST et squelette de la nouvelle application
+
+**Ajouté**
+- `api/` : API FastAPI de salles de marché multi-participants (création d'une salle par le formateur, code à
+  partager, traders et observateurs avec jeton, carnet d'ordres par trader remplacé à chaque dépôt, paramètres et
+  règles par salle, NTC surchargées, lancement du clearing, historique des résultats, résultat individuel).
+  Base SQLAlchemy distincte (`data/rooms.db`, ou Postgres via `WAPP_API_DATABASE_URL`). Documentation
+  interactive sur `/docs`. Le moteur n'est pas modifié : l'API lui passe les mêmes lignes que Streamlit.
+- `engine/cli.py` : ligne de commande du moteur (CSV en entrée, JSON et CSV des prix en sortie).
+- `web/` : squelette du nouveau front React (Vite, TypeScript, Tailwind) avec le système de design sobre
+  (palette neutre, un accent, deux poids), le bilinguisme, le client API typé et les trois écrans : hall,
+  salle de marché du trader, poste du formateur. Non compilé sur cette machine (Node absent) : voir web/README.md.
+- `docs/ARCHITECTURE.md` : modèle de données, routes, structure du front, lancement.
+- `Dockerfile.app` : image unique API + front compilé.
+- Tests `tests/test_api.py` (parcours complet, droits, validations) et `tests/test_cli.py`.
+
 ### Étape 4 — Règles restantes du Livrable 2 : partage des ex æquo et Minimum Income Condition
 
 **Ajouté**

@@ -13,3 +13,6 @@ venv*/
 .claude/
 # Secrets Streamlit
 .streamlit/secrets.toml
+# Front
+web/node_modules/
+web/dist/

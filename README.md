@@ -118,6 +118,18 @@ Zones : NGA, BEN, TGO, GHA, CIV, BFA, MLI, SEN, GIN, SLE, LBR, GNB, GMB, NER. In
 
 Blocs paradoxalement acceptés : rejetés itérativement (règle EUPHEMIA, par défaut). Blocs paradoxalement rejetés : tolérés et signalés. Offres au même prix : partage au prorata des quantités (ou par ordre de soumission).
 
+
+## API et nouvelle application
+
+Le moteur est aussi exposé par une API REST de salles de marché (plusieurs formations en parallèle, un code par salle, jetons de participants) et par une ligne de commande :
+
+```bash
+uvicorn api.main:app --reload --port 8000      # documentation interactive sur http://localhost:8000/docs
+python -m engine.cli --reference --hours 19 --out resultat.json
+```
+
+Le nouveau front (React, dossier `web/`) se compile avec Node : `cd web && npm install && npm run build`, puis l'API le sert à la racine. Détails dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Tests
 
 ```bash

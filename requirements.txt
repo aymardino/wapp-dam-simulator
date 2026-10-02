@@ -7,3 +7,8 @@ numpy>=1.24.0
 # Solveur : HiGHS (highspy) est installé par défaut et suffit (LP et MILP).
 # Gurobi (licence académique gratuite) est utilisé automatiquement s'il est présent.
 # Tests : pip install pytest ; puis  pytest -q
+# API REST (uvicorn api.main:app)
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+sqlalchemy>=2.0.0
+httpx>=0.27.0
