@@ -184,7 +184,7 @@ function sentence(c: Curves, zone: string, hour: number, lang: Lang) {
   return `At ${hh(hour)}, the price of zone ${name} is ${p} $/MWh. At that price, plants willing to run offer ${nf(c.supAt)} MW and acceptable demand is ${nf(c.demAt)} MW: the zone ${pos}. ${flows ? `Lines: ${flows}.` : ''}`
 }
 
-const niceCeil = (v: number) => { const pow = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1)))); const f = v / pow; const m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10; return m * pow }
+const niceCeil = (v: number) => { const pow = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1)))); const f = v / pow; const m = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => f <= k) ?? 10; return m * pow }
 const ticks = (max: number, n: number) => { const step = niceCeil(max / n); const out: number[] = []; for (let v = 0; v <= max + 1e-9; v += step) out.push(v); return out }
 
 /* ── Components ───────────────────────────────────────────────────────── */
