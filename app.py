@@ -1,140 +1,113 @@
 """
-WAPP Day-Ahead Market Simulator — Page d'accueil
+WAPP Day-Ahead Market Simulator — page d'accueil
 """
-import os, base64
 from datetime import datetime, timedelta
 import streamlit as st
-from engine import get_session, set_session, get_players, register_player, ZONES, ZONE_COLORS
+from engine import get_session, set_session, get_players, register_player, get_results, ZONES, ZONE_COLORS
 from engine.actors import ZONE_ACTORS, CUSTOM_SENTINEL
+from ui_common import inject_css, header, logo_b64, map_b64, lang_selector, t, money, hours_label
 
 st.set_page_config(page_title="WAPP Market Simulator", page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
+inject_css()
 
-CSS_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'style.css')
-with open(CSS_PATH, encoding='utf-8') as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-def img_b64(path):
-    with open(path, 'rb') as f:
-        return base64.b64encode(f.read()).decode()
-
-LOGO_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'wapp_logo.png')
-MAP_PATH  = os.path.join(os.path.dirname(__file__), 'assets', 'wapp_map.png')
-logo_b64  = img_b64(LOGO_PATH)
-map_b64   = img_b64(MAP_PATH)
-
-# ── Init session defaults (date J+1) ──────────────────────────────
+# ── Date de livraison J+1 par défaut ──────────────────────────────
 session = get_session()
-if session.get('market_date', '') == '' or session.get('market_date') == datetime.now().strftime('%Y-%m-%d'):
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
-    set_session('market_date', tomorrow)
+if session.get('market_date', '') in ('', datetime.now().strftime('%Y-%m-%d')):
+    set_session('market_date', (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'))
     session = get_session()
 
-# ── Sidebar ───────────────────────────────────────────────────────
+# ── Barre latérale ────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(f'<div style="text-align:center;margin-bottom:16px;"><img src="data:image/png;base64,{logo_b64}" width="80"/></div>', unsafe_allow_html=True)
-    st.markdown("### Connexion Trader")
+    st.markdown(f'<div style="text-align:center;margin-bottom:16px;"><img src="data:image/png;base64,{logo_b64()}" width="80"/></div>', unsafe_allow_html=True)
+    lang_selector()
+    st.markdown(f"### {t('login_title')}")
     st.markdown("---")
 
-    zone_options = ["— Sélectionner —"] + ZONES
-    selected_zone = st.selectbox("Zone / Pays", zone_options, key="zone_select")
+    zone_options = [t('select_placeholder')] + ZONES
+    selected_zone = st.selectbox(t('zone_country'), zone_options, key="zone_select")
 
-    # Actor dropdown per zone
     player_name = ""
-    if selected_zone != "— Sélectionner —":
+    if selected_zone != t('select_placeholder'):
         actor_list = ZONE_ACTORS.get(selected_zone, []) + [CUSTOM_SENTINEL]
-        selected_actor = st.selectbox("Organisation", actor_list, key="actor_select")
+        selected_actor = st.selectbox(t('organisation'), actor_list, key="actor_select")
         if selected_actor == CUSTOM_SENTINEL:
-            player_name = st.text_input("Nom personnalisé", placeholder="ex: Mon Organisation", key="custom_name")
+            player_name = st.text_input(t('custom_name'), placeholder=t('custom_name_ph'), key="custom_name")
         else:
             player_name = selected_actor
-            st.caption(f"Connecté en tant que : **{player_name}**")
+            st.caption(t('connected_as', name=player_name))
 
-    if st.button("Se connecter", use_container_width=True, type="primary"):
-        if selected_zone == "— Sélectionner —" or not player_name.strip():
-            st.error("Sélectionnez une zone et un nom.")
+    if st.button(t('connect'), use_container_width=True, type="primary"):
+        if selected_zone == t('select_placeholder') or not player_name.strip():
+            st.error(t('select_zone_and_name'))
         else:
             register_player(selected_zone, player_name.strip())
-            st.session_state['my_zone']   = selected_zone
+            st.session_state['my_zone'] = selected_zone
             st.session_state['my_player'] = player_name.strip()
-            st.success(f"Connecté : **{player_name}** ({selected_zone})")
+            st.success(t('connected_ok', name=player_name, zone=selected_zone))
             st.rerun()
 
     if 'my_zone' in st.session_state:
         color = ZONE_COLORS.get(st.session_state['my_zone'], '#1a6b3a')
         st.markdown(
-            f'<div class="player-card" style="margin-top:12px;">'
-            f'<div class="player-dot" style="background:{color};"></div>'
+            f'<div class="player-card" style="margin-top:12px;"><div class="player-dot" style="background:{color};"></div>'
             f'<div class="player-name">{st.session_state["my_player"]}</div>'
-            f'<div class="player-zone">{st.session_state["my_zone"]}</div>'
-            f'</div>', unsafe_allow_html=True)
+            f'<div class="player-zone">{st.session_state["my_zone"]}</div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
     session = get_session()
     phase = session.get('phase', 'submission')
-    phase_label = "⏳ Soumission ouverte" if phase == 'submission' else "✅ Marche cloture"
-    st.markdown(f'<div><strong>Phase :</strong> <span class="phase-badge phase-{phase}">{phase_label}</span></div>', unsafe_allow_html=True)
-    st.markdown(f"**Date livraison :** {session.get('market_date', '—')}")
-    st.markdown(f"**Horizon :** {session.get('horizon', '24')}h")
+    phase_label = t('phase_submission') if phase == 'submission' else t('phase_cleared')
+    st.markdown(f'<div><strong>{t("phase")} :</strong> <span class="phase-badge phase-{phase}">{phase_label}</span></div>', unsafe_allow_html=True)
+    st.markdown(f"**{t('delivery_date')} :** {session.get('market_date', '—')}")
+    st.markdown(f"**{t('horizon')} :** {hours_label(session)}")
     st.markdown("---")
-    st.page_link("pages/1_Submit_Offers.py", label="Soumettre Offres",  icon="📋")
-    st.page_link("pages/2_Results.py",        label="Resultats",          icon="📊")
-    st.page_link("pages/3_Admin.py",           label="Administration",     icon="⚙️")
+    st.page_link("pages/1_Submit_Offers.py", label=t('nav_submit'), icon="📋")
+    st.page_link("pages/2_Results.py", label=t('nav_results'), icon="📊")
+    st.page_link("pages/3_Admin.py", label=t('nav_admin'), icon="⚙️")
 
-# ── Header ────────────────────────────────────────────────────────
-st.markdown(
-    f'<div class="wapp-header">'
-    f'<img src="data:image/png;base64,{logo_b64}" height="60"/>'
-    f'<div><h1>WAPP Day-Ahead Market Simulator</h1>'
-    f'<div class="subtitle">West African Power Pool — Outil de Formation au Marche Electrique</div></div>'
-    f'</div>', unsafe_allow_html=True)
+# ── En-tête et indicateurs ────────────────────────────────────────
+header(t('app_title'), t('app_subtitle'), height=60)
 
-# ── KPIs ──────────────────────────────────────────────────────────
 players = get_players()
-from engine import get_results
 results = get_results()
-
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Pays connectes", len(players), f"/ {len(ZONES)} zones")
-c2.metric("Date de livraison (J+1)", session.get('market_date', '—'))
-c3.metric("Horizon", f"{session.get('horizon','24')}h")
-welfare_str = f"{results['welfare']/1e6:.2f} M EUR" if results else "—"
-c4.metric("Welfare dernier clearing", welfare_str)
+c1.metric(t('kpi_countries'), len({p['zone'] for p in players}), t('kpi_zones', n=len(ZONES)))
+c2.metric(t('kpi_date'), session.get('market_date', '—'))
+c3.metric(t('horizon'), hours_label(session))
+c4.metric(t('kpi_welfare'), money(results['welfare'], millions=True) if results else "—")
 
 st.markdown("---")
 
-# ── Map + Participants ────────────────────────────────────────────
+# ── Carte et participants ─────────────────────────────────────────
 col_map, col_players = st.columns([2, 1])
-
 with col_map:
-    st.markdown("## Reseau WAPP")
-    st.markdown(f'<div class="map-container"><img src="data:image/png;base64,{map_b64}" style="width:100%;max-height:480px;object-fit:contain;"/></div>', unsafe_allow_html=True)
+    st.markdown(f"## {t('network')}")
+    st.markdown(f'<div class="map-container"><img src="data:image/png;base64,{map_b64()}" style="width:100%;max-height:480px;object-fit:contain;"/></div>', unsafe_allow_html=True)
+    st.caption(t('data_disclaimer'))
 
 with col_players:
-    st.markdown("## Participants")
+    st.markdown(f"## {t('participants')}")
     if not players:
-        st.info("Aucun participant connecte. Connectez-vous via la barre laterale.")
+        st.info(t('no_participant'))
     else:
         for p in players:
             color = p.get('color', '#1a6b3a')
             st.markdown(
-                f'<div class="player-card">'
-                f'<div class="player-dot" style="background:{color};"></div>'
+                f'<div class="player-card"><div class="player-dot" style="background:{color};"></div>'
                 f'<div><div class="player-name">{p["player"]}</div>'
-                f'<div style="font-size:0.72rem;color:#8a9a8a;">{p["connected_at"][:16] if p["connected_at"] else ""}</div></div>'
+                f'<div style="font-size:0.72rem;color:#8a9a8a;">{(p["connected_at"] or "")[:16]}</div></div>'
                 f'<div class="player-zone">{p["zone"]}</div></div>', unsafe_allow_html=True)
-
-    connected_zones = {p['zone'] for p in players}
-    missing = [z for z in ZONES if z not in connected_zones]
+    missing = [z for z in ZONES if z not in {p['zone'] for p in players}]
     if missing:
-        st.markdown(f"**Sans trader :** {', '.join(missing)}")
-        st.caption("Ces zones utiliseront les donnees par defaut lors du clearing (configurable dans Admin).")
+        st.markdown(t('without_trader', zones=', '.join(missing)))
+        st.caption(t('without_trader_hint'))
 
 st.markdown("---")
-st.markdown("## Comment utiliser")
+st.markdown(f"## {t('how_to')}")
 c1, c2, c3 = st.columns(3)
-c1.markdown("**1. Connexion**\n\nChaque participant selectionne son pays et son organisation dans la barre laterale.")
-c2.markdown("**2. Soumission**\n\nVia *Soumettre Offres*, chaque trader soumet ses offres de vente/achat avec le type d'ordre souhaite.")
-c3.markdown("**3. Clearing**\n\nL'administrateur lance le clearing depuis *Administration*. Les resultats s'affichent dans *Resultats*.")
+c1.markdown(t('how_1'))
+c2.markdown(t('how_2'))
+c3.markdown(t('how_3'))
 
 st.markdown("---")
-st.markdown('<div style="text-align:center;color:#8a9a8a;font-size:0.75rem;">WAPP Market Simulator — Projet MS OSE 2025 | Mines Paris-PSL x SENELEC x EPEX SPOT</div>', unsafe_allow_html=True)
+st.markdown(f'<div style="text-align:center;color:#8a9a8a;font-size:0.75rem;">{t("footer")}</div>', unsafe_allow_html=True)

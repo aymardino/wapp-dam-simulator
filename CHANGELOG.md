@@ -5,6 +5,46 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 3 — Documentation et publication
+
+**Ajouté**
+- `docs/REGLES_DE_MARCHE.md` : toutes les règles appliquées par le moteur, en toutes lettres (ensemble des prix
+  admissibles, prix de référence, départage, blocs paradoxaux, tolérances, ce qui n'est pas modélisé), avec un
+  résumé en anglais. Base de la note technique.
+- `Dockerfile` et `.dockerignore` ; mot de passe administrateur lu dans `WAPP_ADMIN_PASSWORD` ou
+  `.streamlit/secrets.toml`, plus jamais affiché dans l'interface.
+- Intégration continue GitHub Actions (`.github/workflows/tests.yml`) : la suite de tests tourne à chaque push.
+- README réécrit : installation sans licence Gurobi, déroulé d'une session, architecture, modèle, tests,
+  données et confidentialité, auteurs, résumé en anglais.
+- Note d'état en tête de `AUDIT_V2.md` indiquant les constats traités.
+
+### Étape 2 — Interface (`app.py`, `ui_common.py`, `pages/`)
+
+**Ajouté**
+- Interface bilingue français / anglais : dictionnaire de 265 textes dans `ui_common.py`, sélecteur de langue
+  dans la barre latérale de chaque page, langue par défaut réglable par l'administrateur.
+- Monnaie paramétrable (libellé, USD par défaut) utilisée dans tous les affichages.
+- Page Résultats : onglet **Mon résultat** (volume offert et accepté, taux d'acceptation, recette ou paiement,
+  surplus, offres rejetées et explication, prix de la zone), onglet **Ordres bloc** (décision, prix moyen,
+  surplus, statut OK / PAB / PRB expliqué, planning), onglet **Analyse** (surplus par zone, rente de congestion
+  par ligne, identité du welfare, vérifications de cohérence, règles appliquées), export CSV des prix.
+- Page Administration : éditeur de NTC (tableau modifiable, retour aux valeurs par défaut), choix de l'heure
+  simulée en mode 1 h, choix de la règle de prix et de la règle de traitement des blocs paradoxaux, aperçu des
+  ordres bloc, diagnostics du dernier clearing.
+- Page Soumission : éditeur d'ordres bloc structuré (sens, plage horaire, parent, groupe exclusif) à côté des
+  offres par segments, sans que l'un efface l'autre ; récapitulatif des blocs de la zone.
+- Avertissement visible sur le caractère illustratif des NTC et des profils.
+
+**Corrigé**
+- L'option « compléter avec les données de référence » complète réellement les zones sans soumission ;
+  l'option « ignorer » donne un marché partiel ; le mode démonstration ignore les soumissions.
+- La page Résultats ne dépend plus de matplotlib (barres de saturation natives) et ne plante plus sur une
+  installation propre ; la courbe de demande acceptée est visible (trait sombre) ; les heures affichées sont
+  celles réellement simulées ; le rafraîchissement automatique utilise `st.fragment` au lieu de bloquer la page.
+- Les erreurs de clearing s'affichent en clair (message de `ClearingError`) au lieu d'une trace Python.
+- Plusieurs traders d'un même pays apparaissent tous dans la liste des participants.
+- Le mot de passe administrateur n'est plus affiché dans la page.
+
 ### Étape 1 — Moteur de clearing (`engine/clearing.py`, `engine/db.py`, `tests/`)
 
 **Ajouté**

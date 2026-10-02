@@ -1,0 +1,367 @@
+"""
+Éléments d'interface partagés par toutes les pages : CSS, en-tête, logo, bilinguisme FR/EN, monnaie.
+"""
+import os, base64
+import streamlit as st
+from engine import get_session
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+LANGS = {'fr': 'Français', 'en': 'English'}
+
+
+@st.cache_data
+def _file_b64(name):
+    with open(os.path.join(ROOT, 'assets', name), 'rb') as f:
+        return base64.b64encode(f.read()).decode()
+
+
+@st.cache_data
+def _css():
+    with open(os.path.join(ROOT, 'assets', 'style.css'), encoding='utf-8') as f:
+        return f.read()
+
+
+def inject_css():
+    st.markdown(f"<style>{_css()}</style>", unsafe_allow_html=True)
+
+
+def logo_b64():
+    return _file_b64('wapp_logo.png')
+
+
+def map_b64():
+    return _file_b64('wapp_map.png')
+
+
+def header(title, subtitle_html, height=50):
+    st.markdown(
+        f'<div class="wapp-header"><img src="data:image/png;base64,{logo_b64()}" height="{height}"/>'
+        f'<div><h1>{title}</h1><div class="subtitle">{subtitle_html}</div></div></div>',
+        unsafe_allow_html=True)
+
+
+# ── Langue ────────────────────────────────────────────────────────
+def current_lang():
+    if 'lang' not in st.session_state:
+        st.session_state['lang'] = get_session().get('lang', 'fr')
+    return st.session_state['lang'] if st.session_state['lang'] in LANGS else 'fr'
+
+
+def lang_selector():
+    """Sélecteur de langue à placer dans la barre latérale de chaque page."""
+    lang = current_lang()
+    choice = st.selectbox("Langue / Language", list(LANGS), index=list(LANGS).index(lang),
+                          format_func=lambda k: LANGS[k], key='lang_select')
+    if choice != lang:
+        st.session_state['lang'] = choice
+        st.rerun()
+
+
+def t(key, **kw):
+    """Texte traduit ; la clé est renvoyée telle quelle si elle est inconnue."""
+    pair = STR.get(key)
+    if pair is None:
+        return key
+    txt = pair[0] if current_lang() == 'fr' else pair[1]
+    return txt.format(**kw) if kw else txt
+
+
+# ── Monnaie ───────────────────────────────────────────────────────
+def currency():
+    return get_session().get('currency', 'USD')
+
+
+def money(x, millions=False):
+    """Montant formaté avec la monnaie de la session : 12 345 USD ou 12,35 M USD."""
+    if millions:
+        return f"{x / 1e6:,.2f} M {currency()}".replace(',', ' ')
+    return f"{x:,.0f} {currency()}".replace(',', ' ')
+
+
+def price_unit():
+    return f"{currency()}/MWh"
+
+
+def hours_label(session):
+    if session.get('horizon', '24') == '1':
+        return f"1 h ({t('hour_short')} {session.get('hour', '19')})"
+    return "24 h"
+
+
+# ── Dictionnaire FR / EN ──────────────────────────────────────────
+STR = {
+    # Général
+    'app_title':        ("WAPP Day-Ahead Market Simulator", "WAPP Day-Ahead Market Simulator"),
+    'app_subtitle':     ("West African Power Pool — outil de formation au marché électrique", "West African Power Pool — electricity market training tool"),
+    'footer':           ("WAPP Market Simulator — Projet MS OSE 2025 | Mines Paris-PSL × SENELEC × EPEX SPOT", "WAPP Market Simulator — MS OSE 2025 project | Mines Paris-PSL × SENELEC × EPEX SPOT"),
+    'nav_home':         ("Accueil", "Home"),
+    'nav_submit':       ("Soumettre des offres", "Submit orders"),
+    'nav_results':      ("Résultats", "Results"),
+    'nav_admin':        ("Administration", "Administration"),
+    'phase':            ("Phase", "Phase"),
+    'phase_submission': ("Soumission ouverte", "Submission open"),
+    'phase_cleared':    ("Marché clôturé", "Market cleared"),
+    'delivery_date':    ("Date de livraison", "Delivery date"),
+    'horizon':          ("Horizon", "Horizon"),
+    'hour_short':       ("heure", "hour"),
+    'hour':             ("Heure", "Hour"),
+    'zone':             ("Zone", "Zone"),
+    'trader':           ("Trader", "Trader"),
+    'actor':            ("Acteur", "Actor"),
+    'buyer':            ("Acheteur", "Buyer"),
+    'segment':          ("Seg.", "Seg."),
+    'mw':               ("MW", "MW"),
+    'price':            ("Prix", "Price"),
+    'max_price':        ("Prix max", "Max price"),
+    'profile':          ("Profil", "Profile"),
+    'side':             ("Sens", "Side"),
+    'sell':             ("Vente", "Sell"),
+    'buy':              ("Achat", "Buy"),
+    'yes':              ("oui", "yes"),
+    'no':               ("non", "no"),
+    'save':             ("Enregistrer", "Save"),
+    'delete':           ("Supprimer", "Delete"),
+    'none':             ("— (aucun)", "— (none)"),
+    'currency_label':   ("Monnaie", "Currency"),
+
+    # Accueil
+    'login_title':      ("Connexion trader", "Trader login"),
+    'zone_country':     ("Zone / Pays", "Zone / Country"),
+    'select_placeholder': ("— Sélectionner —", "— Select —"),
+    'organisation':     ("Organisation", "Organisation"),
+    'custom_name':      ("Nom personnalisé", "Custom name"),
+    'custom_name_ph':   ("ex : Mon organisation", "e.g. My organisation"),
+    'connected_as':     ("Connecté en tant que : **{name}**", "Logged in as: **{name}**"),
+    'connect':          ("Se connecter", "Log in"),
+    'select_zone_and_name': ("Sélectionnez une zone et un nom.", "Select a zone and a name."),
+    'connected_ok':     ("Connecté : **{name}** ({zone})", "Logged in: **{name}** ({zone})"),
+    'kpi_countries':    ("Pays connectés", "Countries connected"),
+    'kpi_zones':        ("/ {n} zones", "/ {n} zones"),
+    'kpi_date':         ("Date de livraison (J+1)", "Delivery date (D+1)"),
+    'kpi_welfare':      ("Welfare du dernier clearing", "Welfare of last clearing"),
+    'network':          ("Réseau WAPP", "WAPP network"),
+    'participants':     ("Participants", "Participants"),
+    'no_participant':   ("Aucun participant connecté. Connectez-vous via la barre latérale.", "No participant connected. Log in from the sidebar."),
+    'without_trader':   ("**Sans trader :** {zones}", "**Without trader:** {zones}"),
+    'without_trader_hint': ("Ces zones seront complétées par les données de référence lors du clearing si l'administrateur le demande.", "These zones are filled with reference data at clearing time if the administrator selects that option."),
+    'how_to':           ("Comment utiliser", "How to use"),
+    'how_1':            ("**1. Connexion**\n\nChaque participant sélectionne son pays et son organisation dans la barre latérale.", "**1. Log in**\n\nEach participant selects a country and an organisation in the sidebar."),
+    'how_2':            ("**2. Soumission**\n\nVia *Soumettre des offres*, chaque trader dépose ses offres par segments et ses ordres bloc.", "**2. Submit**\n\nUnder *Submit orders*, each trader submits stepwise orders and block orders."),
+    'how_3':            ("**3. Clearing**\n\nL'administrateur lance le clearing depuis *Administration*. Les résultats s'affichent dans *Résultats*.", "**3. Clearing**\n\nThe administrator runs the clearing from *Administration*. Results appear under *Results*."),
+    'data_disclaimer':  ("Les capacités NTC et les profils horaires de référence sont des valeurs types estimées à des fins de formation, pas des données opérationnelles du WAPP.", "Reference NTC values and hourly profiles are illustrative estimates for training purposes, not WAPP operational data."),
+
+    # Soumission
+    'submit_title':     ("Soumission des offres", "Order submission"),
+    'login_first':      ("Connectez-vous d'abord sur la page d'accueil.", "Please log in on the home page first."),
+    'market_closed':    ("Le marché est **clôturé**. Les soumissions ne sont plus acceptées. Consultez les résultats ou demandez à l'administrateur de rouvrir le marché.", "The market is **cleared**. Submissions are closed. Check the results or ask the administrator to reopen the market."),
+    'tab_stepwise':     ("Offres par segments", "Stepwise orders"),
+    'tab_blocks':       ("Ordres bloc (simples, liés, exclusifs)", "Block orders (simple, linked, exclusive)"),
+    'tab_preview':      ("Récapitulatif", "Summary"),
+    'stepwise_badge':   ("Offres par segments prix / quantité, acceptation partielle possible. Chaque segment est valable pour les 24 heures, modulé par le profil horaire.", "Price / quantity segments, partial acceptance allowed. Each segment applies to all 24 hours, shaped by its hourly profile."),
+    'supply_in_zone':   ("Production — zone **{zone}**", "Generation — zone **{zone}**"),
+    'max_segments':     ("Au plus 4 segments par acteur. Prix croissants = ordre de mérite.", "At most 4 segments per actor. Increasing prices = merit order."),
+    'already_submitted': ("{n} segment(s) déjà enregistré(s).", "{n} segment(s) already saved."),
+    'actor_ph':         ("Nom de la centrale / acteur", "Plant / actor name"),
+    'add_segment':      ("+ Segment", "+ Segment"),
+    'save_supply':      ("Enregistrer les offres de VENTE", "Save SELL orders"),
+    'save_demand':      ("Enregistrer les offres d'ACHAT", "Save BUY orders"),
+    'no_valid_segment': ("Aucun segment valide (nom et quantité requis).", "No valid segment (name and quantity required)."),
+    'saved_supply':     ("{n} segment(s) de vente enregistré(s).", "{n} sell segment(s) saved."),
+    'saved_demand':     ("{n} segment(s) d'achat enregistré(s).", "{n} buy segment(s) saved."),
+    'profiles_help':    ("Profils horaires", "Hourly profiles"),
+    'profiles_table':   ("| Profil | Description |\n|---|---|\n| **baseload** | Thermique stable, 95 % sur 24 h |\n| **hydro** | Hydraulique flexible, 60 à 100 % |\n| **solar** | Solaire PV, 0 % la nuit, 100 % à midi |\n| **peaker** | Turbine gaz / diesel, 100 % à toute heure |\n| **flat** | Disponibilité constante, 100 % |", "| Profile | Description |\n|---|---|\n| **baseload** | Stable thermal, 95% over 24 h |\n| **hydro** | Flexible hydro, 60 to 100% |\n| **solar** | Solar PV, 0% at night, 100% at noon |\n| **peaker** | Gas / diesel peaker, 100% at all hours |\n| **flat** | Constant availability, 100% |"),
+    'demand_in_zone':   ("Demande — zone **{zone}**", "Demand — zone **{zone}**"),
+    'demand_help':      ("La demande est modulée par le profil de charge ouest-africain (creux la nuit, pointe le soir).", "Demand follows the West African load profile (night trough, evening peak)."),
+    'buyer_ph':         ("Nom de l'acheteur / réseau", "Buyer / grid name"),
+    'blocks_badge':     ("Un bloc est accepté en totalité sur toutes ses heures ou rejeté (fill-or-kill). Un bloc **enfant** n'est accepté que si son **parent** l'est. Dans un **groupe exclusif**, une seule option au plus est retenue. Le solveur passe en MILP.", "A block is either fully accepted over all its hours or rejected (fill-or-kill). A **child** block is accepted only if its **parent** is. In an **exclusive group**, at most one option is selected. The solver switches to MILP."),
+    'blocks_in_zone':   ("Blocs — zone **{zone}**", "Blocks — zone **{zone}**"),
+    'block_name':       ("Nom du bloc", "Block name"),
+    'block_name_ph':    ("ex : Base nuit", "e.g. Night base"),
+    'h_start':          ("H début", "Start h"),
+    'h_end':            ("H fin", "End h"),
+    'parent':           ("Parent", "Parent"),
+    'group':            ("Groupe excl.", "Excl. group"),
+    'group_ph':         ("ex : A", "e.g. A"),
+    'add_block':        ("+ Bloc", "+ Block"),
+    'save_blocks':      ("Enregistrer les ordres bloc", "Save block orders"),
+    'delete_blocks':    ("Supprimer mes ordres bloc", "Delete my block orders"),
+    'saved_blocks':     ("{n} ordre(s) bloc enregistré(s).", "{n} block order(s) saved."),
+    'no_valid_block':   ("Aucun bloc valide (nom, quantité et plage horaire requis).", "No valid block (name, quantity and hour range required)."),
+    'blocks_deleted':   ("Ordres bloc supprimés.", "Block orders deleted."),
+    'preview_supply':   ("Offres de vente", "Sell orders"),
+    'preview_demand':   ("Offres d'achat", "Buy orders"),
+    'preview_blocks':   ("Ordres bloc", "Block orders"),
+    'total_capacity':   ("Capacité totale", "Total capacity"),
+    'total_demand':     ("Demande totale", "Total demand"),
+    'no_supply':        ("Aucune offre de vente.", "No sell order."),
+    'no_demand':        ("Aucune offre d'achat.", "No buy order."),
+    'no_blocks':        ("Aucun ordre bloc.", "No block order."),
+    'hours_col':        ("Heures", "Hours"),
+
+    # Résultats
+    'results_title':    ("Résultats du clearing", "Clearing results"),
+    'results_subtitle': ("Day-Ahead Market — West African Power Pool", "Day-Ahead Market — West African Power Pool"),
+    'auto_refresh':     ("Actualisation automatique (10 s)", "Auto refresh (10 s)"),
+    'no_results':       ("Aucun résultat disponible. Le clearing n'a pas encore été lancé.", "No result available. The clearing has not been run yet."),
+    'wait_admin':       ("Attendez que l'administrateur déclenche le clearing depuis la page **Administration**.", "Wait for the administrator to run the clearing from the **Administration** page."),
+    'kpi_total_welfare': ("Welfare total", "Total welfare"),
+    'kpi_volume':       ("Volume échangé", "Traded volume"),
+    'kpi_time':         ("Temps de calcul", "Solve time"),
+    'kpi_solver':       ("Solveur", "Solver"),
+    'kpi_hours':        ("Heures simulées", "Simulated hours"),
+    'tab_prices':       ("Prix zonaux", "Zonal prices"),
+    'tab_flows':        ("Flux d'échange", "Exchange flows"),
+    'tab_dispatch':     ("Dispatch", "Dispatch"),
+    'tab_blocks_res':   ("Ordres bloc", "Block orders"),
+    'tab_mine':         ("Mon résultat", "My result"),
+    'tab_analysis':     ("Analyse", "Analysis"),
+    'tab_tables':       ("Tableaux", "Tables"),
+    'prices_chart':     ("Prix zonaux de clearing ({unit})", "Zonal clearing prices ({unit})"),
+    'prices_hourly':    ("Prix zonaux horaires ({unit})", "Hourly zonal prices ({unit})"),
+    'heatmap':          ("Heatmap des prix (zone × heure)", "Price heatmap (zone × hour)"),
+    'net_positions':    ("Positions nettes (export +, import −)", "Net positions (export +, import −)"),
+    'net_position_chart': ("Position nette par zone (MWh)", "Net position by zone (MWh)"),
+    'no_trade_note':    ("Zones sans aucun échange sur certaines heures : {zones}. Le prix affiché y est le milieu entre la meilleure demande et la meilleure offre rejetées.", "Zones with no trade in some hours: {zones}. The displayed price is the midpoint between the best rejected bid and the best rejected offer."),
+    'flows_title':      ("Flux sur les interconnexions", "Interconnection flows"),
+    'line':             ("Interconnexion", "Interconnection"),
+    'avg_flow':         ("Flux moyen (MW)", "Average flow (MW)"),
+    'direction':        ("Sens", "Direction"),
+    'ntc_mw':           ("NTC (MW)", "NTC (MW)"),
+    'saturation':       ("Saturation (%)", "Utilisation (%)"),
+    'saturated_hours':  ("Heures saturées", "Congested hours"),
+    'congestion_rent':  ("Rente de congestion", "Congestion rent"),
+    'flows_chart':      ("Flux moyens (MW), positif = sens conventionnel", "Average flows (MW), positive = conventional direction"),
+    'no_flow':          ("Aucun flux significatif.", "No significant flow."),
+    'flows_24h':        ("Évolution des flux sur la journée", "Flows over the day"),
+    'flows_corridors':  ("Flux horaires, corridors principaux (MW)", "Hourly flows, main corridors (MW)"),
+    'dispatch_title':   ("Dispatch par profil de production", "Dispatch by generation profile"),
+    'dispatch_chart':   ("Dispatch empilé par profil (MW)", "Stacked dispatch by profile (MW)"),
+    'demand_accepted':  ("Demande acceptée", "Accepted demand"),
+    'mix_chart':        ("Mix de production accepté", "Accepted generation mix"),
+    'blocks_none':      ("Aucun ordre bloc dans ce clearing.", "No block order in this clearing."),
+    'blocks_explain':   ("**OK** : décision cohérente avec les prix. **PRB** : bloc rejeté qui aurait été gagnant aux prix finals ; l'accepter aurait changé les prix de tous et réduit le welfare total, ce qu'EUPHEMIA tolère. **PAB** : bloc accepté à perte, interdit ; le moteur le rejette et relance le clearing.", "**OK**: decision consistent with prices. **PRB**: rejected block that would have been profitable at final prices; accepting it would have changed everyone's prices and reduced total welfare, which EUPHEMIA tolerates. **PAB**: block accepted at a loss, forbidden; the engine rejects it and re-runs the clearing."),
+    'accepted':         ("Accepté", "Accepted"),
+    'status':           ("Statut", "Status"),
+    'avg_price':        ("Prix moyen", "Average price"),
+    'surplus':          ("Surplus", "Surplus"),
+    'surplus_if_acc':   ("Surplus si accepté", "Surplus if accepted"),
+    'mine_login':       ("Connectez-vous sur la page d'accueil pour voir votre résultat.", "Log in on the home page to see your result."),
+    'mine_none':        ("Aucune offre de **{player}** ({zone}) dans ce clearing.", "No order from **{player}** ({zone}) in this clearing."),
+    'mine_title':       ("Résultat de {player} ({zone})", "Result for {player} ({zone})"),
+    'offered_mwh':      ("Offert (MWh)", "Offered (MWh)"),
+    'accepted_mwh':     ("Accepté (MWh)", "Accepted (MWh)"),
+    'acceptance':       ("Taux d'acceptation", "Acceptance rate"),
+    'revenue':          ("Recette", "Revenue"),
+    'payment':          ("Paiement", "Payment"),
+    'rejected_orders':  ("Offres entièrement rejetées", "Fully rejected orders"),
+    'why_rejected':     ("Une offre de vente est rejetée quand son prix dépasse le prix de la zone ; une offre d'achat quand son prix est inférieur. Un bloc peut aussi être rejeté parce que l'accepter aurait réduit le welfare total (voir l'onglet Ordres bloc).", "A sell order is rejected when its price exceeds the zonal price; a buy order when its price is below it. A block can also be rejected because accepting it would have reduced total welfare (see the Block orders tab)."),
+    'zone_prices_mine': ("Prix de votre zone ({unit})", "Your zone's prices ({unit})"),
+    'analysis_zones':   ("Décomposition par zone", "Breakdown by zone"),
+    'generation_mwh':   ("Production (MWh)", "Generation (MWh)"),
+    'load_mwh':         ("Consommation (MWh)", "Load (MWh)"),
+    'net_mwh':          ("Position nette (MWh)", "Net position (MWh)"),
+    'consumer_surplus': ("Surplus consommateur", "Consumer surplus"),
+    'producer_surplus': ("Producer surplus", "Producer surplus"),
+    'producer_surplus_fr': ("Surplus producteur", "Producer surplus"),
+    'no_trade_hours':   ("Heures sans échange", "No-trade hours"),
+    'analysis_lines':   ("Rente de congestion par ligne", "Congestion rent by line"),
+    'welfare_identity': ("Welfare = surplus consommateur + surplus producteur + rente de congestion", "Welfare = consumer surplus + producer surplus + congestion rent"),
+    'identity_gap':     ("Écart de l'identité : {gap}", "Identity gap: {gap}"),
+    'checks_title':     ("Vérifications de cohérence", "Consistency checks"),
+    'check_pro':        ("Ordres simples paradoxalement rejetés : {n}", "Paradoxically rejected simple orders: {n}"),
+    'check_pao':        ("Ordres simples paradoxalement acceptés : {n}", "Paradoxically accepted simple orders: {n}"),
+    'check_gaps':       ("Lignes non saturées avec prix différents : {n}", "Unsaturated lines with different prices: {n}"),
+    'check_max':        ("Écart maximal aux conditions d'équilibre : {v} {unit}", "Largest deviation from equilibrium conditions: {v} {unit}"),
+    'check_tie':        ("Départage par volume : {mode}", "Volume tie-break: {mode}"),
+    'check_pricing':    ("Règle de prix : {mode}", "Pricing rule: {mode}"),
+    'check_pab':        ("Itérations PAB : {n} ; blocs fixés : {fixed}", "PAB iterations: {n}; fixed blocks: {fixed}"),
+    'check_prb':        ("Blocs paradoxalement rejetés tolérés : {names}", "Tolerated paradoxically rejected blocks: {names}"),
+    'notes':            ("Notes du moteur", "Engine notes"),
+    'rules_title':      ("Règles appliquées", "Rules applied"),
+    'prices_table':     ("Prix zonaux, tableau complet", "Zonal prices, full table"),
+    'flows_table':      ("Flux, tableau complet", "Flows, full table"),
+    'download_json':    ("Télécharger les résultats (JSON)", "Download results (JSON)"),
+    'download_csv':     ("Télécharger les prix (CSV)", "Download prices (CSV)"),
+
+    # Administration
+    'admin_title':      ("Administration", "Administration"),
+    'admin_subtitle':   ("Contrôle de session et lancement du clearing", "Session control and clearing launch"),
+    'admin_access':     ("Accès administrateur", "Administrator access"),
+    'password':         ("Mot de passe", "Password"),
+    'wrong_password':   ("Mot de passe incorrect.", "Wrong password."),
+    'kpi_participants': ("Participants", "Participants"),
+    'kpi_supply':       ("Offres de vente", "Sell orders"),
+    'kpi_demand':       ("Offres d'achat", "Buy orders"),
+    'kpi_blocks':       ("Ordres bloc", "Block orders"),
+    'n_zones':          ("{n} zones", "{n} zones"),
+    'market_phase':     ("Phase du marché", "Market phase"),
+    'current_state':    ("État actuel :", "Current state:"),
+    'closed_warning':   ("Le marché est clôturé. Les traders ne peuvent plus soumettre d'offres.", "The market is cleared. Traders can no longer submit orders."),
+    'reopen':           ("Rouvrir le marché (nouvelle session)", "Reopen the market (new session)"),
+    'reopened':         ("Marché rouvert.", "Market reopened."),
+    'open_info':        ("Le marché est ouvert. Les traders peuvent soumettre leurs offres.", "The market is open. Traders can submit their orders."),
+    'full_reset':       ("Réinitialisation complète", "Full reset"),
+    'reset_button':     ("Réinitialiser le marché (supprimer toutes les offres)", "Reset the market (delete all orders)"),
+    'reset_done':       ("Marché réinitialisé.", "Market reset."),
+    'click_again':      ("Cliquez à nouveau pour confirmer.", "Click again to confirm."),
+    'parameters':       ("Paramètres du marché", "Market parameters"),
+    'date_input':       ("Date de livraison (J+1 recommandé)", "Delivery date (D+1 recommended)"),
+    'update_date':      ("Mettre à jour la date", "Update the date"),
+    'date_set':         ("Date : {d}", "Date: {d}"),
+    'horizon_input':    ("Horizon de simulation", "Simulation horizon"),
+    'horizon_1h':       ("1 heure (test rapide)", "1 hour (quick test)"),
+    'horizon_24h':      ("24 heures (day-ahead complet)", "24 hours (full day-ahead)"),
+    'hour_input':       ("Heure simulée en mode 1 h", "Simulated hour in 1 h mode"),
+    'update_horizon':   ("Mettre à jour l'horizon", "Update the horizon"),
+    'horizon_set':      ("Horizon : {h}", "Horizon: {h}"),
+    'currency_input':   ("Monnaie affichée", "Displayed currency"),
+    'lang_input':       ("Langue par défaut", "Default language"),
+    'update_display':   ("Mettre à jour l'affichage", "Update display settings"),
+    'display_set':      ("Affichage mis à jour.", "Display settings updated."),
+    'rules_section':    ("Règles de clearing", "Clearing rules"),
+    'pricing_input':    ("Règle de prix (P2)", "Pricing rule (P2)"),
+    'pricing_complete': ("P2 complet : conditions d'équilibre complètes (recommandé)", "Complete P2: full equilibrium conditions (recommended)"),
+    'pricing_l2':       ("P2 du Livrable 2 : contraintes (8)-(12) seulement", "Livrable 2 P2: constraints (8)-(12) only"),
+    'pab_input':        ("Blocs paradoxaux", "Paradoxical blocks"),
+    'pab_euphemia':     ("EUPHEMIA : PAB rejetés itérativement, PRB tolérés", "EUPHEMIA: PABs iteratively rejected, PRBs tolerated"),
+    'pab_l2':           ("Livrable 2 §3.3 : PAB fixés à 0 et PRB fixés à 1", "Livrable 2 §3.3: PABs fixed to 0 and PRBs fixed to 1"),
+    'pab_none':         ("Détection seule, sans correction", "Detection only, no correction"),
+    'update_rules':     ("Mettre à jour les règles", "Update rules"),
+    'rules_set':        ("Règles mises à jour.", "Rules updated."),
+    'ntc_section':      ("Capacités d'interconnexion (NTC)", "Interconnection capacities (NTC)"),
+    'ntc_help':         ("Modifiez la colonne « NTC actuelle » puis enregistrez. Les valeurs par défaut sont des estimations à partir des tensions des lignes.", "Edit the “Current NTC” column, then save. Default values are estimates based on line voltages."),
+    'ntc_default':      ("NTC par défaut (MW)", "Default NTC (MW)"),
+    'ntc_current':      ("NTC actuelle (MW)", "Current NTC (MW)"),
+    'save_ntc':         ("Enregistrer les NTC", "Save NTC"),
+    'reset_ntc':        ("Revenir aux NTC par défaut", "Restore default NTC"),
+    'ntc_saved':        ("NTC enregistrées.", "NTC saved."),
+    'ntc_reset':        ("NTC par défaut restaurées.", "Default NTC restored."),
+    'ntc_custom_active': ("NTC personnalisées actives sur {n} ligne(s).", "Custom NTC active on {n} line(s)."),
+    'clearing_section': ("Lancement du clearing", "Run the clearing"),
+    'zones_covered':    ("Zones couvertes :", "Zones covered:"),
+    'zone_line':        ("{icon} **{z}** — {ns} vente / {nd} achat / {nb} bloc", "{icon} **{z}** — {ns} sell / {nd} buy / {nb} block"),
+    'missing_zones':    ("Zones sans soumission :", "Zones without submission:"),
+    'fill_question':    ("Que faire pour les zones manquantes ?", "What to do with missing zones?"),
+    'fill_reference':   ("Compléter avec les données de référence (recommandé)", "Fill with reference data (recommended)"),
+    'fill_ignore':      ("Ignorer ces zones (marché partiel)", "Ignore these zones (partial market)"),
+    'fill_demo':        ("Mode démonstration : données de référence pour toutes les zones, soumissions ignorées", "Demonstration mode: reference data for all zones, submissions ignored"),
+    'fill_info':        ("{n} zone(s) seront complétées par les données de référence.", "{n} zone(s) will be filled with reference data."),
+    'fill_partial':     ("Seules {n} zone(s) participent.", "Only {n} zone(s) participate."),
+    'fill_demo_warn':   ("Mode démonstration : les soumissions des traders ne sont pas utilisées.", "Demonstration mode: traders' submissions are not used."),
+    'all_zones_ok':     ("Toutes les zones ont soumis des offres.", "All zones have submitted orders."),
+    'run_clearing':     ("Lancer le clearing Day-Ahead", "Run the Day-Ahead clearing"),
+    'running':          ("Optimisation P1 → P1bis → P2 ({h})…", "Optimising P1 → P1bis → P2 ({h})…"),
+    'clearing_done':    ("Clearing terminé en {t} s | Welfare = {w} | Volume = {v} GWh", "Clearing done in {t} s | Welfare = {w} | Volume = {v} GWh"),
+    'clearing_error':   ("Clearing impossible : {msg}", "Clearing failed: {msg}"),
+    'unexpected_error': ("Erreur inattendue :", "Unexpected error:"),
+    'last_diag':        ("Diagnostics du dernier clearing", "Diagnostics of the last clearing"),
+    'all_offers':       ("Toutes les offres soumises", "All submitted orders"),
+    'no_block_orders':  ("Aucun ordre bloc.", "No block order."),
+    'no_participant_admin': ("Aucun participant.", "No participant."),
+    'danger_zone':      ("Zone danger", "Danger zone"),
+    'delete_all_offers': ("Supprimer toutes les offres", "Delete all orders"),
+    'offers_deleted':   ("Offres supprimées.", "Orders deleted."),
+    'disconnect_all':   ("Déconnecter tous les participants", "Disconnect all participants"),
+    'all_disconnected': ("Participants déconnectés.", "Participants disconnected."),
+    'password_hint':    ("Le mot de passe administrateur se définit par la variable d'environnement WAPP_ADMIN_PASSWORD ou dans .streamlit/secrets.toml (clé admin_password).", "The administrator password is set through the WAPP_ADMIN_PASSWORD environment variable or in .streamlit/secrets.toml (key admin_password)."),
+}

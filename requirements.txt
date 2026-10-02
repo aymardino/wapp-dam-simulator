@@ -1,9 +1,9 @@
-streamlit>=1.32.0
+streamlit>=1.37.0
 pyomo>=6.7.0
+highspy>=1.7.0
 plotly>=5.18.0
 pandas>=2.0.0
 numpy>=1.24.0
-# Solver: install at least one of:
-# pip install highspy      (HiGHS — gratuit, recommandé)
-# pip install glpk         (GLPK — via conda: conda install -c conda-forge glpk)
-# Gurobi: licence académique gratuite sur gurobi.com
+# Solveur : HiGHS (highspy) est installé par défaut et suffit (LP et MILP).
+# Gurobi (licence académique gratuite) est utilisé automatiquement s'il est présent.
+# Tests : pip install pytest ; puis  pytest -q

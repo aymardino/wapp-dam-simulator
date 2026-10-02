@@ -1,177 +1,142 @@
 # WAPP Day-Ahead Market Simulator
 
-**Outil de formation au marché électrique Day-Ahead du West African Power Pool**
-Projet MS OSE 2025 — Mines Paris-PSL × SENELEC × EPEX SPOT
+**Outil de formation et implémentation ouverte de référence du couplage de marché day-ahead zonal appliqué au West African Power Pool**
+Projet MS OSE 2025 — Mines Paris-PSL × SENELEC × EPEX SPOT · version 2 (octobre 2026)
+
+*English summary at the end of this file.*
 
 ---
 
-## Prérequis
+## Ce que fait l'outil
 
-- Python 3.10+
-- Un solveur LP (voir ci-dessous)
+Chaque participant se connecte comme trader d'un pays, dépose ses offres de vente et d'achat pour chaque heure du lendemain, et l'administrateur lance le clearing. Le moteur répond à trois questions, dans l'ordre : **qui échange** (la combinaison d'échanges qui crée le plus de valeur sans dépasser la capacité des lignes), **comment départager** les ex æquo (le plus d'énergie échangée), **à quel prix** (un prix par pays et par heure, choisi dans l'ensemble des prix compatibles avec les quantités). Les règles sont écrites noir sur blanc dans [docs/REGLES_DE_MARCHE.md](docs/REGLES_DE_MARCHE.md) et vérifiées par des tests.
+
+Nouveautés de la version 2 (détail dans [CHANGELOG.md](CHANGELOG.md)) :
+- ordres bloc, liés et exclusifs réellement modélisés (MILP), blocs paradoxaux traités selon la règle EUPHEMIA ;
+- prix zonaux choisis dans l'ensemble admissible complet (plus d'ordre paradoxalement rejeté, plus d'écart de prix sans congestion) ;
+- NTC modifiables, heure simulée au choix, zones manquantes complétées, messages d'erreur lisibles ;
+- vue « Mon résultat » pour chaque trader, décomposition du welfare, diagnostics de cohérence ;
+- interface bilingue français / anglais, monnaie paramétrable ;
+- suite de tests calée sur les valeurs du Livrable 2, Dockerfile.
+
+---
+
+## Installation
+
+Prérequis : Python 3.10 ou plus récent.
 
 ```bash
-pip install streamlit pyomo plotly pandas numpy highspy
+pip install -r requirements.txt
 ```
 
-**Solveurs supportés (ordre de priorité automatique) :**
-| Solveur | Installation | Recommandé |
-|---------|-------------|------------|
-| Gurobi  | Licence académique gratuite sur gurobi.com | Oui (le plus rapide) |
-| HiGHS   | `pip install highspy` | Oui (gratuit, ~0.5s sur 24h) |
-| GLPK    | `conda install -c conda-forge glpk` | Dépannage |
-| CBC     | `conda install -c conda-forge coincbc` | Dépannage |
-
----
+Le solveur HiGHS (paquet `highspy`) est installé avec les dépendances et suffit pour tous les cas, blocs compris, en moins d'une seconde. Gurobi est utilisé automatiquement s'il est présent.
 
 ## Lancement
 
-### Sur Windows (double-clic)
-```
-run.bat
-```
-
-### Sur Windows (PowerShell)
-```powershell
-cd wapp_simulator
-streamlit run app.py --server.address 0.0.0.0 --server.port 8501
-```
-
-### Sur Linux / Mac
 ```bash
-chmod +x run.sh && ./run.sh
-```
-
-L'application s'ouvre dans le navigateur sur `http://localhost:8501`.
-
----
-
-## Accès multi-utilisateurs (formation en présentiel)
-
-### Problème : le firewall bloque le port 8501
-
-Sur un PC d'université ou d'entreprise, les autres participants ne peuvent
-généralement pas accéder à `http://[votre-IP]:8501` à cause du firewall réseau.
-
-### Solution : tunnel SSH via localhost.run (sans installation, sans droits admin)
-
-**Étape 1 — Lancer l'application normalement :**
-```powershell
 streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 ```
 
-**Étape 2 — Dans un second terminal PowerShell, ouvrir le tunnel :**
-```powershell
+ou `run.sh` (Linux, macOS) / `run.bat` (Windows). L'application s'ouvre sur `http://localhost:8501`.
+
+Avec Docker :
+
+```bash
+docker build -t wapp-simulator .
+docker run -p 8501:8501 -e WAPP_ADMIN_PASSWORD=motdepasse wapp-simulator
+```
+
+### Mot de passe administrateur
+
+Défini par la variable d'environnement `WAPP_ADMIN_PASSWORD` ou par la clé `admin_password` dans `.streamlit/secrets.toml`. À défaut : `<mot-de-passe-retire>` (à changer avant toute mise en ligne).
+
+### Accès multi-utilisateurs en formation
+
+Les participants ouvrent `http://[adresse-du-formateur]:8501` sur le même réseau. Si le pare-feu bloque le port, deux solutions sans droits administrateur : un point d'accès Wi-Fi depuis un téléphone, ou un tunnel :
+
+```bash
 ssh -R 80:localhost:8501 nokey@localhost.run
 ```
 
-**Étape 3 — Copier l'URL générée :**
-```
-https://xxxxxxxx.lhr.life   ← partager cette URL aux participants
-```
+L'URL `https://xxxx.lhr.life` affichée est à partager. Les données transitent alors par les serveurs du service de tunnel : à réserver aux données de formation.
 
-Les participants accèdent à l'outil depuis n'importe quel réseau (WiFi, 4G, câble)
-via cette URL HTTPS. Aucune installation requise côté participants — juste un navigateur.
-
-> **Note :** L'URL change à chaque nouvelle connexion SSH.
-> L'erreur SSL `net_error -200` dans PowerShell est normale et sans conséquence —
-> elle indique juste que Streamlit ne peut pas contacter ses serveurs de stats.
-
-### Alternative : ngrok
-
-```powershell
-# Télécharger ngrok.exe depuis https://ngrok.com/download (pas d'installation)
-.\ngrok.exe http 8501
-```
+Limite connue de Streamlit : rafraîchir la page du navigateur déconnecte le trader ; il suffit de se reconnecter depuis la barre latérale.
 
 ---
 
-## Architecture du projet
+## Déroulé d'une session
+
+1. **Connexion** : chaque trader choisit son pays et son organisation (plusieurs organisations par pays possibles).
+2. **Soumission** : offres par segments (prix croissants, profil horaire) et ordres bloc (simples, liés à un parent, ou en groupe exclusif).
+3. **Clearing** : l'administrateur choisit l'horizon (24 h ou une heure précise), la règle de prix, la règle de traitement des blocs paradoxaux, le sort des zones sans soumission, puis lance le calcul.
+4. **Résultats** : prix, flux, dispatch, ordres bloc, résultat individuel de chaque trader, analyse (surplus, rente de congestion, vérifications), tableaux et export.
+
+---
+
+## Architecture
 
 ```
 wapp_simulator/
-├── app.py                    ← Accueil : logo WAPP, carte réseau, liste participants
+├── app.py                    ← accueil, connexion des traders
+├── ui_common.py              ← CSS, en-tête, bilinguisme FR/EN, monnaie
 ├── pages/
-│   ├── 1_Submit_Offers.py   ← Soumission des offres (stepwise / block / linked)
-│   ├── 2_Results.py          ← Résultats : prix, flux, dispatch, heatmap
-│   └── 3_Admin.py            ← Administration : clearing, phase, paramètres
+│   ├── 1_Submit_Offers.py    ← segments et ordres bloc
+│   ├── 2_Results.py          ← résultats, vue trader, analyse
+│   └── 3_Admin.py            ← phase, paramètres, règles, NTC, clearing
 ├── engine/
-│   ├── clearing.py           ← Moteur P1/P1bis/P2 (Pyomo, flux signés)
-│   ├── db.py                 ← État partagé SQLite (offres, résultats, phase)
-│   ├── actors.py             ← Liste des acteurs prédéfinis par zone
-│   └── __init__.py
-├── assets/
-│   ├── style.css             ← Thème clair blanc/vert/orange
-│   ├── wapp_logo.png
-│   └── wapp_map.png
-├── data/
-│   └── market.db             ← Base SQLite (créée automatiquement au premier lancement)
-├── requirements.txt
-├── run.bat                   ← Lanceur Windows
-└── run.sh                    ← Lanceur Linux/Mac
+│   ├── clearing.py           ← moteur P1 / P1bis / P2, blocs, diagnostics
+│   ├── db.py                 ← état partagé SQLite (offres, blocs, NTC, résultats)
+│   └── actors.py             ← acteurs prédéfinis par zone
+├── tests/test_engine.py      ← tests de non-régression (valeurs du Livrable 2)
+├── docs/REGLES_DE_MARCHE.md  ← règles appliquées, en toutes lettres
+├── assets/                   ← style, logo, carte
+├── data/market.db            ← base SQLite locale (créée au premier lancement, jamais publiée)
+├── CHANGELOG.md, AUDIT_V2.md, PLAN_VALORISATION.md
+├── Dockerfile, requirements.txt, run.sh, run.bat
 ```
 
 ---
 
-## Modèle économique : décomposition P1/P1bis/P2
+## Modèle
 
-| Étape | Problème | Type | Variables | Résultat |
-|-------|----------|------|-----------|----------|
-| 1 | P1 — Welfare | LP | xs, xd, f | W* |
-| 2 | P1bis — Volume | LP | xs, xd, f | x*, f* |
-| 3 | P2 — Pricing | LP | π | π*_z,t |
+| Étape | Question | Problème | Type |
+|-------|----------|----------|------|
+| P1 | Qui échange ? | maximisation du welfare sous équilibre zonal, NTC, contrainte α, liaisons de blocs | LP, MILP avec blocs |
+| P1bis | Comment départager ? | maximisation du volume à welfare optimal exact | LP |
+| P2 | À quel prix ? | prix admissibles (conditions d'équilibre complètes) les plus proches du milieu de l'intervalle | LP |
 
-**Flux signés :** une seule variable `f[u,v,t] ∈ [-NTC, +NTC]` par interconnexion,
-éliminant les variables binaires de direction (LP pur, steps 1–3).
+Zones : NGA, BEN, TGO, GHA, CIV, BFA, MLI, SEN, GIN, SLE, LBR, GNB, GMB, NER. Interconnexions : 15 paires, flux signés. Contrainte d'interdépendance CIV/GHA/BFA avec α = 0,7.
 
-**Zones modélisées :** 14 pays CEDEAO
-`NGA · BEN · TGO · GHA · CIV · BFA · MLI · SEN · GIN · SLE · LBR · GNB · GMB · NER`
+| Type d'ordre | Modèle |
+|--------------|--------|
+| Segments prix / quantité (4 par acteur) | variables continues, acceptation partielle |
+| Bloc simple | binaire, fill-or-kill sur sa plage horaire |
+| Bloc lié | enfant ≤ parent |
+| Groupe exclusif | au plus une option |
 
-**Interconnexions :** 15 paires avec NTC estimés (330 kV et 225 kV)
+Blocs paradoxalement acceptés : rejetés itérativement (règle EUPHEMIA, par défaut). Blocs paradoxalement rejetés : tolérés et signalés.
 
-**Contrainte d'interdépendance :**
-`f[GHA→BFA] + f[CIV→BFA] ≤ 0.7 × (NTC_GHA_BFA + NTC_CIV_BFA)`
+## Tests
 
----
+```bash
+pip install pytest
+pytest -q
+```
 
-## Types d'ordres disponibles
+Quinze tests reproduisent les valeurs du Livrable 2 (welfare 22 317 910 et volume 167 900 MWh sur le cas de référence, 23 082 419 avec blocs, 23 775 223 avec blocs liés et exclusifs) et vérifient les propriétés des prix. Les tests utilisent une base temporaire (`WAPP_DB_PATH`) et ne touchent jamais `data/market.db`.
 
-| Type | Description | Modèle |
-|------|-------------|--------|
-| **Stepwise** | Segments prix/quantité, acceptation partielle possible | LP |
-| **Block Orders** | Fill-or-kill sur une plage horaire | MILP (variable binaire) |
-| **Linked** | Bloc enfant conditionné à l'acceptation du parent | MILP |
-| **Exclusifs** | Au plus une option d'un groupe acceptée | MILP |
+## Données et confidentialité
 
-Tous les types supportent les offres de **vente (production)** et d'**achat (demande)**.
+- Les NTC et les profils horaires de référence sont des valeurs types estimées pour la formation, pas des données opérationnelles du WAPP. Ils se remplacent depuis la page Administration (NTC) et par les offres des participants.
+- Tout fonctionne en local ; la base SQLite reste sur la machine hôte. Ne jamais publier le dossier `data/`.
+- Monnaie : libellé paramétrable (USD par défaut), sans effet sur le calcul.
 
----
+## Auteurs
 
-## Scénario de formation type
-
-1. **Formateur** lance `run.bat`, puis ouvre le tunnel `localhost.run` et partage l'URL
-2. **Participants** ouvrent l'URL dans leur navigateur
-3. **Connexion** : chaque trader sélectionne son pays et son organisation
-4. **Soumission** : chaque trader soumet ses offres (type au choix)
-5. **Clearing** : le formateur déclenche le clearing depuis Admin (mot de passe : `<mot-de-passe-retire>`)
-6. **Analyse** : tous visualisent les résultats en temps réel (prix, flux, welfare)
+Kodjovi Plakoo et Enrico Patanè (Mines Paris-PSL, MS OSE 2025), avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila (livrables 1 et 2). Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT). Licence : à définir avant publication.
 
 ---
 
-## Mot de passe administrateur
+## English summary
 
-Défaut : `<mot-de-passe-retire>`
-À modifier dans `pages/3_Admin.py` → variable `ADMIN_PASSWORD`
-
----
-
-## Confidentialité
-
-- Tout fonctionne **localement** — la base SQLite reste sur la machine hôte
-- Le tunnel `localhost.run` est chiffré HTTPS mais les données transitent par leurs serveurs
-- Pour une confidentialité totale, utiliser uniquement en réseau local (sans tunnel)
-- Ne jamais pousser le dossier `data/` sur un dépôt git public
-
----
-
-*Encadré par El Hadji Tamsir DIOP (SENELEC) et Adrien ATAYI (EPEX SPOT)*
+An open, documented and tested implementation of day-ahead zonal market coupling for the West African Power Pool, built as a multi-user training tool. Traders log in as a country's organisation and submit stepwise orders (price/quantity segments shaped by hourly profiles) and block orders (simple, linked, exclusive). The administrator runs the clearing: P1 maximises welfare under zonal balance, NTC limits and a CIV/GHA/BFA interdependence constraint (LP, MILP with blocks); P1bis maximises traded volume among welfare-optimal solutions; P2 selects, within the complete set of admissible prices (full equilibrium conditions, network included), the price closest to the midpoint of the admissible interval. Paradoxically accepted blocks are iteratively rejected (EUPHEMIA rule); paradoxically rejected blocks are tolerated and reported. Every rule is stated in `docs/REGLES_DE_MARCHE.md` and checked by `tests/test_engine.py`. Install with `pip install -r requirements.txt` (HiGHS solver included), run with `streamlit run app.py`, or use the Dockerfile. The interface is bilingual (French / English). Reference NTC values and profiles are illustrative estimates, not WAPP operational data.

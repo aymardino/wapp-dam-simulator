@@ -4,6 +4,8 @@
 
 Base auditée : dossier `wapp_simulator` (livré le 10 avril 2026, Livrable 3) ; tous les constats ci-dessous ont été reproduits par des tests exécutés sur le moteur réel (HiGHS 1.x, Pyomo 6.9.5).
 
+> **État au 2 octobre 2026 (soir) — v2 en cours.** Les constats 1, 2, 3, 4, 5, 7, 7b, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 et une partie de 19 (mot de passe hors du code, non affiché) et 21 (dépôt git, tests, Dockerfile, avertissement sur les données) sont traités : voir [CHANGELOG.md](CHANGELOG.md). Restent ouverts : 6 (MIC), 20 (salles de session pour une app web publique), la licence et le nom public du produit. Le reste de ce document décrit l'état **avant** ces modifications.
+
 ---
 
 ## 1. Résumé
