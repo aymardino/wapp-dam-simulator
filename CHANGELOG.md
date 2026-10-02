@@ -5,6 +5,32 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 13 — Site vitrine, deuxième version : identité propre, explorateur de zone, correctifs
+
+**Ajouté**
+- Nouvelle page d'accueil (`web/src/pages/Landing.tsx`) avec une identité distincte de l'application : titres en
+  serif éditoriale (Instrument Serif), bandeau de cotations défilant (prix des 14 zones à l'heure courante,
+  welfare, volume, lignes saturées), carte sombre « salle de contrôle » pilotée par un sélecteur d'heure en
+  histogramme (hauteur des barres = prix moyen de l'heure), lecture de la position d'un pays au clic.
+- Explorateur « Pourquoi ce prix, dans cette zone, à cette heure » : courbes d'offre et de demande de la zone
+  construites à partir des ordres de référence 2024 (quantités horaires = quantité × profil, comme dans le
+  moteur), prix zonal, volume importé ou exporté lu dans les flux, phrase explicative générée, tableau des
+  ordres (retenu / marginal / hors marché), prix des 14 zones sur 24 h avec la zone choisie en évidence.
+- Section « Le moteur » (P1 → P1bis → P2 avec le schéma de l'intervalle admissible), fiche technique en
+  tableau, trois usages, bloc terminal avec la sortie réelle de la ligne de commande (welfare 22 317 910,
+  volume 167 900 MWh), avertissements, auteurs.
+- `GET /api/v1/demo` renvoie aussi les ordres de référence, les profils horaires, la courbe de charge et les
+  heures saturées par ligne (test mis à jour).
+- `NetworkMap` : thème sombre, sélection au clic, identifiant de dégradé unique (plusieurs cartes par page).
+- Mise en page fluide (`.wrap`, 1 440 px maximum, marges en pourcentage), vérifiée à 375, 1 000, 1 280 et
+  1 900 px.
+
+**Corrigé**
+- Graphiques ECharts (`Chart`) : l'instance était détruite et recréée à chaque rendu du parent, d'où un
+  graphique vide jusqu'au survol sur la page d'accueil (rendu toutes les 1,5 s) ; une seule instance par
+  montage, `setOption` à chaque changement, options mémorisées, animation désactivée.
+- Débordement horizontal sur mobile (tableau des ordres : colonnes fixes).
+
 ### Étape 12 — Site vitrine, kit de mise en ligne, nettoyage avant publication
 
 **Ajouté**

@@ -1,5 +1,5 @@
 /** Graphiques ECharts (rendu SVG, modules réduits) : prix par zone, dispatch empilé, flux par ligne. */
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import * as echarts from 'echarts/core'
 import { LineChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
@@ -16,14 +16,14 @@ const FONT = 'Inter, ui-sans-serif, system-ui, sans-serif'
 const hh = (h: number) => `H${String(h).padStart(2, '0')}`
 
 export function Chart({ option, height = 300 }: { option: echarts.EChartsCoreOption; height?: number }) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLDivElement>(null); const inst = useRef<echarts.ECharts | null>(null)
   useEffect(() => {
     if (!ref.current) return
-    const inst = echarts.init(ref.current, undefined, { renderer: 'svg' })
-    inst.setOption({ textStyle: { fontFamily: FONT }, ...option }, true)
-    const ro = new ResizeObserver(() => inst.resize()); ro.observe(ref.current)
-    return () => { ro.disconnect(); inst.dispose() }
-  }, [option])
+    const chart = echarts.init(ref.current, undefined, { renderer: 'svg' }); inst.current = chart
+    const ro = new ResizeObserver(() => chart.resize()); ro.observe(ref.current)
+    return () => { ro.disconnect(); chart.dispose(); inst.current = null }
+  }, [])
+  useEffect(() => { inst.current?.setOption({ textStyle: { fontFamily: FONT }, animation: false, ...option }, true) }, [option])
   return <div ref={ref} style={{ height }} />
 }
 
@@ -36,7 +36,7 @@ const base = (unit: string) => ({
 })
 
 export function PriceChart({ prices, hours, highlight, unit }: { prices: Record<string, Record<string, number>>; hours: number[]; highlight?: string | null; unit: string }) {
-  const option: echarts.EChartsCoreOption = {
+  const option: echarts.EChartsCoreOption = useMemo(() => ({
     ...base(unit),
     xAxis: { ...base(unit).xAxis, data: hours.map(hh) },
     series: Object.keys(prices).map(z => ({
@@ -45,13 +45,13 @@ export function PriceChart({ prices, hours, highlight, unit }: { prices: Record<
       itemStyle: { color: ZONE_COLORS[z] || '#888' }, emphasis: { focus: 'series' },
       data: hours.map(h => prices[z][String(h)]),
     })),
-  }
+  }), [prices, hours, highlight, unit])
   return <Chart option={option} height={320} />
 }
 
 export function DispatchChart({ dispatch, hours, label }: { dispatch: Record<string, number[]>; hours: number[]; label: (k: string) => string }) {
   const order = ['solar', 'hydro', 'baseload', 'flat', 'custom', 'peaker', 'block']
-  const option: echarts.EChartsCoreOption = {
+  const option: echarts.EChartsCoreOption = useMemo(() => ({
     ...base('MW'),
     xAxis: { ...base('MW').xAxis, data: hours.map(hh) },
     series: [
@@ -60,13 +60,13 @@ export function DispatchChart({ dispatch, hours, label }: { dispatch: Record<str
       })),
       { name: label('demand'), type: 'line', step: 'middle', showSymbol: false, lineStyle: { color: '#1B1B19', width: 2, type: 'dashed' }, itemStyle: { color: '#1B1B19' }, data: (dispatch.demand || []).map(v => Math.round(v)) },
     ],
-  }
+  }), [dispatch, hours, label])
   return <Chart option={option} height={320} />
 }
 
 export function FlowChart({ flows, hours, ntc, corridors }: { flows: Record<string, Record<string, number>>; hours: number[]; ntc: Record<string, number>; corridors: string[] }) {
   const palette = ['#0F6E56', '#2F6DB3', '#D97B2B', '#A63D7A', '#6F5BB5', '#B5443C', '#2A9DB5', '#7FA33A']
-  const option: echarts.EChartsCoreOption = {
+  const option: echarts.EChartsCoreOption = useMemo(() => ({
     ...base('MW'),
     tooltip: { trigger: 'axis', valueFormatter: (v: any) => `${Math.round(v)} MW` },
     xAxis: { ...base('MW').xAxis, data: hours.map(hh) },
@@ -75,6 +75,6 @@ export function FlowChart({ flows, hours, ntc, corridors }: { flows: Record<stri
       lineStyle: { width: 2, color: palette[i % palette.length] }, itemStyle: { color: palette[i % palette.length] },
       data: hours.map(h => flows[c][String(h)]),
     })),
-  }
+  }), [flows, hours, ntc, corridors])
   return <Chart option={option} height={320} />
 }

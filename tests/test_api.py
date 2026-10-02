@@ -198,4 +198,5 @@ def test_fill_mode_actors_in_room():
 def test_demo_endpoint_is_cached():
     r1 = client.get(API + '/demo'); assert r1.status_code == 200
     d = r1.json(); assert d['scenario'] == 'reference_2024' and len(d['hours']) == 24 and 'NGA' in d['prices'] and d['welfare'] > 0
+    assert d['supply'] and d['demand'] and len(d['load']) == 24 and 'baseload' in d['profiles']
     r2 = client.get(API + '/demo'); assert r2.json()['welfare'] == d['welfare']

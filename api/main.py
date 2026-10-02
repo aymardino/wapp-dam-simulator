@@ -80,7 +80,7 @@ _demo_cache: dict = {}
 @app.get(API + '/demo', summary="Clearing de démonstration (scénario Référence 2024, 24 h), mis en cache pour le site")
 def demo():
     if 'result' not in _demo_cache:
-        from engine.clearing import run_clearing
+        from engine.clearing import run_clearing, PROF, LOAD_WA
         from engine.scenarios import scenario_rows
         sup, dem, ntc = scenario_rows('reference_2024')
         res = run_clearing(None, None, horizon=24, reference_rows=(sup, dem), ntc_override=ntc)
@@ -90,6 +90,10 @@ def demo():
             'ntc': s['rules']['ntc'], 'welfare': res['welfare'], 'volume': res['volume'],
             'net_pos': s['net_pos'], 'saturated_lines': sum(1 for l in s['lines'].values() if l['saturated_hours'] > 0),
             'elapsed': s['elapsed'], 'solver': s['solver'],
+            'supply': [{k: r[k] for k in ('zone', 'actor', 'segment', 'quantity', 'price', 'profile')} for r in sup],
+            'demand': [{k: r[k] for k in ('zone', 'actor', 'segment', 'quantity', 'price')} for r in dem],
+            'profiles': {k: list(v) for k, v in PROF.items()}, 'load': list(LOAD_WA),
+            'lines': {k: {'saturated_hours': v['saturated_hours']} for k, v in s['lines'].items()},
         }
     return _demo_cache['result']
 

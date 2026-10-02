@@ -27,3 +27,14 @@
 .guide strong { @apply font-semibold; }
 .guide em { @apply italic text-ink-2; }
 .kpi-value { @apply font-mono text-xl font-medium tabular-nums; }
+
+/* Site vitrine */
+.wrap { max-width: 1440px; margin-left: auto; margin-right: auto; padding-left: clamp(16px, 4vw, 56px); padding-right: clamp(16px, 4vw, 56px); }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker-track { animation: ticker 70s linear infinite; }
+.ticker-track:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+.landing h2 { @apply font-display font-normal text-4xl md:text-5xl tracking-tight leading-none; }
+.spec dt { @apply font-mono text-xs uppercase tracking-wider text-ink-3 pt-5; }
+.spec dd { @apply text-base text-ink py-5 border-b border-line; }
+@media (min-width: 768px) { .spec dt { @apply border-b border-line py-5; } }
