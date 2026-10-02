@@ -36,6 +36,18 @@ const STR: Record<string, [string, string]> = {
   error: ['Erreur', 'Error'], no_orders: ['Aucun ordre déposé dans cette salle.', 'No order submitted in this room.'],
   withdrawn: ['retirée (MIC)', 'withdrawn (MIC)'], hours_label: ['Heures simulées', 'Simulated hours'],
   trader_count: ['traders', 'traders'], back: ['Accueil', 'Home'],
+  my_rooms: ['Vos salles', 'Your rooms'], as_trainer: ['Poste du formateur', 'Trainer desk'], as_member: ['Salle de marché', 'Trading floor'],
+  forget: ['Oublier', 'Forget'], switch_desk: ['Passer au poste du formateur', 'Switch to the trainer desk'], switch_room: ['Entrer dans la salle comme trader', 'Enter the floor as a trader'],
+  hero_1: ['Chaque participant représente un pays du West African Power Pool, dépose ses offres pour le lendemain et observe le clearing.', 'Each participant represents a West African Power Pool country, submits orders for the next day and watches the clearing.'],
+  empty_supply: ['Aucune offre de vente. Ajoutez un segment prix / quantité par centrale.', 'No sell order yet. Add a price / quantity segment per plant.'],
+  empty_demand: ['Aucune offre d\u2019achat. Ajoutez la demande de votre réseau par segment.', 'No buy order yet. Add your grid demand by segment.'],
+  empty_blocks: ['Aucun bloc. Un bloc est accepté en totalité sur sa plage horaire, ou rejeté.', 'No block. A block is fully accepted over its hours, or rejected.'],
+  empty_mic: ['Aucune condition. Une condition retire vos offres si la recette est insuffisante.', 'No condition. A condition withdraws your orders if revenue falls short.'],
+  waiting_clearing: ['En attente du clearing lancé par le formateur.', 'Waiting for the trainer to run the clearing.'],
+  network: ['Réseau', 'Network'], prices_at: ['Prix à', 'Prices at'], saved_at: ['Enregistré à', 'Saved at'],
+  run_hint: ['Exécute le moteur avec les ordres déposés ; les zones sans soumission sont complétées si l\u2019option est cochée.', 'Runs the engine with submitted orders; zones without submission are filled when the option is checked.'],
+  results: ['Résultats', 'Results'], invite: ['Partagez ce code aux participants', 'Share this code with participants'],
+  order_book_hint: ['Vos ordres sont remplacés à chaque enregistrement.', 'Your orders are replaced on each save.'],
 }
 
 const Ctx = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({ lang: 'fr', setLang: () => {} })

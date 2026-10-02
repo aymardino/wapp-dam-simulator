@@ -5,6 +5,23 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 6 — Première passe de design du front et navigation entre rôles
+
+**Ajouté**
+- Système de design v1 : bandeau sombre avec le logo, le nom de la salle, le code et la phase ; panneaux blancs
+  à filet fin ; onglets pour le carnet d'ordres (vente, achat, blocs, MIC) avec compteurs ; indicateurs ;
+  états vides qui expliquent quoi faire ; corps de texte à 15 px, chiffres en police à chasse fixe.
+- Carte du réseau WAPP (`web/src/components/NetworkMap.tsx`) : 14 zones colorées par prix à l'heure choisie,
+  15 lignes dont l'épaisseur suit le flux, flèche de sens, lignes saturées en rouge, légende. Affichée dans la
+  salle de marché et au poste du formateur.
+- Accueil : liste « Vos salles » avec, pour chaque salle mémorisée, l'accès au poste du formateur et à la salle
+  de marché ; lien de bascule entre les deux dans le bandeau ; le poste du formateur propose de rejoindre sa
+  propre salle comme trader (code prérempli).
+
+**Corrigé**
+- Un formateur qui rejoignait sa salle comme trader perdait l'accès à son poste : jetons désormais conservés
+  par salle et par rôle, nom de la salle mémorisé.
+
 ### Étape 5 — API REST et squelette de la nouvelle application
 
 **Ajouté**

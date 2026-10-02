@@ -15,9 +15,24 @@ export type MyResult = { run_id: number; run_at: string; participant: Participan
 export type Reference = { zones: string[]; lines: { from: string; to: string; ntc: number }[]; profiles: Record<string, number[]>; price_bounds: number[]; rules: Record<string, string[]> }
 
 /** Un jeton par salle et par rôle : un formateur peut aussi rejoindre sa propre salle comme trader depuis le même navigateur. */
+export type Role2 = 'trainer' | 'member'
 export const session = {
-  token: (code: string, role: 'trainer' | 'member') => localStorage.getItem(`wapp:${code}:${role}:token`),
-  save: (code: string, token: string, role: string) => localStorage.setItem(`wapp:${code}:${role === 'trainer' ? 'trainer' : 'member'}:token`, token),
+  token: (code: string, role: Role2) => localStorage.getItem(`wapp:${code}:${role}:token`),
+  save: (code: string, token: string, role: string, name?: string) => {
+    localStorage.setItem(`wapp:${code}:${role === 'trainer' ? 'trainer' : 'member'}:token`, token)
+    if (name) localStorage.setItem(`wapp:${code}:name`, name)
+  },
+  rooms: (): { code: string; name: string; trainer: boolean; member: boolean }[] => {
+    const out: Record<string, { code: string; name: string; trainer: boolean; member: boolean }> = {}
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) || ''; const m = k.match(/^wapp:([A-Z0-9]{4,8}):(trainer|member):token$/)
+      if (!m) continue
+      const r = (out[m[1]] ||= { code: m[1], name: localStorage.getItem(`wapp:${m[1]}:name`) || m[1], trainer: false, member: false })
+      if (m[2] === 'trainer') r.trainer = true; else r.member = true
+    }
+    return Object.values(out)
+  },
+  forget: (code: string) => ['trainer', 'member'].forEach(r => localStorage.removeItem(`wapp:${code}:${r}:token`)),
 }
 
 async function call<T>(path: string, init: RequestInit = {}, token?: string | null): Promise<T> {
