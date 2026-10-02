@@ -399,7 +399,7 @@ export default function Landing() {
     <div className="min-h-screen landing">
       <header className="bg-brand text-white sticky top-0 z-10">
         <div className="wrap flex items-center justify-between h-16">
-          <a href="#marche" className="flex items-center gap-3"><img src="/mark.svg" alt="" className="h-9 w-9" /><span className="font-display text-2xl whitespace-nowrap hidden sm:inline">WAPP DAM Simulator</span></a>
+          <a href="#marche" className="flex items-center gap-3"><img src="/mark-light.svg" alt="" className="h-9 w-9" /><span className="font-display text-2xl whitespace-nowrap hidden sm:inline">WAPP DAM Simulator</span></a>
           <nav className="flex items-center gap-5 text-sm">
             {s.nav.map(([href, label]) => <a key={href} href={href} className="hidden lg:inline text-brand-ink hover:text-white">{label}</a>)}
             <Link to="/guide/formateur" className="hidden md:inline text-brand-ink hover:text-white">{s.nav_guides}</Link>

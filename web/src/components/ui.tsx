@@ -77,7 +77,7 @@ export function Header({ title, code, meta, phase, switchTo, extra }: { title: s
     <header className="bg-brand text-white">
       <div className="flex items-center justify-between px-6 h-16">
         <div className="flex items-center gap-4 min-w-0">
-          <Link to="/app" className="flex items-center gap-3 shrink-0"><img src="/mark.svg" alt="" className="h-9 w-9" /><span className="hidden md:inline text-brand-ink text-sm">WAPP DAM Simulator</span></Link>
+          <Link to="/app" className="flex items-center gap-3 shrink-0"><img src="/mark-light.svg" alt="" className="h-9 w-9" /><span className="hidden md:inline text-brand-ink text-sm">WAPP DAM Simulator</span></Link>
           <span className="text-brand-ink/40">|</span>
           <div className="min-w-0">
             <div className="font-semibold text-lg truncate">{title}{code && <span className="ml-3 font-mono text-base text-brand-ink/90 tracking-wider">{code}</span>}</div>
