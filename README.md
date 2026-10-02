@@ -128,6 +128,8 @@ uvicorn api.main:app --reload --port 8000      # documentation interactive sur h
 python -m engine.cli --reference --hours 19 --out resultat.json
 ```
 
+Le formateur dispose de cinq scénarios pédagogiques (référence, sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande) qui remplacent les données de référence pour la démonstration et la complétion des zones.
+
 Le nouveau front (React, dossier `web/`) se compile avec Node : `cd web && npm install && npm run build`, puis l'API le sert à la racine. Détails dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Tests

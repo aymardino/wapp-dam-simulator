@@ -50,6 +50,9 @@ Le formateur reçoit son jeton à la création de la salle ; les traders le reç
 | `GET /api/v1/rooms/{code}/results` | tous | historique des clearings |
 | `GET /api/v1/rooms/{code}/results/{id|latest}` | tous | résultat complet (prix, flux, dispatch, résumé, diagnostics) |
 | `GET /api/v1/rooms/{code}/results/{id|latest}/me` | participant | résultat du trader : ses acteurs, ses blocs, ses MIC, les prix de sa zone |
+| `GET /api/v1/rooms/{code}/results/{id}/prices.csv` | tous | prix zonaux en CSV |
+| `GET /api/v1/rooms/{code}/events` | tous | flux Server-Sent Events de l'état de la salle |
+| `GET /api/v1/scenarios` | tous | scénarios pédagogiques (référence, sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande) |
 
 Les erreurs du moteur (`ClearingError`) reviennent en 422 avec le message en clair. La documentation interactive est servie sur `/docs`.
 
@@ -63,7 +66,7 @@ Trois écrans, un seul système de design :
 
 Système de design : palette neutre (`page`, `surface`, `panel`, `ink`, `line`) et un seul accent (vert profond), deux poids de police (400, 500), chiffres en police à chasse fixe, filets fins plutôt que cartes bordées, couleur réservée au sens (position nette, statut d'un bloc). L'ensemble est défini dans `web/tailwind.config.js` et `web/src/styles.css`.
 
-Le front interroge l'API toutes les dix secondes (`/state`, puis `/results/latest` quand un nouveau clearing apparaît). Un canal temps réel (SSE ou WebSocket) remplacera ce sondage dans une version ultérieure.
+Le front s'abonne au flux d'événements de la salle (`/rooms/{code}/events`, Server-Sent Events) et recharge l'état à chaque changement ; sans ce flux il revient à un sondage toutes les dix secondes. Les graphiques (prix, dispatch, flux) sont rendus par ECharts en SVG ; la carte s'appuie sur les contours Natural Earth (domaine public) extraits à la compilation.
 
 ## Lancer l'ensemble en développement
 
@@ -75,6 +78,10 @@ cd web && npm install && npm run dev             # front sur http://localhost:51
 
 En production : `npm run build` produit `web/dist`, que l'API sert à la racine ; une seule image Docker suffit (`Dockerfile.app`).
 
+## Garde-fous pour l'exposition publique
+
+Purge des salles sans activité depuis `WAPP_ROOM_TTL_DAYS` jours (30), au plus `WAPP_MAX_ROOMS_PER_IP_PER_DAY` créations par adresse et par jour (20), origines autorisées par `WAPP_CORS_ORIGINS`.
+
 ## Ce qui reste
 
-Carte des zones avec prix et flux, graphiques (ECharts), temps réel, expiration des salles, export Excel, scénarios préenregistrés, tests de bout en bout du front.
+Tests de bout en bout du front, chargement différé d'ECharts pour alléger le premier affichage, bac à sable pédagogique à deux pays, site vitrine, licence et nom public.
