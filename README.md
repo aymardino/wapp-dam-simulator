@@ -106,7 +106,7 @@ Two-page overview in [docs/TECHNICAL_SHEET.md](docs/TECHNICAL_SHEET.md) (Word an
 
 ## Authors
 
-Kodjovi Plakoo and Enrico Patanè (Mines Paris-PSL, MS OSE 2025), with Lucien Kouakou, Mouhamadou Sow and Wissem Hmila for the first phases of the project. Supervision: El Hadji Tamsir Diop (SENELEC) and Adrien Atayi (EPEX SPOT).
+Kodjovi Plakoo and Enrico Patanè (Mines Paris-PSL, MS OSE 2025). The simulator grew out of a group project of the Advanced Master OSE that also included Lucien Kouakou, Mouhamadou Sow and Wissem Hmila. Supervision: El Hadji Tamsir Diop (SENELEC) and Adrien Atayi (EPEX SPOT).
 
 ## Licence
 

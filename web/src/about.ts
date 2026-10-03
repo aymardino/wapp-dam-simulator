@@ -18,7 +18,7 @@ export const AUTHORS: Person[] = [
   { name: 'Enrico Patanè', role: ['Co-auteur du simulateur', 'Co-author of the simulator'], org: 'Mines Paris – PSL · MS OSE 2025', photo: file('team', 'enrico-patane'), linkedin: 'https://www.linkedin.com/in/enricopatane98/' },
 ]
 export const CONTRIBUTORS: Person[] = ['Lucien Kouakou', 'Mouhamadou Sow', 'Wissem Hmila'].map(name => ({
-  name, role: ['Formulation et premières phases', 'Formulation and first phases'] as [string, string], org: 'Mines Paris – PSL · MS OSE 2025',
+  name, role: ['Groupe projet', 'Project group'] as [string, string], org: 'Mines Paris – PSL · MS OSE 2025',
   photo: file('team', name.toLowerCase().replace(/\s+/g, '-')),
 }))
 export const SUPERVISORS: Person[] = [

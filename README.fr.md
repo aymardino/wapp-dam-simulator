@@ -154,7 +154,7 @@ Soixante-six tests, dont ceux qui reproduisent les valeurs du Livrable 2 (welfar
 
 ## Auteurs
 
-Kodjovi Plakoo et Enrico Patanè (Mines Paris-PSL, MS OSE 2025), avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila (livrables 1 et 2). Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT).
+Kodjovi Plakoo et Enrico Patanè (Mines Paris-PSL, MS OSE 2025). Le simulateur est né d'un projet de groupe du Mastère Spécialisé OSE auquel appartenaient aussi Lucien Kouakou, Mouhamadou Sow et Wissem Hmila. Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT).
 
 ## Licence
 
