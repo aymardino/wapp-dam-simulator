@@ -223,26 +223,26 @@ def validate_inputs(supply_rows, demand_rows, block_rows):
         for r in rows:
             who = f"{r.get('actor', '?')} ({r.get('zone', '?')})"
             if r.get('zone') not in ZONES:
-                raise ClearingError(f"Offre de {kind} {who} : zone inconnue.")
+                raise ClearingError(f"{kind.capitalize()} order {who}: unknown zone.")
             q, p = float(r.get('quantity', 0)), float(r.get('price', 0))
             if q < 0:
                 raise ClearingError(f"{kind.capitalize()} order {who}: negative quantity.")
             if not (P_MIN <= p <= P_MAX):
-                raise ClearingError(f"Offre de {kind} {who} : prix {p:g} hors des bornes [{P_MIN}, {P_MAX}].")
+                raise ClearingError(f"{kind.capitalize()} order {who}: price {p:g} outside the bounds [{P_MIN}, {P_MAX}].")
     for r in block_rows:
         who = f"{r.get('name', '?')} ({r.get('zone', '?')})"
         if r.get('zone') not in ZONES:
-            raise ClearingError(f"Bloc {who} : zone inconnue.")
+            raise ClearingError(f"Block {who}: unknown zone.")
         if r.get('side') not in ('S', 'D'):
-            raise ClearingError(f"Bloc {who} : sens attendu 'S' (vente) ou 'D' (achat).")
+            raise ClearingError(f"Block {who}: side must be 'S' (sell) or 'D' (buy).")
         q, p = float(r.get('quantity', 0)), float(r.get('price', 0))
         if q < 0:
             raise ClearingError(f"Block {who}: negative quantity.")
         if not (P_MIN <= p <= P_MAX):
-            raise ClearingError(f"Bloc {who} : prix {p:g} hors des bornes [{P_MIN}, {P_MAX}].")
+            raise ClearingError(f"Block {who}: price {p:g} outside the bounds [{P_MIN}, {P_MAX}].")
         h0, h1 = int(r.get('h_start', 0)), int(r.get('h_end', 23))
         if not (0 <= h0 <= 23 and 0 <= h1 <= 23 and h0 <= h1):
-            raise ClearingError(f"Bloc {who} : plage horaire invalide ({h0}-{h1}).")
+            raise ClearingError(f"Block {who}: invalid hour range ({h0}-{h1}).")
 
 
 # ── Segment and block construction ────────────────────────────────
@@ -316,7 +316,7 @@ def _get_solver():
                 return s, name
         except Exception:
             pass
-    raise ClearingError("Aucun solveur disponible. Installez HiGHS : pip install highspy")
+    raise ClearingError("No solver available. Install HiGHS: pip install highspy")
 
 
 _OK = (_TC.optimal, _TC.globallyOptimal, _TC.locallyOptimal)
@@ -338,7 +338,7 @@ def _try_solve(solver, model):
 def _solve(solver, model, label):
     ok, status = _try_solve(solver, model)
     if not ok:
-        raise ClearingError(f"{label} : pas de solution optimale ({status}).")
+        raise ClearingError(f"{label}: no optimal solution ({status}).")
     return status
 
 
@@ -901,7 +901,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     alpha_active = all(l in ntc for l in ALPHA_LINES)
 
     solver, solver_name = _get_solver()
-    logger.info("Solveur %s | %d segments vente, %d segments achat, %d blocs, %d MIC, %d heures",
+    logger.info("Solver %s | %d sell segments, %d buy segments, %d blocks, %d MIC, %d hours",
                 solver_name, len(seg_s_all), len(seg_d), len(blocks_all), len(mics), len(hours))
 
     # ── MIC loop around the P1 → P1bis → P2 sequence ──────────────

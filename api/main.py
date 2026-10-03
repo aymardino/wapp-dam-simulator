@@ -180,7 +180,7 @@ def update_ntc(body: S.NtcUpdate, room: Room = Depends(get_room), _: Participant
     valid = {service.line_key(u, v) for u, v, _c in LINES}
     bad = [k for k in body.values if k not in valid]
     if bad:
-        raise HTTPException(status_code=422, detail=f"Lignes inconnues : {', '.join(bad)}")
+        raise HTTPException(status_code=422, detail=f"Unknown lines: {', '.join(bad)}")
     if any(v < 0 for v in body.values.values()):
         raise HTTPException(status_code=422, detail="An NTC cannot be negative")
     overrides = room.ntc_overrides
