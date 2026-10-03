@@ -460,9 +460,9 @@ function Avatar({ p, size }: { p: Person; size: number }) {
 function PartnerMark({ p }: { p: Partner }) {
   const [loaded, setLoaded] = useState(false)
   return (
-    <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center justify-center min-h-20 text-center text-ink-2 hover:text-ink">
+    <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center justify-center min-h-24 px-4 md:px-8 text-center text-ink-2 hover:text-ink">
       {!loaded && <span className="font-display text-xl leading-tight">{p.name}</span>}
-      {p.logo && <img src={p.logo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'max-h-14 md:max-h-20 max-w-full object-contain' : 'hidden'} />}
+      {p.logo && <img src={p.logo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'max-h-14 md:max-h-24 max-w-full object-contain' : 'hidden'} />}
     </a>
   )
 }
@@ -525,10 +525,14 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
 function Partners({ s }: { s: Strings }) {
   return (
     <section id="cadre" className="bg-surface border-t border-line">
-      <div className="wrap py-12">
-        <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3">{s.p_title}</div>
-        <div className="grid grid-cols-3 gap-x-6 md:gap-x-16 items-center mt-6 max-w-3xl">{PARTNERS.map(p => <PartnerMark key={p.name} p={p} />)}</div>
-        <p className="text-sm text-ink-3 mt-8 max-w-4xl leading-relaxed">{s.p_note}</p>
+      <div className="wrap py-14 grid lg:grid-cols-12 gap-x-16 gap-y-8 items-center">
+        <div className="lg:col-span-4 min-w-0">
+          <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3">{s.p_title}</div>
+          <p className="text-sm text-ink-3 mt-4 leading-relaxed">{s.p_note}</p>
+        </div>
+        <div className="lg:col-span-8 min-w-0 grid grid-cols-3 items-center divide-x divide-line">
+          {PARTNERS.map(p => <PartnerMark key={p.name} p={p} />)}
+        </div>
       </div>
     </section>
   )
