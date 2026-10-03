@@ -1,0 +1,19 @@
+/* Print stylesheet for the Markdown exports (technical sheet, working paper) rendered by Chrome to PDF. */
+@page { size: A4; margin: 18mm 17mm; }
+html { font-size: 10.5pt; }
+body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1b1b19; line-height: 1.42; max-width: none; margin: 0; }
+h1 { font-size: 20pt; margin: 0 0 6pt; letter-spacing: -0.01em; }
+h2 { font-size: 13pt; margin: 16pt 0 6pt; padding-bottom: 3pt; border-bottom: 1px solid #c8c6be; }
+h3 { font-size: 11pt; margin: 12pt 0 4pt; }
+p { margin: 0 0 7pt; }
+em { color: #5c5b56; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9.3pt; page-break-inside: auto; }
+th, td { border: 1px solid #d9d7cf; padding: 3.5pt 5pt; vertical-align: top; text-align: left; }
+th { background: #f1f1ec; font-weight: 600; }
+tr { page-break-inside: avoid; }
+code { font-family: Menlo, Consolas, monospace; font-size: 8.8pt; background: #f4f4f0; padding: 0 2pt; }
+pre { background: #f4f4f0; border: 1px solid #e2e0d9; padding: 6pt 8pt; font-size: 8.6pt; white-space: pre-wrap; }
+a { color: #0f6e56; text-decoration: none; }
+ul, ol { margin: 0 0 7pt; padding-left: 18pt; }
+li { margin-bottom: 2pt; }
+hr { border: 0; border-top: 1px solid #c8c6be; margin: 12pt 0; }

@@ -13,6 +13,7 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 - Explorer: white section background, wider text column and narrower chart, fixed 0–500 $/MWh price axis (the market's regulatory bounds) so that every zone is drawn in the same frame.
 - Explorer: the end of each curve (no more supply at any price, no more demand at any price) is drawn dashed and labelled with the offered capacity and the total demand.
 - Technical sheet (`docs/TECHNICAL_SHEET.md`, French version `docs/fr/FICHE_TECHNIQUE.md`): identity, scope, rules, inputs and outputs, data, architecture, performance, verification, deployment, limitations, roadmap, citation; linked from the landing page and the README.
+- `scripts/export_docs.sh`: exports the technical sheet (and the working paper when present) from Markdown to Word, PDF (Chrome headless printing with `scripts/doc.css`) and LaTeX with pandoc; outputs go to an ignored folder.
 - The git history was rewritten before publication (3 October 2026) to remove a former default administrator password and two images that were not free of rights.
 
 ### Step 13 — Landing page, second version: own identity, zone explorer, fixes
