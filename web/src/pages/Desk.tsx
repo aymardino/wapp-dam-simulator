@@ -6,7 +6,7 @@ import { PriceChart, DispatchChart, FlowChart } from '../components/Charts'
 import PriceHeatmap from '../components/PriceHeatmap'
 import { useRoomEvents } from '../hooks'
 import { useT } from '../i18n'
-import { Badge, Button, Empty, ErrorBox, Field, Header, Kpi, Panel, Tabs } from '../components/ui'
+import { Badge, Button, Empty, ErrorBox, Field, Header, Kpi, Panel, Tabs, Tour } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
 
 const CORRIDORS = ['NGA->BEN', 'NGA->NER', 'GHA->CIV', 'GHA->BFA', 'CIV->BFA', 'CIV->MLI', 'CIV->LBR', 'SEN->MLI']
@@ -60,7 +60,8 @@ export default function Desk() {
   return (
     <div className="min-h-screen">
       <Header title={`${t('desk')} · ${room?.name || code}`} code={code} phase={room?.phase} meta={`${t('invite')} · ${t('delivery')} ${room?.settings.market_date || ''}`}
-        switchTo={{ label: memberToken ? t('switch_room') : t('switch_room'), to: memberToken ? `/room/${code}` : `/?code=${code}` }} />
+        switchTo={{ label: memberToken ? t('switch_room') : t('switch_room'), to: memberToken ? `/room/${code}` : `/app?code=${code}` }} />
+      <Tour id="desk" steps={[{ target: 'room-code', title: t('tour_desk_1_t'), text: t('tour_desk_1_x') }, { target: 'desk-settings', title: t('tour_desk_2_t'), text: t('tour_desk_2_x') }, { target: 'desk-run', title: t('tour_desk_3_t'), text: t('tour_desk_3_x') }]} />
       <main className="p-5 max-w-[1500px] mx-auto">
         <ErrorBox message={err} />
         <div className="grid md:grid-cols-4 gap-3 mb-5">
@@ -72,7 +73,7 @@ export default function Desk() {
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="flex flex-col gap-5">
-            <Panel title={t('run_clearing')}>
+            <Panel title={t('run_clearing')} tour="desk-run">
               <p className="text-ink-2 mb-3">{t('run_hint')}</p>
               {s && <div className="mb-3 max-w-md"><Field label={t('fill_mode')} hint={t(`fill_${s.fill_mode || 'actors'}_hint`)}>
                 <select value={s.fill_mode || 'actors'} onChange={e => patchSettings({ fill_mode: e.target.value as any })}>
@@ -94,7 +95,7 @@ export default function Desk() {
                 </tbody></table>}
             </Panel>
 
-            {s && <Panel title={t('settings')} right={<span className="text-sm text-ink-3">{savedAt ? `${t('saved_at')} ${savedAt}` : t('autosave')}</span>}>
+            {s && <Panel tour="desk-settings" title={t('settings')} right={<span className="text-sm text-ink-3">{savedAt ? `${t('saved_at')} ${savedAt}` : t('autosave')}</span>}>
               <div className="grid grid-cols-2 gap-4">
                 <Field label={t('horizon')}>
                   <select value={s.hours.length === 24 ? '24' : 'one'} onChange={e => patchSettings({ hours: e.target.value === '24' ? Array.from({ length: 24 }, (_, i) => i) : [19] })}>
@@ -137,7 +138,7 @@ export default function Desk() {
                 {view === 'map' && <div className="flex items-center justify-between mb-2"><h3>{t('network')} · {t('prices_at')} {`H${String(hour).padStart(2, '0')}`}</h3>
                   <select value={hour} onChange={e => setHour(+e.target.value)} className="h-8 font-mono">{(run.result.summary.hours as number[]).map(h => <option key={h} value={h}>{`H${String(h).padStart(2, '0')}`}</option>)}</select></div>}
                 <div className="rounded-lg bg-panel p-2 mb-4">
-                  {view === 'map' && <NetworkMap prices={run.result.prices} flows={run.result.flows} ntc={room?.ntc || {}} hour={hour} unit={unit} />}
+                  {view === 'map' && <NetworkMap lang={lang} prices={run.result.prices} flows={run.result.flows} ntc={room?.ntc || {}} hour={hour} unit={unit} />}
                   {view === 'prices' && <><PriceHeatmap prices={run.result.prices} hours={run.result.summary.hours} unit={unit} lang={lang} /><div className="mt-6"><PriceChart prices={run.result.prices} hours={run.result.summary.hours} unit={unit} /></div></>}
                   {view === 'dispatch' && <DispatchChart dispatch={run.result.dispatch} hours={run.result.summary.hours} label={k => t('p_' + k)} />}
                   {view === 'flows' && <FlowChart flows={run.result.flows} hours={run.result.summary.hours} ntc={room?.ntc || {}} corridors={CORRIDORS} />}

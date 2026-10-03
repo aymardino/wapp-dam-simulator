@@ -1,4 +1,16 @@
 {
-  "team": [],
-  "partners": []
+  "team": [
+    "adrien-atayi.jpg",
+    "enrico-patane.jpg",
+    "kodjovi-plakoo.jpg",
+    "lucien-kouakou.jpg",
+    "mouhamadou-sow.jpg",
+    "tamsir-diop.jpg",
+    "wissem-hmila.jpg"
+  ],
+  "partners": [
+    "mines-paris-psl.png",
+    "ms-ose.png",
+    "senelec.png"
+  ]
 }

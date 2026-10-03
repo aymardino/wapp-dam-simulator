@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, session, type Reference } from '../api'
 import { useT, useLang } from '../i18n'
-import { Button, Field, ErrorBox, LangToggle, Panel, Badge } from '../components/ui'
+import { Button, Field, ErrorBox, LangToggle, Panel, Badge, Tour } from '../components/ui'
 
 export default function Hall() {
   const t = useT(); const { lang } = useLang(); const nav = useNavigate(); const [params] = useSearchParams()
@@ -30,6 +30,7 @@ export default function Hall() {
   return (
     <div className="min-h-screen">
       <header className="bg-brand text-white"><div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16"><Link to="/" className="flex items-center gap-3"><img src="/mark-light.svg" alt="" className="h-9 w-9" /><span className="font-semibold text-lg whitespace-nowrap hidden sm:inline">WAPP DAM Simulator</span></Link><div className="flex items-center gap-5 text-sm whitespace-nowrap"><Link to="/" className="text-brand-ink hover:text-white">{t('about')}</Link><Link to="/guide/formateur" className="hidden md:inline text-brand-ink hover:text-white">{t('guide_trainer')}</Link><Link to="/guide/trader" className="hidden md:inline text-brand-ink hover:text-white">{t('guide_trader')}</Link><LangToggle dark /></div></div></header>
+      <Tour id="hall" steps={[{ target: 'hall-create', title: t('tour_hall_1_t'), text: t('tour_hall_1_x') }, { target: 'hall-join', title: t('tour_hall_2_t'), text: t('tour_hall_2_x') }]} />
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="max-w-3xl mb-10">
           <h1 className="text-3xl">{t('app_title')}</h1>
@@ -37,14 +38,14 @@ export default function Hall() {
         </div>
         <ErrorBox message={err} />
         <div className="grid lg:grid-cols-2 gap-6">
-          <Panel title={t('create_room')}>
+          <Panel title={t('create_room')} tour="hall-create">
             <form onSubmit={create} className="flex flex-col gap-4">
               <Field label={t('room_name')}><input value={roomName} onChange={e => setRoomName(e.target.value)} required /></Field>
               <Field label={t('trainer_name')}><input value={trainer} onChange={e => setTrainer(e.target.value)} placeholder="SENELEC" /></Field>
               <div><Button primary type="submit">{t('create')}</Button></div>
             </form>
           </Panel>
-          <Panel title={t('join_room')}>
+          <Panel title={t('join_room')} tour="hall-join">
             <form onSubmit={join} className="flex flex-col gap-4">
               <Field label={t('room_code')}><input value={code} onChange={e => setCode(e.target.value)} placeholder="ABC123" required className="font-mono uppercase tracking-widest" /></Field>
               <Field label={t('your_name')} hint={t('name_hint')}><input value={name} onChange={e => setName(e.target.value)} placeholder="SENELEC" required list="orgs" /><datalist id="orgs">{(role === 'trader' ? (ref?.organisations?.[zone] || []) : []).map(o => <option key={o} value={o} />)}</datalist></Field>

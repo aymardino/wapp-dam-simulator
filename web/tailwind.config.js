@@ -16,7 +16,7 @@ export default {
         warn: { DEFAULT: '#854F0B', soft: '#FAEEDA' },
         amber: '#F2B134', mint: '#8FD3B5', coral: '#FF6B4A', deep: '#07241C',
       },
-      fontFamily: { display: ['"Instrument Serif"', 'Georgia', 'serif'], sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'] },
+      fontFamily: { display: ['"Instrument Serif"', 'Georgia', 'serif'], hand: ['Caveat', '"Bradley Hand"', 'cursive'], sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'] },
       fontSize: { xs: ['12px', '16px'], sm: ['13.5px', '18px'], base: ['15px', '22px'], lg: ['17px', '24px'], xl: ['22px', '28px'], '2xl': ['28px', '34px'], '3xl': ['34px', '40px'], '4xl': ['44px', '48px'], '5xl': ['58px', '60px'], '6xl': ['76px', '76px'] },
       borderRadius: { DEFAULT: '8px', lg: '12px' },
       boxShadow: { panel: '0 1px 2px rgba(27,27,25,0.04)' },

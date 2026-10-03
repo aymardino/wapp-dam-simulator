@@ -22,152 +22,164 @@ const money = (x: number) => `${nf(x / 1e6, 2)} M USD`
 
 const L = {
   fr: {
-    nav: [['#explorer', 'Explorer'], ['#moteur', 'Le moteur'], ['#fiche', 'Fiche technique'], ['#ouvert', 'Code'], ['#apropos', 'À propos']] as [string, string][],
-    nav_guides: 'Guides', nav_app: 'Ouvrir le simulateur',
-    kicker: 'Implémentation ouverte de référence · couplage de marché zonal',
-    title_1: 'Le marché day-ahead du West African Power Pool,', title_2: 'expliqué par le calcul.',
-    lead: 'Les traders déposent leurs offres pour le lendemain ; le moteur fixe les volumes, les prix et les flux entre quatorze pays. Chaque règle est écrite, testée, et vous pouvez la vérifier ici même.',
-    cta_app: 'Ouvrir le simulateur', cta_explore: 'Explorer une zone',
-    computed: (t: number) => `Scénario de démonstration (données 2024 reconstituées), calculé par le moteur à l’ouverture de cette page en ${t.toFixed(2)} s`,
-    map_hint: 'Prix simulés en $/MWh (pas des prix observés) et flux sur les quinze interconnexions ; les lignes en corail sont saturées. Les barres donnent le prix moyen de chaque heure : cliquez pour figer l’heure, cliquez un pays pour lire sa position.',
-    welfare: 'welfare', volume: 'volume', saturated: 'lignes saturées',
-    loading: 'Calcul du cas de référence…', demo_err: 'Le serveur de démonstration ne répond pas.',
-    ex_kicker: 'Explorer', ex_title: 'Pourquoi ce prix, dans cette zone, à cette heure',
-    ex_lead: 'Les ordres du scénario de démonstration (centrales et demande de la zone, données 2024 reconstituées) forment une courbe d’offre et une courbe de demande. Le prix zonal ne se lit pas à leur croisement : le réseau déplace l’équilibre par les importations et les exportations.',
-    ex_cap: 'plafond réglementaire 500', ex_sup_end: 'capacité offerte :', ex_dem_end: 'demande totale :', ex_supply: 'Offre (centrales)', ex_demand: 'Demande (charge)', ex_price: 'prix zonal', ex_export: 'export', ex_import: 'import',
-    ex_seg_title: 'Ordres de la zone à l’heure choisie', ex_accepted: 'retenu', ex_marginal: 'marginal', ex_rejected: 'hors marché',
-    ex_prices_title: 'Les quatorze prix sur vingt-quatre heures', ex_prices_hint: 'Prix simulés sur le scénario de démonstration, pas des prix observés. Une ligne par zone, une colonne par heure : les zones de même couleur partagent le même prix, un trait sépare les groupes isolés par une ligne saturée. Cliquez une zone pour l’explorer.',
-    m_kicker: 'Le moteur', m_title: 'Trois questions, trois programmes, dans cet ordre',
-    m_lead: 'Un couplage de marché répond chaque jour à trois questions. Le moteur les prend l’une après l’autre, comme un algorithme de bourse, mais à livre ouvert : les règles sont dans le code et dans la documentation.',
+    nav: [['#explorer', 'Comprendre'], ['#moteur', 'Le calcul'], ['#fiche', 'Fiche'], ['#ouvert', 'Code'], ['#apropos', 'À propos']] as [string, string][],
+    nav_guides: 'Guides', nav_app: 'Essayer le simulateur',
+    kicker: 'Simulateur ouvert · marché de l’électricité d’Afrique de l’Ouest',
+    title: ['Comment quatorze pays fixeront, chaque jour,', 'le prix de leur électricité.'],
+    lead: 'L’Afrique de l’Ouest doit ouvrir en 2027 un marché commun de l’électricité. Ce simulateur refait le calcul sous vos yeux : qui vend, qui achète, à quel prix.',
+    cta_app: 'Essayer le simulateur', cta_explore: 'Comprendre un prix',
+    computed: (t: number) => `Calculé à l’instant par le moteur, en ${t.toFixed(2)} s, sur des données 2024 reconstituées.`,
+    hand_map: 'cliquez un pays, changez d’heure',
+    map_hint: 'Un cercle, un pays et son prix en $/MWh. En corail, les lignes pleines : de chaque côté, le prix n’est plus le même. Prix simulés, pas observés.',
+    welfare: 'valeur créée', volume: 'énergie échangée', saturated: 'lignes pleines',
+    loading: 'Le moteur calcule…', demo_err: 'Le serveur de démonstration ne répond pas.',
+    ex_kicker: 'Comprendre un prix', ex_title: ['Pourquoi ce prix,', 'ici, à cette heure ?'],
+    ex_lead: 'On range les centrales d’un pays de la moins chère à la plus chère : c’est la courbe verte. La demande est en rouge. Le prix se fixe à leur rencontre, corrigé de ce que les lignes laissent entrer ou sortir.',
+    hand_ex: 'choisissez un pays, puis une heure',
+    ex_cap: 'prix plafond : 500', ex_sup_end: 'production possible :', ex_dem_end: 'demande :', ex_supply: 'Offre des centrales', ex_demand: 'Demande', ex_price: 'prix du pays', ex_export: 'export', ex_import: 'import',
+    ex_seg_title: 'Offres', ex_accepted: 'retenu', ex_marginal: 'fixe le prix', ex_rejected: 'non retenu',
+    ex_prices_title: 'Les prix des quatorze pays, heure par heure', ex_prices_hint: 'Même couleur, même prix : ces pays forment un seul marché. Un trait sépare ceux qu’une ligne pleine isole. Cliquez un pays pour l’explorer.',
+    m_kicker: 'Le calcul', m_title: ['Trois questions,', 'dans l’ordre.'],
+    m_lead: 'Chaque jour, le marché répond à trois questions. Le moteur fait pareil, à livre ouvert.',
     steps: [
-      ['P1', 'optimisation linéaire, entière avec des blocs', 'Qui est servi ?', 'Maximiser le welfare, la valeur créée par les échanges, sous l’équilibre de chaque zone, les capacités des lignes et la contrainte d’interdépendance CIV / GHA / BFA.'],
-      ['P1bis', 'optimisation linéaire', 'Combien ?', 'Parmi les solutions de welfare égal, retenir celle qui échange le plus de volume, exactement, sans tolérance numérique.'],
-      ['P2', 'optimisation linéaire', 'À quel prix ?', 'Parmi tous les prix compatibles avec l’équilibre (ordres acceptés, rejetés, lignes saturées ou libres), choisir le milieu de l’intervalle admissible.'],
+      ['1', 'P1 · optimisation', 'Qui est servi ?', 'On retient les échanges qui créent le plus de valeur, sans dépasser la capacité des lignes.'],
+      ['2', 'P1bis · optimisation', 'Combien ?', 'À valeur égale, on échange le plus d’énergie possible.'],
+      ['3', 'P2 · optimisation', 'À quel prix ?', 'Parmi tous les prix compatibles avec ces échanges, on retient celui du milieu.'],
     ] as [string, string, string, string][],
-    m_interval: ['prix admissible le plus bas', 'retenu', 'le plus haut'], m_note: 'Les blocs paradoxalement acceptés sont rejetés et le calcul repris ; les ordres au même prix sont servis au prorata ; une condition de revenu minimum non satisfaite retire les offres de l’acteur et relance le calcul.',
-    f_kicker: 'Fiche technique', f_title: 'Ce qui est dans la boîte', f_lead: 'Un moteur de clearing complet, des salles de formation et des données de référence sourcées, dans un seul dépôt.',
+    m_interval: ['prix le plus bas possible', 'retenu', 'le plus haut'], m_note: 'Et les cas particuliers ? Une offre « tout ou rien » acceptée à perte est retirée, puis on recalcule. Deux offres au même prix se partagent la quantité. Tout est écrit dans les règles de marché.',
+    f_kicker: 'Sous le capot', f_title: ['Ce qu’il y a', 'dans la boîte.'], f_lead: 'Un moteur de calcul, des salles de formation et des données, dans un seul dépôt.',
     spec: [
-      ['Ordres', 'Segments prix–quantité avec profil horaire (solaire, hydraulique, base, pointe, constant)'],
-      ['Blocs', 'Tout ou rien (fill-or-kill), liés (enfant ⇒ parent), exclusifs (au plus un par groupe) ; blocs paradoxalement acceptés rejetés itérativement, paradoxalement rejetés signalés'],
-      ['Conditions', 'Revenu minimum (terme fixe + terme variable × volume) : retrait des offres et relance'],
-      ['Départage', 'Welfare, puis volume exact, puis prix au milieu de l’intervalle admissible ; ex æquo au prorata des quantités'],
-      ['Réseau', 'Quatorze zones, quinze interconnexions, capacités d’échange (NTC) éditables par salle, flux signés, rentes de congestion'],
-      ['Données', 'Scénario 2024 reconstitué à partir de sources publiques (parc, demande, capacités d’échange estimées) et quatre variantes pédagogiques : sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande'],
-      ['Vérifications', 'Bornes de prix, flux dans les capacités, équilibre horaire, règles de blocs, identité du welfare ; 65 tests, campagne de cas aléatoires'],
-      ['Interfaces', 'Salles de formation (web, temps réel), API REST documentée, ligne de commande, exports CSV et JSON, français et anglais'],
-      ['Solveurs', 'Solveur libre HiGHS inclus ; Gurobi utilisé s’il est installé ; modèles Pyomo'],
-      ['Licence', 'Apache 2.0 pour le code, CC BY 4.0 pour les données et la documentation'],
+      ['Offres', 'Prix et quantité par tranche, avec un profil horaire : solaire, hydraulique, base, pointe'],
+      ['Blocs', 'Offres « tout ou rien », liées entre elles ou exclusives'],
+      ['Revenu minimum', 'Un vendeur peut exiger une recette minimale ; sinon ses offres sont retirées'],
+      ['Départage', 'Valeur créée, puis énergie échangée, puis prix du milieu ; à prix égal, partage au prorata'],
+      ['Réseau', '14 pays, 15 lignes, capacités modifiables par salle'],
+      ['Données', 'Scénario 2024 reconstitué de sources publiques, et quatre variantes : sécheresse, ligne coupée, gaz cher, forte demande'],
+      ['Vérifications', '67 tests automatiques et une campagne de cas aléatoires'],
+      ['Accès', 'Salles en ligne, API documentée, ligne de commande, exports CSV et JSON, français et anglais'],
+      ['Solveur', 'HiGHS, libre et inclus ; Gurobi s’il est installé'],
+      ['Licence', 'Apache 2.0 pour le code, CC BY 4.0 pour les données'],
     ] as [string, string][],
-    w_title: 'Trois usages',
+    w_title: ['Trois façons', 'de s’en servir.'],
     w: [
-      ['Former', 'Une séance de marché en trois manches : chaque participant représente un pays, dépose ses offres, découvre son résultat et les prix des voisins. Guide du formateur inclus.'],
-      ['Étudier', 'Un cas-test public, des règles écrites et un moteur ouvert pour travailler le couplage zonal, les blocs et l’indétermination des prix.'],
-      ['Comparer', 'Rejouer un cas, confronter les résultats à ceux d’une autre plateforme, discuter des règles de départage avant le lancement du marché.'],
+      ['Former', 'Une séance en trois manches. Chacun représente un pays, dépose ses offres, découvre son résultat.'],
+      ['Étudier', 'Des règles écrites, un cas-test public, un moteur ouvert : de quoi travailler sur les prix et les blocs.'],
+      ['Comparer', 'Rejouez un cas et confrontez le résultat à celui d’une autre plateforme, avant le lancement du marché.'],
     ] as [string, string][],
     guide_trainer: 'Guide du formateur', guide_trader: 'Guide du trader',
-    o_kicker: 'Ouvert et vérifiable', o_title: 'Rien à croire sur parole',
-    o_lead: 'Le code est public sous licence Apache 2.0, les données et la documentation sous CC BY 4.0. Les valeurs du cas de référence sont fixées par des tests, et une campagne de cas aléatoires contrôle les propriétés du clearing à chaque modification.',
+    o_kicker: 'Code ouvert', o_title: ['Rien à croire', 'sur parole.'],
+    o_lead: 'Le code, les règles et les données sont publics. Trois commandes suffisent pour tout refaire chez vous.',
     o_links: ['Fiche technique', 'Règles de marché', 'Données de référence', 'Architecture', 'Déploiement', 'Dépôt GitHub'],
-    o_note: 'Trois commandes suffisent pour rejouer sur votre poste le cas de test qui fixe les valeurs de non-régression du moteur : welfare 22 317 910 USD, volume 167 900 MWh.',
-    d_title: 'Avertissements',
-    d1: 'Simulateur pédagogique indépendant. Ce projet n’est pas affilié au West African Power Pool, à son Centre d’Information et de Coordination ni à aucun fournisseur de plateforme de marché. « WAPP » et « West African Power Pool » appartiennent au WAPP.',
-    d2: 'Les données du scénario de démonstration (parc, demande, capacités d’échange) sont reconstituées à partir de sources publiques et de valeurs estimées. Les prix affichés sont des résultats de simulation sur ces données, pas des prix observés : le marché day-ahead du WAPP n’a pas encore démarré. Elles servent à la formation et à la recherche, pas à l’exploitation.',
-    a_kicker: 'À propos', a_title: 'Qui est derrière ce simulateur',
+    o_note: 'Vous devez retrouver exactement ces chiffres : valeur créée 22 317 910, énergie échangée 167 900 MWh.',
+    d_title: 'À savoir',
+    d1: 'Ce simulateur est un outil pédagogique indépendant. Il n’est affilié ni au West African Power Pool, ni à son centre de coordination, ni à un fournisseur de plateforme. « WAPP » et « West African Power Pool » appartiennent au WAPP.',
+    d2: 'Les prix affichés sont simulés sur des données reconstituées de sources publiques. Ce ne sont pas des prix observés : le marché n’a pas encore démarré. À utiliser pour former et étudier, pas pour exploiter un réseau.',
+    a_kicker: 'À propos', a_title: ['Qui est derrière', 'ce simulateur ?'],
     a_p: [
-      'Nous sommes deux étudiants du Mastère Spécialisé OSE de Mines Paris – PSL, promotion 2025. Le sujet nous a été proposé par SENELEC dans le cadre du projet externe du Mastère : reconstruire, pour le comprendre, le calcul qui fixera les prix du futur marché day-ahead du WAPP.',
-      'Avec trois camarades de promotion, nous avons d’abord écrit la formulation mathématique, puis livré un premier simulateur au printemps 2026. Nous avons continué ensuite : règles de prix complètes, ordres bloc, données 2024 reconstituées, application en ligne.',
-      'Nous publions le tout en accès libre parce qu’un marché se comprend mieux quand on peut refaire le calcul soi-même. Formateur, opérateur, régulateur ou chercheur : si vous voulez l’utiliser, le critiquer ou le comparer à une autre plateforme, écrivez-nous.',
+      'Nous sommes deux étudiants du Mastère Spécialisé OSE de Mines Paris – PSL. SENELEC nous a proposé un sujet : refaire, pour le comprendre, le calcul qui fixera les prix du futur marché ouest-africain.',
+      'Avec trois camarades, nous avons écrit les équations, puis livré un premier simulateur au printemps 2026. Nous avons continué depuis : des règles de prix complètes, des données 2024, une application en ligne.',
+      'Tout est en accès libre, parce qu’un marché se comprend mieux quand on peut refaire le calcul soi-même. Vous formez, vous exploitez, vous régulez ou vous cherchez ? Écrivez-nous.',
     ],
+    sign: 'Kodjovi & Enrico',
     a_authors: 'Auteurs', a_contrib: 'Ont contribué aux premières phases', a_sup: 'Encadrement',
     p_title: 'Cadre du projet',
-    p_note: 'Projet mené au sein du Mastère Spécialisé OSE du Centre de Mathématiques Appliquées de Mines Paris – PSL, avec SENELEC. Ces institutions ont accueilli ou encadré le projet ; elles ne sont pas responsables du contenu du site. Simulateur indépendant, non affilié au WAPP.',
+    p_note: 'Projet mené au Mastère Spécialisé OSE (Centre de Mathématiques Appliquées, Mines Paris – PSL), avec SENELEC. Ces institutions ont accueilli ou encadré le projet ; elles ne répondent pas du contenu du site.',
     v_kicker: 'En vidéo', v_title: 'Le simulateur en deux minutes',
     a_paper: 'Note technique à paraître.', a_paper_link: 'Lire la note technique', contact: 'Questions et contributions',
     footer: 'Simulateur pédagogique indépendant, non affilié au WAPP.',
-    sim_badge: 'Simulation sur données 2024 reconstituées, pas des prix observés',
+    sim_badge: 'Simulation sur des données 2024 reconstituées',
     src_title: 'D’où viennent ces chiffres ?',
     src_items: [
-      ['Sourcé', 'Capacités installées et principales centrales de chaque pays, capacités contractuelles de plusieurs lignes, prix du gaz au Nigeria et au Ghana : rapports publics cités, ligne par ligne, dans la documentation.'],
-      ['Estimé', 'Pointes de demande de plusieurs pays, capacités d’échange des lignes sans valeur publiée (corridor Ghana–Togo–Bénin, boucle OMVG, Mali), profils horaires de charge et de production.'],
-      ['Hypothèse', 'Prix des offres de vente : coût variable typique de chaque technologie (hydraulique 12 à 36 $/MWh, fioul lourd 125 à 210), prix d’achat par tranche. Ce ne sont pas les offres réelles des acteurs.'],
+      ['Sourcé', 'Les centrales et les capacités de chaque pays, plusieurs lignes, le prix du gaz au Nigeria et au Ghana : rapports publics, cités un par un.'],
+      ['Estimé', 'La demande de pointe de plusieurs pays, la capacité des lignes sans chiffre publié, les profils horaires.'],
+      ['Supposé', 'Le prix des offres : nous prenons le coût typique de chaque technologie. Ce ne sont pas les offres réelles des acteurs.'],
     ] as [string, string][],
-    src_note: 'Le marché day-ahead du WAPP n’a pas encore démarré : il n’existe pas de prix observés auxquels comparer ces résultats. Les niveaux de prix dépendent de nos hypothèses ; la structure (qui importe, quelles lignes saturent) dépend surtout des capacités d’échange, à valider avec le centre de coordination du WAPP.',
-    src_link: 'Sources et hypothèses, ligne par ligne',
+    src_note: 'Le marché n’a pas encore démarré : il n’existe pas de prix réels à comparer. Le niveau des prix dépend de nos hypothèses ; qui importe et quelles lignes saturent dépend surtout des capacités des lignes, à valider avec le WAPP.',
+    src_link: 'Toutes les sources, ligne par ligne',
   },
   en: {
-    nav: [['#explorer', 'Explore'], ['#moteur', 'The engine'], ['#fiche', 'Spec sheet'], ['#ouvert', 'Code'], ['#apropos', 'About']] as [string, string][],
-    nav_guides: 'Guides', nav_app: 'Open the simulator',
-    kicker: 'Open reference implementation · zonal market coupling',
-    title_1: 'The West African Power Pool day-ahead market,', title_2: 'explained by computation.',
-    lead: 'Traders submit orders for the next day; the engine sets volumes, prices and flows across fourteen countries. Every rule is written down, tested, and you can check it right here.',
-    cta_app: 'Open the simulator', cta_explore: 'Explore a zone',
-    computed: (t: number) => `Demonstration scenario (reconstructed 2024 data), computed by the engine when this page opened in ${t.toFixed(2)} s`,
-    map_hint: 'Simulated prices in $/MWh (not observed prices) and flows on the fifteen interconnections; coral lines are saturated. The bars give the mean price of each hour: click to freeze the hour, click a country to read its position.',
-    welfare: 'welfare', volume: 'volume', saturated: 'saturated lines',
-    loading: 'Computing the reference case…', demo_err: 'The demonstration server is not responding.',
-    ex_kicker: 'Explore', ex_title: 'Why this price, in this zone, at this hour',
-    ex_lead: 'The demonstration scenario’s orders (the zone’s plants and demand, reconstructed 2024 data) form a supply curve and a demand curve. The zonal price is not read at their crossing: the network shifts the balance through imports and exports.',
-    ex_cap: 'regulatory cap 500', ex_sup_end: 'offered capacity:', ex_dem_end: 'total demand:', ex_supply: 'Supply (plants)', ex_demand: 'Demand (load)', ex_price: 'zonal price', ex_export: 'export', ex_import: 'import',
-    ex_seg_title: 'Orders of the zone at the chosen hour', ex_accepted: 'accepted', ex_marginal: 'marginal', ex_rejected: 'out of market',
-    ex_prices_title: 'Fourteen prices over twenty-four hours', ex_prices_hint: 'Simulated prices on the demonstration scenario, not observed prices. One row per zone, one column per hour: zones sharing a colour share a price, a rule separates groups isolated by a saturated line. Click a zone to explore it.',
-    m_kicker: 'The engine', m_title: 'Three questions, three programs, in that order',
-    m_lead: 'A market coupling answers three questions every day. The engine takes them one after the other, like an exchange algorithm, but with the book open: the rules are in the code and in the documentation.',
+    nav: [['#explorer', 'Understand'], ['#moteur', 'The maths'], ['#fiche', 'Spec sheet'], ['#ouvert', 'Code'], ['#apropos', 'About']] as [string, string][],
+    nav_guides: 'Guides', nav_app: 'Try the simulator',
+    kicker: 'Open simulator · West African electricity market',
+    title: ['How fourteen countries will set, every day,', 'the price of their electricity.'],
+    lead: 'West Africa is due to open a common electricity market in 2027. This simulator redoes the computation in front of you: who sells, who buys, at what price.',
+    cta_app: 'Try the simulator', cta_explore: 'Understand a price',
+    computed: (t: number) => `Computed just now by the engine, in ${t.toFixed(2)} s, on reconstructed 2024 data.`,
+    hand_map: 'click a country, change the hour',
+    map_hint: 'One circle, one country and its price in $/MWh. In coral, the full lines: the price is no longer the same on either side. Simulated prices, not observed ones.',
+    welfare: 'value created', volume: 'energy traded', saturated: 'full lines',
+    loading: 'The engine is computing…', demo_err: 'The demonstration server is not responding.',
+    ex_kicker: 'Understand a price', ex_title: ['Why this price,', 'here, at this hour?'],
+    ex_lead: 'Line up a country’s plants from cheapest to most expensive: that is the green curve. Demand is in red. The price settles where they meet, adjusted for what the lines let in or out.',
+    hand_ex: 'pick a country, then an hour',
+    ex_cap: 'price cap: 500', ex_sup_end: 'possible output:', ex_dem_end: 'demand:', ex_supply: 'Supply from plants', ex_demand: 'Demand', ex_price: 'country price', ex_export: 'export', ex_import: 'import',
+    ex_seg_title: 'Orders', ex_accepted: 'accepted', ex_marginal: 'sets the price', ex_rejected: 'not accepted',
+    ex_prices_title: 'The prices of the fourteen countries, hour by hour', ex_prices_hint: 'Same colour, same price: those countries form a single market. A rule separates the ones a full line isolates. Click a country to explore it.',
+    m_kicker: 'The maths', m_title: ['Three questions,', 'in order.'],
+    m_lead: 'Every day, the market answers three questions. The engine does the same, with the book open.',
     steps: [
-      ['P1', 'linear optimisation, integer with blocks', 'Who is served?', 'Maximise welfare, the value created by trades, under each zone’s balance, line capacities and the CIV / GHA / BFA interdependence constraint.'],
-      ['P1bis', 'linear optimisation', 'How much?', 'Among equal-welfare solutions, keep the one that trades the most volume, exactly, with no numerical tolerance.'],
-      ['P2', 'linear optimisation', 'At what price?', 'Among all prices consistent with equilibrium (accepted and rejected orders, saturated or free lines), pick the midpoint of the admissible interval.'],
+      ['1', 'P1 · optimisation', 'Who is served?', 'Keep the trades that create the most value, without exceeding line capacities.'],
+      ['2', 'P1bis · optimisation', 'How much?', 'At equal value, trade as much energy as possible.'],
+      ['3', 'P2 · optimisation', 'At what price?', 'Among all prices consistent with those trades, take the one in the middle.'],
     ] as [string, string, string, string][],
-    m_interval: ['lowest admissible price', 'chosen', 'highest'], m_note: 'Paradoxically accepted blocks are rejected and the run repeated; equal-price orders are served pro rata; an unmet minimum income condition withdraws the actor’s orders and reruns the clearing.',
-    f_kicker: 'Spec sheet', f_title: 'What is in the box', f_lead: 'A complete clearing engine, training rooms and sourced reference data, in a single repository.',
+    m_interval: ['lowest possible price', 'chosen', 'highest'], m_note: 'And the special cases? An “all or nothing” order accepted at a loss is removed, then we recompute. Two orders at the same price share the quantity. Everything is written in the market rules.',
+    f_kicker: 'Under the hood', f_title: ['What is', 'in the box.'], f_lead: 'A clearing engine, training rooms and data, in a single repository.',
     spec: [
-      ['Orders', 'Price–quantity segments with hourly profiles (solar, hydro, baseload, peaking, flat)'],
-      ['Blocks', 'All-or-nothing (fill-or-kill), linked (child ⇒ parent), exclusive (at most one per group); paradoxically accepted blocks rejected iteratively, paradoxically rejected ones reported'],
-      ['Conditions', 'Minimum income (fixed term + variable term × volume): orders withdrawn and clearing rerun'],
-      ['Tie-break', 'Welfare, then exact volume, then the midpoint of the admissible price interval; equal prices shared pro rata'],
-      ['Network', 'Fourteen zones, fifteen interconnections, exchange capacities (NTC) editable per room, signed flows, congestion rents'],
-      ['Data', '2024 scenario rebuilt from public sources (fleet, demand, estimated exchange capacities) and four teaching variants: hydro drought, Nigeria–Benin line out, expensive gas, high demand'],
-      ['Checks', 'Price bounds, flows within capacities, hourly balance, block rules, welfare identity; 65 tests, random-case campaign'],
-      ['Interfaces', 'Training rooms (web, live), documented REST API, command line, CSV and JSON exports, French and English'],
-      ['Solvers', 'Open-source HiGHS solver included; Gurobi used when installed; Pyomo models'],
-      ['Licence', 'Apache 2.0 for the code, CC BY 4.0 for data and documentation'],
+      ['Orders', 'Price and quantity by tranche, with an hourly profile: solar, hydro, baseload, peaking'],
+      ['Blocks', '“All or nothing” orders, linked to one another or exclusive'],
+      ['Minimum income', 'A seller can require a minimum income; otherwise its orders are withdrawn'],
+      ['Tie-break', 'Value created, then energy traded, then the middle price; equal prices shared pro rata'],
+      ['Network', '14 countries, 15 lines, capacities editable per room'],
+      ['Data', '2024 scenario rebuilt from public sources, and four variants: drought, line out, expensive gas, high demand'],
+      ['Checks', '67 automated tests and a campaign of random cases'],
+      ['Access', 'Online rooms, documented API, command line, CSV and JSON exports, French and English'],
+      ['Solver', 'HiGHS, open source and included; Gurobi when installed'],
+      ['Licence', 'Apache 2.0 for the code, CC BY 4.0 for the data'],
     ] as [string, string][],
-    w_title: 'Three uses',
+    w_title: ['Three ways', 'to use it.'],
     w: [
-      ['Train', 'A three-round market session: each participant represents a country, submits orders, discovers their result and the neighbours’ prices. Trainer guide included.'],
-      ['Study', 'A public test case, written rules and an open engine to work on zonal coupling, blocks and price indeterminacy.'],
-      ['Compare', 'Replay a case, confront results with those of another platform, discuss tie-break rules before the market goes live.'],
+      ['Train', 'A three-round session. Everyone represents a country, submits orders and discovers their result.'],
+      ['Study', 'Written rules, a public test case, an open engine: material to work on prices and blocks.'],
+      ['Compare', 'Replay a case and confront the result with another platform’s, before the market opens.'],
     ] as [string, string][],
     guide_trainer: 'Trainer guide', guide_trader: 'Trader guide',
-    o_kicker: 'Open and verifiable', o_title: 'Nothing to take on faith',
-    o_lead: 'The code is public under the Apache 2.0 licence, data and documentation under CC BY 4.0. Reference-case values are pinned by tests, and a campaign of random cases checks clearing properties on every change.',
+    o_kicker: 'Open code', o_title: ['Nothing to take', 'on faith.'],
+    o_lead: 'The code, the rules and the data are public. Three commands are enough to redo everything at home.',
     o_links: ['Technical sheet', 'Market rules', 'Reference data', 'Architecture', 'Deployment', 'GitHub repository'],
-    o_note: 'Three commands replay on your machine the test case that pins the engine’s regression values: welfare 22,317,910 USD, volume 167,900 MWh.',
-    d_title: 'Disclaimers',
-    d1: 'Independent educational simulator. This project is not affiliated with the West African Power Pool, its Information and Coordination Centre, or any market platform vendor. “WAPP” and “West African Power Pool” belong to the WAPP.',
-    d2: 'The demonstration scenario’s data (fleet, demand, exchange capacities) are rebuilt from public sources and estimated values. The prices shown are simulation results on these data, not observed prices: the WAPP day-ahead market has not started yet. They are meant for training and research, not for operations.',
-    a_kicker: 'About', a_title: 'Who is behind this simulator',
+    o_note: 'You should get exactly these figures: value created 22,317,910, energy traded 167,900 MWh.',
+    d_title: 'Good to know',
+    d1: 'This simulator is an independent educational tool. It is not affiliated with the West African Power Pool, its coordination centre or any platform vendor. “WAPP” and “West African Power Pool” belong to the WAPP.',
+    d2: 'The prices shown are simulated on data rebuilt from public sources. They are not observed prices: the market has not started yet. Use it to train and to study, not to operate a network.',
+    a_kicker: 'About', a_title: ['Who is behind', 'this simulator?'],
     a_p: [
-      'We are two students of the Advanced Master OSE at Mines Paris – PSL, class of 2025. The subject was proposed by SENELEC as the Master’s external project: rebuild, in order to understand it, the computation that will set the prices of the future WAPP day-ahead market.',
-      'With three classmates, we first wrote the mathematical formulation, then delivered a first simulator in the spring of 2026. We kept going afterwards: complete pricing rules, block orders, reconstructed 2024 data, an online application.',
-      'We publish everything in open access because a market is better understood when you can redo the computation yourself. Trainer, operator, regulator or researcher: if you want to use it, criticise it or compare it with another platform, write to us.',
+      'We are two students of the Advanced Master OSE at Mines Paris – PSL. SENELEC gave us a subject: redo, in order to understand it, the computation that will set the prices of the future West African market.',
+      'With three classmates, we wrote the equations, then delivered a first simulator in the spring of 2026. We have kept going since: complete pricing rules, 2024 data, an online application.',
+      'Everything is open access, because a market is better understood when you can redo the computation yourself. You train, operate, regulate or research? Write to us.',
     ],
+    sign: 'Kodjovi & Enrico',
     a_authors: 'Authors', a_contrib: 'Contributed to the first phases', a_sup: 'Supervision',
     p_title: 'Project framework',
-    p_note: 'Project carried out within the Advanced Master OSE of the Centre for Applied Mathematics of Mines Paris – PSL, with SENELEC. These institutions hosted or supervised the project; they are not responsible for the content of this site. Independent simulator, not affiliated with the WAPP.',
+    p_note: 'Project carried out at the Advanced Master OSE (Centre for Applied Mathematics, Mines Paris – PSL), with SENELEC. These institutions hosted or supervised the project; they are not responsible for the content of this site.',
     v_kicker: 'On video', v_title: 'The simulator in two minutes',
     a_paper: 'Technical note forthcoming.', a_paper_link: 'Read the technical note', contact: 'Questions and contributions',
     footer: 'Independent educational simulator, not affiliated with the WAPP.',
-    sim_badge: 'Simulation on reconstructed 2024 data, not observed prices',
+    sim_badge: 'Simulation on reconstructed 2024 data',
     src_title: 'Where do these figures come from?',
     src_items: [
-      ['Sourced', 'Installed capacities and main plants of each country, contractual capacities of several lines, gas prices in Nigeria and Ghana: public reports cited, line by line, in the documentation.'],
-      ['Estimated', 'Peak demand of several countries, exchange capacities of lines with no published value (Ghana–Togo–Benin corridor, OMVG loop, Mali), hourly load and generation profiles.'],
-      ['Assumption', 'Sell order prices: typical variable cost of each technology (hydro 12 to 36 $/MWh, heavy fuel oil 125 to 210), buy prices by tranche. These are not the actors’ real bids.'],
+      ['Sourced', 'The plants and capacities of each country, several lines, the gas price in Nigeria and Ghana: public reports, cited one by one.'],
+      ['Estimated', 'The peak demand of several countries, the capacity of lines with no published figure, the hourly profiles.'],
+      ['Assumed', 'The order prices: we take the typical cost of each technology. These are not the actors’ real bids.'],
     ] as [string, string][],
-    src_note: 'The WAPP day-ahead market has not started yet: there are no observed prices to compare these results with. Price levels depend on our assumptions; the structure (who imports, which lines saturate) depends mostly on exchange capacities, to be validated with the WAPP coordination centre.',
-    src_link: 'Sources and assumptions, line by line',
+    src_note: 'The market has not started yet: there are no real prices to compare with. Price levels depend on our assumptions; who imports and which lines fill up depends mostly on line capacities, to be validated with the WAPP.',
+    src_link: 'All the sources, line by line',
   },
 }
+/** French typography: non-breaking spaces before ? ! : ; » and after «, so that punctuation never wraps alone. */
+const frTypo = (x: unknown): unknown =>
+  typeof x === 'string' ? x.replace(/ ([?!:;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0')
+    : Array.isArray(x) ? x.map(frTypo)
+    : typeof x === 'function' ? (...a: unknown[]) => frTypo((x as (...b: unknown[]) => unknown)(...a)) : x
+L.fr = Object.fromEntries(Object.entries(L.fr).map(([k, v]) => [k, k === 'nav' ? v : frTypo(v)])) as typeof L.fr
 type Strings = typeof L.fr
 
 /* ── Explorer computations ────────────────────────────────────────────── */
@@ -191,14 +203,23 @@ function zoneCurves(demo: Demo, zone: string, h: number): Curves {
 }
 
 function sentence(c: Curves, zone: string, hour: number, lang: Lang) {
-  const name = ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]; const p = Math.round(c.price); const n = Math.round(c.net)
-  const flows = c.lines.map(l => `${zone}–${l.other} ${l.flow >= 0 ? '→' : '←'} ${nf(Math.abs(Math.round(l.flow)))}/${nf(l.cap)} MW${l.sat ? (lang === 'fr' ? ' (saturée)' : ' (saturated)') : ''}`).join(' · ')
-  if (lang === 'fr') {
-    const pos = n > 1 ? `exporte ${nf(n)} MW` : n < -1 ? `importe ${nf(-n)} MW` : 'est à l’équilibre avec ses voisins'
-    return `À ${hh(hour)}, le prix de la zone ${name} est de ${p} $/MWh. À ce prix, les centrales disposées à produire offrent ${nf(c.supAt)} MW et la demande acceptable est de ${nf(c.demAt)} MW : la zone ${pos}. ${flows ? `Lignes : ${flows}.` : ''}`
+  const fr = lang === 'fr'; const name = ZONE_NAMES[zone][fr ? 0 : 1]; const p = Math.round(c.price); const n = Math.round(c.net)
+  const plant = c.sup.find(r => Math.abs(r.price - c.price) <= 0.5); const load = c.dem.find(r => Math.abs(r.price - c.price) <= 0.5)
+  const full = c.lines.filter(l => l.sat).map(l => `${zone}–${l.other}`)
+  if (fr) {
+    const trade = n > 1 ? `Le pays exporte ${nf(n)} MW.` : n < -1 ? `Le pays importe ${nf(-n)} MW.` : 'Le pays n’échange presque rien avec ses voisins.'
+    const why = plant ? `La dernière centrale appelée, ${plant.actor}, demande ${p} $/MWh : c’est elle qui fixe le prix.`
+      : load ? 'Ici, c’est la demande qui fixe le prix : la dernière tranche servie paie exactement ce montant.'
+      : 'Ce prix vient d’un pays voisin : aucune ligne pleine ne les sépare, ils forment un seul marché.'
+    const lines = full.length ? ` ${full.length > 1 ? 'Lignes pleines' : 'Ligne pleine'} : ${full.join(', ')}.` : ''
+    return frTypo(`${name}, ${hour} h : ${p} $/MWh. ${trade} ${why}${lines}`) as string
   }
-  const pos = n > 1 ? `exports ${nf(n)} MW` : n < -1 ? `imports ${nf(-n)} MW` : 'is balanced with its neighbours'
-  return `At ${hh(hour)}, the price of zone ${name} is ${p} $/MWh. At that price, plants willing to run offer ${nf(c.supAt)} MW and acceptable demand is ${nf(c.demAt)} MW: the zone ${pos}. ${flows ? `Lines: ${flows}.` : ''}`
+  const trade = n > 1 ? `The country exports ${nf(n)} MW.` : n < -1 ? `The country imports ${nf(-n)} MW.` : 'The country trades almost nothing with its neighbours.'
+  const why = plant ? `The last plant called, ${plant.actor}, asks ${p} $/MWh: it sets the price.`
+    : load ? 'Here demand sets the price: the last tranche served pays exactly that amount.'
+    : 'This price comes from a neighbouring country: no full line separates them, they form a single market.'
+  const lines = full.length ? ` Full line${full.length > 1 ? 's' : ''}: ${full.join(', ')}.` : ''
+  return `${name}, ${String(hour).padStart(2, '0')}:00: ${p} $/MWh. ${trade} ${why}${lines}`
 }
 
 const niceCeil = (v: number) => { const pow = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1)))); const f = v / pow; const m = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => f <= k) ?? 10; return m * pow }
@@ -258,8 +279,8 @@ function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Stri
       <div className="wrap grid lg:grid-cols-12 gap-x-12 gap-y-10 pt-14 pb-16 items-center">
         <div className="lg:col-span-5 min-w-0">
           <Kicker light>{s.kicker}</Kicker>
-          <h1 className="font-display font-normal text-4xl md:text-6xl leading-[0.98] tracking-tight mt-5">{s.title_1} <em className="text-amber">{s.title_2}</em></h1>
-          <p className="text-lg text-brand-ink mt-6 max-w-xl">{s.lead}</p>
+          <h1 className="font-display font-normal text-4xl md:text-6xl leading-[0.98] tracking-tight mt-5">{s.title[0]} <em className="text-amber">{s.title[1]}</em></h1>
+          <p className="font-display text-xl md:text-2xl leading-snug text-white/90 mt-6 max-w-xl">{s.lead}</p>
           <div className="flex flex-wrap gap-3 mt-8">
             <Link to="/app" className="h-11 px-5 inline-flex items-center rounded bg-white text-brand font-medium hover:bg-brand-ink whitespace-nowrap">{s.cta_app}</Link>
             <a href="#explorer" className="h-11 px-5 inline-flex items-center rounded border border-white/30 text-white hover:bg-white/10 whitespace-nowrap">{s.cta_explore}</a>
@@ -269,7 +290,8 @@ function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Stri
         <div className="lg:col-span-7 min-w-0">
           {demo ? (
             <>
-              <NetworkMap theme="dark" prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
+              <div className="font-hand text-2xl text-amber text-right pr-3 -mb-1 hidden sm:block" style={{ transform: 'rotate(-1.5deg)' }}>{s.hand_map} ↓</div>
+              <NetworkMap theme="dark" lang={lang} prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
               <div className="mt-4 flex items-center gap-4">
                 <button onClick={() => setPlay(p => !p)} className="font-mono text-sm text-amber w-8 shrink-0" aria-label={play ? 'pause' : 'play'}>{play ? '❚❚' : '▶'}</button>
                 <div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={h => { setPlay(false); setHour(h) }} dark /></div>
@@ -357,7 +379,7 @@ function SegmentTable({ c, s }: { c: Curves; s: Strings }) {
       {[['S', s.ex_supply, c.sup], ['D', s.ex_demand, c.dem]].map(([side, title, rows]) => (
         <div key={side as string} className="min-w-0">
           <div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-1">{title as string}</div>
-          <table className="text-sm table-fixed w-full"><colgroup><col className="w-4" /><col /><col className="w-12" /><col className="w-14" /><col className="w-20" /></colgroup><thead><tr><th /><th>{s.ex_seg_title.split(' ')[0]}</th><th className="text-right">MW</th><th className="text-right">$/MWh</th><th /></tr></thead>
+          <table className="text-sm table-fixed w-full"><colgroup><col className="w-4" /><col /><col className="w-12" /><col className="w-14" /><col className="w-20" /></colgroup><thead><tr><th /><th>{s.ex_seg_title}</th><th className="text-right">MW</th><th className="text-right">$/MWh</th><th /></tr></thead>
             <tbody>{(rows as Seg[]).slice(0, 9).map((r, i) => <Row key={i} r={r} side={side as 'S' | 'D'} />)}</tbody></table>
           {(rows as Seg[]).length > 9 && <div className="text-xs text-ink-3 mt-1">… {(rows as Seg[]).length - 9}</div>}
         </div>
@@ -375,9 +397,10 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
         <div className="grid lg:grid-cols-12 gap-x-16 gap-y-10">
           <div className="lg:col-span-5 min-w-0">
             <Kicker>{s.ex_kicker}</Kicker>
-            <h2 className="mt-4">{s.ex_title}</h2>
-            <p className="text-ink-2 text-lg mt-5">{s.ex_lead}</p>
-            <div className="mt-8 flex flex-wrap gap-1.5">
+            <h2 className="mt-4">{s.ex_title[0]} <em className="text-accent">{s.ex_title[1]}</em></h2>
+            <p className="font-display text-xl leading-snug text-ink mt-5">{s.ex_lead}</p>
+            <div className="font-hand text-2xl text-accent mt-7 -mb-1" style={{ transform: 'rotate(-1deg)', transformOrigin: 'left' }}>{s.hand_ex} ↓</div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {ZONES.map(z => <button key={z} onClick={() => setZone(z)} className={`h-8 px-2.5 rounded font-mono text-sm border transition-colors ${z === zone ? 'bg-brand text-white border-brand' : 'bg-surface text-ink-2 border-line hover:border-line-strong'}`}>{z}</button>)}
             </div>
             <div className="mt-6 flex items-center gap-4"><div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={setHour} /></div><div className="font-mono text-xl w-14 text-right">{hh(hour)}</div></div>
@@ -437,9 +460,9 @@ function Avatar({ p, size }: { p: Person; size: number }) {
 function PartnerMark({ p }: { p: Partner }) {
   const [loaded, setLoaded] = useState(false)
   return (
-    <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center justify-center min-h-16 px-3 text-center text-ink-2 hover:text-ink">
+    <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center justify-center min-h-20 text-center text-ink-2 hover:text-ink">
       {!loaded && <span className="font-display text-xl leading-tight">{p.name}</span>}
-      {p.logo && <img src={p.logo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'max-h-12 max-w-full object-contain' : 'hidden'} />}
+      {p.logo && <img src={p.logo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'max-h-14 md:max-h-20 max-w-full object-contain' : 'hidden'} />}
     </a>
   )
 }
@@ -456,10 +479,11 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
       <div className="wrap py-20 grid lg:grid-cols-12 gap-x-16 gap-y-12">
         <div className="lg:col-span-6 min-w-0">
           <Kicker>{s.a_kicker}</Kicker>
-          <h2 className="mt-4">{s.a_title}</h2>
-          <p className="text-ink text-lg leading-relaxed mt-6">{s.a_p[0]}</p>
+          <h2 className="mt-4">{s.a_title[0]} <em className="text-accent">{s.a_title[1]}</em></h2>
+          <p className="font-display text-xl md:text-2xl leading-snug text-ink mt-6">{s.a_p[0]}</p>
           <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[1]}</p>
           <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[2]}</p>
+          <div className="font-hand text-4xl text-accent mt-5" style={{ transform: 'rotate(-2deg)', transformOrigin: 'left' }}>{s.sign}</div>
           <div className="mt-6 flex flex-wrap gap-6 text-base">
             {LINKS.contact && <a href={`mailto:${LINKS.contact}`} className="text-accent font-medium">{LINKS.contact}</a>}
             <a href={LINKS.issues} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.contact} →</a>
@@ -502,7 +526,7 @@ function Partners({ s }: { s: Strings }) {
     <section id="cadre" className="bg-surface border-t border-line">
       <div className="wrap py-12">
         <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3">{s.p_title}</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 items-center mt-6">{PARTNERS.map(p => <PartnerMark key={p.name} p={p} />)}</div>
+        <div className="grid grid-cols-3 gap-x-6 md:gap-x-16 items-center mt-6 max-w-3xl">{PARTNERS.map(p => <PartnerMark key={p.name} p={p} />)}</div>
         <p className="text-sm text-ink-3 mt-8 max-w-4xl leading-relaxed">{s.p_note}</p>
       </div>
     </section>
@@ -554,13 +578,13 @@ export default function Landing() {
 
         <section id="moteur" className="bg-brand text-white" style={{ backgroundImage: 'url(/patterns/mesh-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
-            <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><h2 className="mt-4 text-white">{s.m_title}</h2><p className="text-brand-ink text-lg mt-5">{s.m_lead}</p></div>
+            <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><h2 className="mt-4 text-white">{s.m_title[0]} <em className="text-amber">{s.m_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.m_lead}</p></div>
             <div className="lg:col-span-8 min-w-0">
               <ol className="grid md:grid-cols-3 gap-px bg-white/10 border border-white/10 rounded-lg overflow-hidden">
                 {s.steps.map(([code, kind, q, txt], i) => (
                   <li key={code} className="bg-brand p-6">
-                    <div className="flex items-baseline justify-between font-mono text-xs gap-3"><span className="text-amber">{code}</span><span className="text-mint/70 text-right">{kind}</span></div>
-                    <div className="font-display text-3xl mt-4 leading-tight">{q}</div>
+                    <div className="flex items-start justify-between gap-3"><span className="font-display text-6xl leading-[0.8] text-amber">{code}</span><span className="font-mono text-xs text-mint/70 text-right">{kind}</span></div>
+                    <div className="font-display text-3xl mt-5 leading-tight">{q}</div>
                     <p className="text-brand-ink mt-3 leading-relaxed text-sm">{txt}</p>
                     {i === 2 && <IntervalSketch s={s} />}
                   </li>
@@ -573,7 +597,7 @@ export default function Landing() {
 
         <section id="fiche" className="bg-surface border-b border-line">
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
-            <div className="lg:col-span-4"><Kicker>{s.f_kicker}</Kicker><h2 className="mt-4">{s.f_title}</h2><p className="text-ink-2 text-lg mt-5">{s.f_lead}</p></div>
+            <div className="lg:col-span-4"><Kicker>{s.f_kicker}</Kicker><h2 className="mt-4">{s.f_title[0]} <em className="text-accent">{s.f_title[1]}</em></h2><p className="font-display text-xl leading-snug text-ink mt-5">{s.f_lead}</p></div>
             <dl className="lg:col-span-8 spec md:grid md:grid-cols-[180px_1fr] md:gap-x-8 border-t border-line">
               {s.spec.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
             </dl>
@@ -582,7 +606,7 @@ export default function Landing() {
 
         <section id="publics" style={{ backgroundImage: 'url(/patterns/topo-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20">
-            <h2>{s.w_title}</h2>
+            <h2>{s.w_title[0]} <em className="text-accent">{s.w_title[1]}</em></h2>
             <ol className="grid md:grid-cols-3 gap-x-12 gap-y-10 mt-10">
               {s.w.map(([h, p], i) => <li key={h} className="border-t border-line pt-5"><div className="font-mono text-xs text-accent">0{i + 1}</div><div className="font-display text-3xl mt-2">{h}</div><p className="text-ink-2 mt-3 leading-relaxed">{p}</p></li>)}
             </ol>
@@ -596,7 +620,7 @@ export default function Landing() {
         <section id="ouvert" className="bg-deep text-white" style={{ backgroundImage: 'url(/patterns/topo-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
             <div className="lg:col-span-5">
-              <Kicker light>{s.o_kicker}</Kicker><h2 className="mt-4 text-white">{s.o_title}</h2><p className="text-brand-ink text-lg mt-5">{s.o_lead}</p>
+              <Kicker light>{s.o_kicker}</Kicker><h2 className="mt-4 text-white">{s.o_title[0]} <em className="text-amber">{s.o_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.o_lead}</p>
               <ul className="mt-8">{s.o_links.map((label, i) => <li key={label}>{ext(docLinks[i], <><span>{label}</span><span className="font-mono text-mint/70">→</span></>, 'flex items-center justify-between border-b border-white/10 py-3 text-white hover:text-amber')}</li>)}</ul>
             </div>
             <div className="lg:col-span-7 min-w-0">

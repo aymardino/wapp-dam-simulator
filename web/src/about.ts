@@ -14,8 +14,8 @@ const file = (kind: 'team' | 'partners', stem: string) => {
 }
 
 export const AUTHORS: Person[] = [
-  { name: 'Kodjovi Plakoo', role: ['Co-auteur du simulateur', 'Co-author of the simulator'], org: 'Mines Paris – PSL · MS OSE 2025', photo: file('team', 'kodjovi-plakoo') },
-  { name: 'Enrico Patanè', role: ['Co-auteur du simulateur', 'Co-author of the simulator'], org: 'Mines Paris – PSL · MS OSE 2025', photo: file('team', 'enrico-patane') },
+  { name: 'Kodjovi Plakoo', role: ['Co-auteur du simulateur', 'Co-author of the simulator'], org: 'Mines Paris – PSL · MS OSE 2025', photo: file('team', 'kodjovi-plakoo'), linkedin: 'https://www.linkedin.com/in/kodjovi-aymard-plakoo-a95a74183' },
+  { name: 'Enrico Patanè', role: ['Co-auteur du simulateur', 'Co-author of the simulator'], org: 'Mines Paris – PSL · MS OSE 2025', photo: file('team', 'enrico-patane'), linkedin: 'https://www.linkedin.com/in/enricopatane98/' },
 ]
 export const CONTRIBUTORS: Person[] = ['Lucien Kouakou', 'Mouhamadou Sow', 'Wissem Hmila'].map(name => ({
   name, role: ['Formulation et premières phases', 'Formulation and first phases'] as [string, string], org: 'Mines Paris – PSL · MS OSE 2025',
@@ -27,7 +27,6 @@ export const SUPERVISORS: Person[] = [
 ]
 export const PARTNERS: Partner[] = [
   { name: 'Mines Paris – PSL', logo: file('partners', 'mines-paris-psl'), url: 'https://www.minesparis.psl.eu' },
-  { name: 'Centre de Mathématiques Appliquées', logo: file('partners', 'cma'), url: 'https://www.cma.mines-paristech.fr' },
   { name: 'Mastère Spécialisé OSE', logo: file('partners', 'ms-ose'), url: 'https://www.cma.mines-paristech.fr/formation/the-ose-specialised-master/' },
   { name: 'SENELEC', logo: file('partners', 'senelec'), url: 'https://www.senelec.sn' },
 ]

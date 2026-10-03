@@ -28,7 +28,7 @@ function color(p: number, lo: number, hi: number, pal: typeof PALETTE.light) {
   return { fill: `rgb(${c[0]},${c[1]},${c[2]})`, dark: x > 0.45 }
 }
 
-export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, theme = 'light', onSelect }: { prices: Record<string, Record<string, number>>; flows: Record<string, Record<string, number>>; ntc: Record<string, number>; hour: number; selected?: string | null; unit: string; theme?: Theme; onSelect?: (zone: string) => void }) {
+export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, theme = 'light', onSelect, lang = 'fr' }: { prices: Record<string, Record<string, number>>; flows: Record<string, Record<string, number>>; ntc: Record<string, number>; hour: number; selected?: string | null; unit: string; theme?: Theme; onSelect?: (zone: string) => void; lang?: 'fr' | 'en' }) {
   const pal = PALETTE[theme]; const gid = useId()
   const { paths, pos, anchor } = useMemo(() => {
     const projection = geoMercator().fitExtent([[6, 6], [W - 6, H - 30]], EXTENT)
@@ -48,7 +48,7 @@ export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, t
   const lo = Math.min(...vals), hi = Math.max(...vals)
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img">
-      <title>Réseau WAPP, prix et flux à {`H${h.padStart(2, '0')}`}</title>
+      <title>{lang === 'fr' ? 'Réseau WAPP, prix et flux à' : 'WAPP network, prices and flows at'} {`H${h.padStart(2, '0')}`}</title>
       <rect x="0" y="0" width={W} height={H} fill={pal.sea} />
       {paths.map(p => <path key={p.id} d={p.d} fill={p.member ? pal.member : pal.other} stroke={pal.border} strokeWidth={p.member ? 0.8 : 0.5} strokeOpacity={p.member ? pal.borderOp[0] : pal.borderOp[1]} />)}
       {LINES.map(([u, v]) => {
@@ -88,8 +88,8 @@ export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, t
         <rect x="80" y={H - 15} width="60" height="8" rx="2" fill={`url(#${gid})`} />
         <text x="146" y={H - 7}>{Math.round(hi)}</text>
         <defs><linearGradient id={gid}><stop offset="0" stopColor={`rgb(${pal.lo.join(',')})`} /><stop offset="1" stopColor={`rgb(${pal.hi.join(',')})`} /></linearGradient></defs>
-        <line x1="200" y1={H - 11} x2="230" y2={H - 11} stroke={pal.flow} strokeWidth="3" /><text x="236" y={H - 7}>flux</text>
-        <line x1="280" y1={H - 11} x2="310" y2={H - 11} stroke={pal.sat} strokeWidth="3" /><text x="316" y={H - 7}>saturée</text>
+        <line x1="200" y1={H - 11} x2="230" y2={H - 11} stroke={pal.flow} strokeWidth="3" /><text x="236" y={H - 7}>{lang === 'fr' ? 'flux' : 'flow'}</text>
+        <line x1="280" y1={H - 11} x2="310" y2={H - 11} stroke={pal.sat} strokeWidth="3" /><text x="316" y={H - 7}>{lang === 'fr' ? 'ligne pleine' : 'full line'}</text>
         <text x={W - 12} y={H - 7} textAnchor="end" fill={pal.credit}>Natural Earth</text>
       </g>
     </svg>

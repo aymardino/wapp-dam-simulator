@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, fmt, session, zoneDefaults, type Block, type Demand, type Mic, type MyResult, type OrderBook, type Participant, type Reference, type RoomInfo, type Run, type Supply } from '../api'
 import { useT, useLang } from '../i18n'
-import { Badge, Bars, Button, Empty, ErrorBox, Header, Kpi, Panel, Tabs } from '../components/ui'
+import { Badge, Bars, Button, Empty, ErrorBox, Header, Kpi, Panel, Tabs, Tour } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
 import { PriceChart, DispatchChart, FlowChart } from '../components/Charts'
 import PriceHeatmap from '../components/PriceHeatmap'
@@ -50,7 +50,7 @@ export default function Room() {
   }, [code, token, load])
   useRoomEvents(code, () => { setLive(true); load() })
 
-  if (!token) return <div className="p-10 text-lg">{t('join_room')} : <a className="text-accent font-medium" href={`/?code=${code}`}>{code}</a></div>
+  if (!token) return <div className="p-10 text-lg">{t('join_room')} : <a className="text-accent font-medium" href={`/app?code=${code}`}>{code}</a></div>
   const cur = room?.settings.currency || 'USD'; const unit = `${cur}/MWh`
   const open = room?.phase === 'submission' && me?.role === 'trader'
 
@@ -83,12 +83,13 @@ export default function Room() {
 
   return (
     <div className="min-h-screen">
+      <Tour id="room" steps={[{ target: 'room-book', title: t('tour_room_1_t'), text: t('tour_room_1_x') }, { target: 'room-market', title: t('tour_room_2_t'), text: t('tour_room_2_x') }, { target: 'room-result', title: t('tour_room_3_t'), text: t('tour_room_3_x') }]} />
       <Header title={room?.name || code} code={code} phase={room?.phase}
         meta={`${t('delivery')} ${room?.settings.market_date || ''} · ${room?.settings.hours.length === 24 ? t('hours24') : hh(room?.settings.hours[0] ?? 0)} · ${me?.name || ''}${me?.zone ? ` (${me.zone})` : ''}`}
         switchTo={trainerToken ? { label: t('switch_desk'), to: `/desk/${code}` } : undefined}
         extra={members.length > 1 ? <select value={memberId ?? ''} onChange={e => { session.setCurrent(code, e.target.value); setMemberId(e.target.value); setBook(EMPTY); setMine(null) }} className="h-8 text-sm bg-brand-2 text-white border-brand-ink/40">{members.map(m => <option key={m.id} value={m.id}>{m.name}{m.zone ? ` · ${m.zone}` : ''}</option>)}</select> : undefined} />
       <main className="p-5 grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,5fr)_minmax(0,3fr)]">
-        <Panel title={<>{t('my_orders')} {me?.zone && <Badge tone="accent">{me.zone}</Badge>}</>}
+        <Panel tour="room-book" title={<>{t('my_orders')} {me?.zone && <Badge tone="accent">{me.zone}</Badge>}</>}
           right={open ? <><span className="text-sm text-ink-3">{savedAt ? `${t('saved_at')} ${savedAt}` : ''}</span><Button primary onClick={save}>{t('save')}</Button></> : <Badge>{t('closed_hint')}</Badge>}>
           <ErrorBox message={err} />
           <Tabs tabs={[{ key: 'supply', label: t('supply'), count: book.supply.length }, { key: 'demand', label: t('demand'), count: book.demand.length }, { key: 'blocks', label: t('blocks'), count: book.blocks.length }, { key: 'mic', label: 'MIC', count: book.mic.length }]} active={tab} onChange={setTab} />
@@ -143,7 +144,7 @@ export default function Room() {
           <p className="text-sm text-ink-3 mt-4">{t('order_book_hint')}</p>
         </Panel>
 
-        <Panel title={`${t('market')} · ${t('last_clearing')}`} right={<>{live && <Badge tone="up">{t('live')}</Badge>}{run && <>{(summary?.reference_zones?.length || 0) > 0 && <Badge tone="warn">{t('reference_badge')} · {summary.reference_zones.length} {t('zones_word')}</Badge>}<span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span></>}</>}>
+        <Panel tour="room-market" title={`${t('market')} · ${t('last_clearing')}`} right={<>{live && <Badge tone="up">{t('live')}</Badge>}{run && <>{(summary?.reference_zones?.length || 0) > 0 && <Badge tone="warn">{t('reference_badge')} · {summary.reference_zones.length} {t('zones_word')}</Badge>}<span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span></>}</>}>
           {!run || !prices || !flows ? <Empty>{t('waiting_clearing')}</Empty> : <>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <Kpi label={t('welfare')} value={fmt.money(run.welfare / 1e6, 'M ' + cur)} />
@@ -153,7 +154,7 @@ export default function Room() {
             </div>
             <Tabs tabs={[{ key: 'map', label: t('tab_map') }, { key: 'prices', label: t('tab_prices') }, { key: 'dispatch', label: t('tab_dispatch') }, { key: 'flows', label: t('tab_flows') }]} active={view} onChange={setView} />
             <div className="rounded-lg bg-panel p-2 mb-4">
-              {view === 'map' && <NetworkMap prices={prices} flows={flows} ntc={room?.ntc || {}} hour={hour} selected={me?.zone} unit={unit} />}
+              {view === 'map' && <NetworkMap lang={lang} prices={prices} flows={flows} ntc={room?.ntc || {}} hour={hour} selected={me?.zone} unit={unit} />}
               {view === 'prices' && <><PriceHeatmap prices={prices} hours={hours} highlight={me?.zone} unit={unit} lang={lang} /><div className="mt-6"><PriceChart prices={prices} hours={hours} highlight={me?.zone} unit={unit} /></div></>}
               {view === 'dispatch' && <DispatchChart dispatch={run.result.dispatch} hours={hours} label={k => t('p_' + k)} />}
               {view === 'flows' && <FlowChart flows={flows} hours={hours} ntc={room?.ntc || {}} corridors={CORRIDORS} />}
@@ -173,7 +174,7 @@ export default function Room() {
           </>}
         </Panel>
 
-        <Panel title={t('my_result')}>
+        <Panel tour="room-result" title={t('my_result')}>
           {!mine ? <Empty>{t('waiting_clearing')}</Empty> : <>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <Kpi label={t('sold')} value={`${fmt.n(sum(sold, 'accepted_mwh'))} MWh`} sub={`${t('offered')} ${fmt.n(sum(sold, 'offered_mwh'))}`} />
