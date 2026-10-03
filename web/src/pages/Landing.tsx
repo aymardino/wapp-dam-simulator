@@ -8,6 +8,7 @@ import { LangToggle } from '../components/ui'
 import NetworkMap from '../components/NetworkMap'
 import PriceHeatmap from '../components/PriceHeatmap'
 import { LINKS } from '../links'
+import { AUTHORS, CONTRIBUTORS, SUPERVISORS, PARTNERS, TIMELINE, type Person, type Partner } from '../about'
 
 type SupRow = { zone: string; actor: string; segment: number; quantity: number; price: number; profile?: string }
 type DemRow = { zone: string; actor: string; segment: number; quantity: number; price: number }
@@ -21,7 +22,7 @@ const money = (x: number) => `${nf(x / 1e6, 2)} M USD`
 
 const L = {
   fr: {
-    nav: [['#explorer', 'Explorer'], ['#moteur', 'Le moteur'], ['#fiche', 'Fiche technique'], ['#ouvert', 'Code']] as [string, string][],
+    nav: [['#explorer', 'Explorer'], ['#moteur', 'Le moteur'], ['#fiche', 'Fiche technique'], ['#ouvert', 'Code'], ['#apropos', 'À propos']] as [string, string][],
     nav_guides: 'Guides', nav_app: 'Ouvrir le simulateur',
     kicker: 'Implémentation ouverte de référence · couplage de marché zonal',
     title_1: 'Le marché day-ahead du West African Power Pool,', title_2: 'expliqué par le calcul.',
@@ -71,8 +72,16 @@ const L = {
     d_title: 'Avertissements',
     d1: 'Simulateur pédagogique indépendant. Ce projet n’est pas affilié au West African Power Pool, à son Centre d’Information et de Coordination ni à aucun fournisseur de plateforme de marché. « WAPP » et « West African Power Pool » appartiennent au WAPP.',
     d2: 'Les données du scénario de démonstration (parc, demande, capacités d’échange) sont reconstituées à partir de sources publiques et de valeurs estimées. Les prix affichés sont des résultats de simulation sur ces données, pas des prix observés : le marché day-ahead du WAPP n’a pas encore démarré. Elles servent à la formation et à la recherche, pas à l’exploitation.',
-    a_title: 'Auteurs',
-    a_text: 'Kodjovi Plakoo et Enrico Patanè, Mastère Spécialisé OSE 2025, Mines Paris-PSL, avec Lucien Kouakou, Mouhamadou Sow et Wissem Hmila pour les premières phases du projet. Encadrement : El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT).',
+    a_kicker: 'À propos', a_title: 'Qui est derrière ce simulateur',
+    a_p: [
+      'Nous sommes deux étudiants du Mastère Spécialisé OSE de Mines Paris – PSL, promotion 2025. Le sujet nous a été proposé par SENELEC dans le cadre du projet externe du Mastère : reconstruire, pour le comprendre, le calcul qui fixera les prix du futur marché day-ahead du WAPP.',
+      'Avec trois camarades de promotion, nous avons d’abord écrit la formulation mathématique, puis livré un premier simulateur au printemps 2026. Nous avons continué ensuite : règles de prix complètes, ordres bloc, données 2024 reconstituées, application en ligne.',
+      'Nous publions le tout en accès libre parce qu’un marché se comprend mieux quand on peut refaire le calcul soi-même. Formateur, opérateur, régulateur ou chercheur : si vous voulez l’utiliser, le critiquer ou le comparer à une autre plateforme, écrivez-nous.',
+    ],
+    a_authors: 'Auteurs', a_contrib: 'Ont contribué aux premières phases', a_sup: 'Encadrement',
+    p_title: 'Cadre du projet',
+    p_note: 'Projet mené au sein du Mastère Spécialisé OSE du Centre de Mathématiques Appliquées de Mines Paris – PSL, avec SENELEC. Ces institutions ont accueilli ou encadré le projet ; elles ne sont pas responsables du contenu du site. Simulateur indépendant, non affilié au WAPP.',
+    v_kicker: 'En vidéo', v_title: 'Le simulateur en deux minutes',
     a_paper: 'Note technique à paraître.', a_paper_link: 'Lire la note technique', contact: 'Questions et contributions',
     footer: 'Simulateur pédagogique indépendant, non affilié au WAPP.',
     sim_badge: 'Simulation sur données 2024 reconstituées, pas des prix observés',
@@ -86,7 +95,7 @@ const L = {
     src_link: 'Sources et hypothèses, ligne par ligne',
   },
   en: {
-    nav: [['#explorer', 'Explore'], ['#moteur', 'The engine'], ['#fiche', 'Spec sheet'], ['#ouvert', 'Code']] as [string, string][],
+    nav: [['#explorer', 'Explore'], ['#moteur', 'The engine'], ['#fiche', 'Spec sheet'], ['#ouvert', 'Code'], ['#apropos', 'About']] as [string, string][],
     nav_guides: 'Guides', nav_app: 'Open the simulator',
     kicker: 'Open reference implementation · zonal market coupling',
     title_1: 'The West African Power Pool day-ahead market,', title_2: 'explained by computation.',
@@ -136,8 +145,16 @@ const L = {
     d_title: 'Disclaimers',
     d1: 'Independent educational simulator. This project is not affiliated with the West African Power Pool, its Information and Coordination Centre, or any market platform vendor. “WAPP” and “West African Power Pool” belong to the WAPP.',
     d2: 'The demonstration scenario’s data (fleet, demand, exchange capacities) are rebuilt from public sources and estimated values. The prices shown are simulation results on these data, not observed prices: the WAPP day-ahead market has not started yet. They are meant for training and research, not for operations.',
-    a_title: 'Authors',
-    a_text: 'Kodjovi Plakoo and Enrico Patanè, Advanced Master OSE 2025, Mines Paris-PSL, with Lucien Kouakou, Mouhamadou Sow and Wissem Hmila for the first phases of the project. Supervision: El Hadji Tamsir Diop (SENELEC) and Adrien Atayi (EPEX SPOT).',
+    a_kicker: 'About', a_title: 'Who is behind this simulator',
+    a_p: [
+      'We are two students of the Advanced Master OSE at Mines Paris – PSL, class of 2025. The subject was proposed by SENELEC as the Master’s external project: rebuild, in order to understand it, the computation that will set the prices of the future WAPP day-ahead market.',
+      'With three classmates, we first wrote the mathematical formulation, then delivered a first simulator in the spring of 2026. We kept going afterwards: complete pricing rules, block orders, reconstructed 2024 data, an online application.',
+      'We publish everything in open access because a market is better understood when you can redo the computation yourself. Trainer, operator, regulator or researcher: if you want to use it, criticise it or compare it with another platform, write to us.',
+    ],
+    a_authors: 'Authors', a_contrib: 'Contributed to the first phases', a_sup: 'Supervision',
+    p_title: 'Project framework',
+    p_note: 'Project carried out within the Advanced Master OSE of the Centre for Applied Mathematics of Mines Paris – PSL, with SENELEC. These institutions hosted or supervised the project; they are not responsible for the content of this site. Independent simulator, not affiliated with the WAPP.',
+    v_kicker: 'On video', v_title: 'The simulator in two minutes',
     a_paper: 'Technical note forthcoming.', a_paper_link: 'Read the technical note', contact: 'Questions and contributions',
     footer: 'Independent educational simulator, not affiliated with the WAPP.',
     sim_badge: 'Simulation on reconstructed 2024 data, not observed prices',
@@ -236,7 +253,7 @@ function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Stri
   useEffect(() => { if (!play || !demo) return; const id = setInterval(() => setHour(h => (h + 1) % 24), 1600); return () => clearInterval(id) }, [play, demo])
   const readout = useMemo(() => { if (!demo || !sel) return null; const c = zoneCurves(demo, sel, hour); const n = Math.round(c.net); return { name: ZONE_NAMES[sel][lang === 'fr' ? 0 : 1], p: Math.round(c.price), n } }, [demo, sel, hour, lang])
   return (
-    <section id="marche" className="text-white" style={{ background: 'radial-gradient(1100px 700px at 75% 15%, #10493A 0%, #0B3D30 50%, #07241C 100%)' }}>
+    <section id="marche" className="text-white" style={{ background: 'url(/patterns/topo-dark.svg) center / cover no-repeat, radial-gradient(1100px 700px at 75% 15%, #10493A 0%, #0B3D30 50%, #07241C 100%)' }}>
       {demo && <Ticker demo={demo} hour={hour} s={s} />}
       <div className="wrap grid lg:grid-cols-12 gap-x-12 gap-y-10 pt-14 pb-16 items-center">
         <div className="lg:col-span-5 min-w-0">
@@ -406,6 +423,107 @@ function IntervalSketch({ s }: { s: Strings }) {
   )
 }
 
+function Avatar({ p, size }: { p: Person; size: number }) {
+  const [loaded, setLoaded] = useState(false)
+  const words = p.name.split(/\s+/); const initials = (words[0][0] + words[words.length - 1][0]).toUpperCase()
+  return (
+    <span className="relative inline-flex shrink-0 rounded-full overflow-hidden bg-brand text-white font-display items-center justify-center" style={{ width: size, height: size, fontSize: size * 0.36 }}>
+      {!loaded && <span aria-hidden>{initials}</span>}
+      {p.photo && <img src={p.photo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'absolute inset-0 w-full h-full object-cover' : 'hidden'} />}
+    </span>
+  )
+}
+
+function PartnerMark({ p }: { p: Partner }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center justify-center min-h-16 px-3 text-center text-ink-2 hover:text-ink">
+      {!loaded && <span className="font-display text-xl leading-tight">{p.name}</span>}
+      {p.logo && <img src={p.logo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'max-h-12 max-w-full object-contain' : 'hidden'} />}
+    </a>
+  )
+}
+
+function About({ s, lang }: { s: Strings; lang: Lang }) {
+  const i = lang === 'fr' ? 0 : 1
+  const small = (p: Person) => (
+    <li key={p.name} className="flex items-center gap-3 py-2.5 border-b border-line last:border-b-0">
+      <Avatar p={p} size={40} /><div className="min-w-0"><div className="font-medium text-ink truncate">{p.name}</div><div className="text-sm text-ink-3 truncate">{p.role[i]} · {p.org}</div></div>
+    </li>
+  )
+  return (
+    <section id="apropos" className="bg-page" style={{ backgroundImage: 'url(/patterns/mesh-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <div className="wrap py-20 grid lg:grid-cols-12 gap-x-16 gap-y-12">
+        <div className="lg:col-span-6 min-w-0">
+          <Kicker>{s.a_kicker}</Kicker>
+          <h2 className="mt-4">{s.a_title}</h2>
+          <p className="text-ink text-lg leading-relaxed mt-6">{s.a_p[0]}</p>
+          <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[1]}</p>
+          <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[2]}</p>
+          <div className="mt-6 flex flex-wrap gap-6 text-base">
+            {LINKS.contact && <a href={`mailto:${LINKS.contact}`} className="text-accent font-medium">{LINKS.contact}</a>}
+            <a href={LINKS.issues} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.contact} →</a>
+            {LINKS.paper ? <a href={LINKS.paper} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.a_paper_link} →</a> : <span className="text-ink-3">{s.a_paper}</span>}
+          </div>
+          <ol className="mt-10 border-l border-line-strong">
+            {TIMELINE.map(([date, fr, en]) => (
+              <li key={date} className="relative pl-6 pb-5 last:pb-0">
+                <span className="absolute -left-[5px] top-1.5 w-[9px] h-[9px] rounded-full bg-accent" />
+                <div className="font-mono text-xs text-ink-3">{date}</div><div className="text-ink">{lang === 'fr' ? fr : en}</div>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="lg:col-span-6 min-w-0">
+          <div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-4">{s.a_authors}</div>
+          <div className="grid sm:grid-cols-2 gap-6">
+            {AUTHORS.map(p => (
+              <div key={p.name} className="bg-surface border border-line rounded-lg p-5 min-w-0">
+                <Avatar p={p} size={96} />
+                <div className="font-display text-2xl mt-4 leading-tight">{p.name}</div>
+                <div className="text-ink-2 mt-1">{p.role[i]}</div>
+                <div className="text-sm text-ink-3 mt-1">{p.org}</div>
+                {p.linkedin && <a href={p.linkedin} target="_blank" rel="noreferrer" className="inline-block mt-3 text-accent text-sm font-medium">LinkedIn →</a>}
+              </div>
+            ))}
+          </div>
+          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-8 mt-8">
+            <div className="min-w-0"><div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-1">{s.a_sup}</div><ul>{SUPERVISORS.map(small)}</ul></div>
+            <div className="min-w-0"><div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-1">{s.a_contrib}</div><ul>{CONTRIBUTORS.map(small)}</ul></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Partners({ s }: { s: Strings }) {
+  return (
+    <section id="cadre" className="bg-surface border-t border-line">
+      <div className="wrap py-12">
+        <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3">{s.p_title}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 items-center mt-6">{PARTNERS.map(p => <PartnerMark key={p.name} p={p} />)}</div>
+        <p className="text-sm text-ink-3 mt-8 max-w-4xl leading-relaxed">{s.p_note}</p>
+      </div>
+    </section>
+  )
+}
+
+function VideoSection({ s }: { s: Strings }) {
+  const url = LINKS.video; if (!url) return null
+  const file = /\.(mp4|webm)$/i.test(url)
+  return (
+    <section id="video" className="bg-deep text-white">
+      <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center">
+        <div className="lg:col-span-4"><Kicker light>{s.v_kicker}</Kicker><h2 className="mt-4 text-white">{s.v_title}</h2></div>
+        <div className="lg:col-span-8"><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
+          {file ? <video src={url} controls preload="metadata" className="w-full h-full" /> : <iframe src={url} title={s.v_title} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full h-full" />}
+        </div></div>
+      </div>
+    </section>
+  )
+}
+
 export default function Landing() {
   const { lang } = useLang(); const s = L[lang]
   const [demo, setDemo] = useState<Demo | null>(null); const [err, setErr] = useState(false)
@@ -431,9 +549,10 @@ export default function Landing() {
 
       <main>
         <Hero demo={demo} err={err} s={s} lang={lang} />
+        <VideoSection s={s} />
         {demo && <Explorer demo={demo} s={s} lang={lang} />}
 
-        <section id="moteur" className="bg-brand text-white">
+        <section id="moteur" className="bg-brand text-white" style={{ backgroundImage: 'url(/patterns/mesh-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
             <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><h2 className="mt-4 text-white">{s.m_title}</h2><p className="text-brand-ink text-lg mt-5">{s.m_lead}</p></div>
             <div className="lg:col-span-8 min-w-0">
@@ -461,7 +580,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="publics">
+        <section id="publics" style={{ backgroundImage: 'url(/patterns/topo-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20">
             <h2>{s.w_title}</h2>
             <ol className="grid md:grid-cols-3 gap-x-12 gap-y-10 mt-10">
@@ -474,7 +593,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="ouvert" className="bg-deep text-white">
+        <section id="ouvert" className="bg-deep text-white" style={{ backgroundImage: 'url(/patterns/topo-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
             <div className="lg:col-span-5">
               <Kicker light>{s.o_kicker}</Kicker><h2 className="mt-4 text-white">{s.o_title}</h2><p className="text-brand-ink text-lg mt-5">{s.o_lead}</p>
@@ -500,18 +619,8 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="auteurs">
-          <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8">
-            <div className="lg:col-span-4"><h2>{s.a_title}</h2></div>
-            <div className="lg:col-span-8">
-              <p className="text-ink leading-relaxed text-lg max-w-3xl">{s.a_text}</p>
-              <div className="mt-5 flex flex-wrap gap-6 text-base">
-                {LINKS.paper ? ext(LINKS.paper, s.a_paper_link + ' →', 'text-accent font-medium') : <span className="text-ink-3">{s.a_paper}</span>}
-                {ext(LINKS.issues, s.contact + ' →', 'text-accent font-medium')}
-              </div>
-            </div>
-          </div>
-        </section>
+        <About s={s} lang={lang} />
+        <Partners s={s} />
       </main>
 
       <footer className="border-t border-line">

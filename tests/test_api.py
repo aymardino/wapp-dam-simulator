@@ -213,3 +213,18 @@ def test_default_scenario_is_reference_2024():
     assert r['ntc']['NGA->NER'] == 120 and r['ntc_default']['NGA->NER'] == 120   # 2024 capacities, not the Deliverable 2 ones (300)
     info = client.get(API + f"/rooms/{r['code']}").json()
     assert info['ntc_default']['NGA->NER'] == 120
+
+
+def test_static_fallback_is_confined_to_the_dist_folder():
+    """The catch-all route serves web/dist only: no path traversal, 404 for missing files and unknown API routes."""
+    import pytest
+    from fastapi import HTTPException
+    from api import main
+    if not hasattr(main, 'spa'):
+        pytest.skip('front end not compiled (web/dist absent)')
+    for path in ('../../etc/hosts', '../api/main.py', 'assets/../../README.md', 'team/missing.jpg', 'api/v1/unknown'):
+        with pytest.raises(HTTPException) as e:
+            main.spa(path)
+        assert e.value.status_code == 404, path
+    assert main.spa('').path.endswith('index.html') and main.spa('room/ABC123').path.endswith('index.html')
+    assert main.spa('mark.svg').path.endswith('mark.svg')

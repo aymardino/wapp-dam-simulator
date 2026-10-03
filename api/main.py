@@ -309,9 +309,19 @@ async def room_events(room: Room = Depends(get_room), once: bool = False):
 if os.path.isdir(WEB_DIST):
     app.mount('/assets', StaticFiles(directory=os.path.join(WEB_DIST, 'assets')), name='assets')
 
+    DIST_REAL = os.path.realpath(WEB_DIST)
+
     @app.get('/{full_path:path}', include_in_schema=False)
     def spa(full_path: str):
-        candidate = os.path.join(WEB_DIST, full_path)
-        if full_path and os.path.isfile(candidate):
+        """Serves a file of the compiled front end, or the application shell for client-side routes.
+        The resolved path must stay inside web/dist (no traversal); unknown API routes and missing files are 404."""
+        if full_path == 'api' or full_path.startswith('api/'):
+            raise HTTPException(status_code=404, detail="Not found")
+        candidate = os.path.realpath(os.path.join(DIST_REAL, full_path))
+        inside = candidate.startswith(DIST_REAL + os.sep)
+        if full_path and inside and os.path.isfile(candidate):
             return FileResponse(candidate)
-        return FileResponse(os.path.join(WEB_DIST, 'index.html'))
+        if not inside or '.' in os.path.basename(full_path):   # traversal attempt or missing file: never the shell
+            if full_path:
+                raise HTTPException(status_code=404, detail="Not found")
+        return FileResponse(os.path.join(DIST_REAL, 'index.html'))

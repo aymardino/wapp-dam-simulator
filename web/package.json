@@ -4,8 +4,8 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "build": "node scripts/copy_guides.mjs && tsc --noEmit && vite build",
-    "dev": "node scripts/copy_guides.mjs && vite",
+    "build": "node scripts/copy_guides.mjs && node scripts/media_manifest.mjs && tsc --noEmit && vite build",
+    "dev": "node scripts/copy_guides.mjs && node scripts/media_manifest.mjs && vite",
     "preview": "vite preview"
   },
   "dependencies": {
