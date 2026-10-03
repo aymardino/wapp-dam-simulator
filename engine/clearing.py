@@ -672,7 +672,7 @@ def _build_mic(mic_rows):
     out = []
     for r in mic_rows:
         if r.get('zone') not in ZONES:
-            raise ClearingError(f"Condition MIC de {r.get('actor', '?')} : zone inconnue.")
+            raise ClearingError(f"Minimum income condition of {r.get('actor', '?')}: unknown zone.")
         out.append(Mic(r['zone'], r.get('player', ''), r['actor'],
                        float(r.get('fixed_term') or 0.0), float(r.get('variable_term') or 0.0)))
     return out
