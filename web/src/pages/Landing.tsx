@@ -469,6 +469,7 @@ function PartnerMark({ p }: { p: Partner }) {
 
 function About({ s, lang }: { s: Strings; lang: Lang }) {
   const i = lang === 'fr' ? 0 : 1
+  const mail = LINKS.contact ? LINKS.contact.join('@') : null
   const small = (p: Person) => (
     <li key={p.name} className="flex items-center gap-3 py-2.5 border-b border-line last:border-b-0">
       <Avatar p={p} size={40} /><div className="min-w-0"><div className="font-medium text-ink truncate">{p.name}</div><div className="text-sm text-ink-3 truncate">{p.role[i]} · {p.org}</div></div>
@@ -485,7 +486,7 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
           <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[2]}</p>
           <div className="font-hand text-4xl text-accent mt-5" style={{ transform: 'rotate(-2deg)', transformOrigin: 'left' }}>{s.sign}</div>
           <div className="mt-6 flex flex-wrap gap-6 text-base">
-            {LINKS.contact && <a href={`mailto:${LINKS.contact}`} className="text-accent font-medium">{LINKS.contact}</a>}
+            {mail && <a href={`mailto:${mail}`} className="text-accent font-medium">{mail}</a>}
             <a href={LINKS.issues} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.contact} →</a>
             {LINKS.paper ? <a href={LINKS.paper} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.a_paper_link} →</a> : <span className="text-ink-3">{s.a_paper}</span>}
           </div>
