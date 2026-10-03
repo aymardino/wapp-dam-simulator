@@ -1,5 +1,5 @@
-# Données locales de session (ne jamais publier)
-data/
+# Local session data (never publish): only the root data/ folder, not web/src/data
+/data/
 *.db
 # Python
 __pycache__/

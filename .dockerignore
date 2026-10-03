@@ -7,3 +7,8 @@ venv*/
 .claude/
 .vscode/
 .pytest_cache/
+private/
+.env
+web/node_modules/
+web/dist/
+web/public/guides/

@@ -14,6 +14,7 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 - Explorer: the end of each curve (no more supply at any price, no more demand at any price) is drawn dashed and labelled with the offered capacity and the total demand.
 - Technical sheet (`docs/TECHNICAL_SHEET.md`, French version `docs/fr/FICHE_TECHNIQUE.md`): identity, scope, rules, inputs and outputs, data, architecture, performance, verification, deployment, limitations, roadmap, citation; linked from the landing page and the README.
 - `scripts/export_docs.sh`: exports the technical sheet (and the working paper when present) from Markdown to Word, PDF (Chrome headless printing with `scripts/doc.css`) and LaTeX with pandoc; outputs go to an ignored folder.
+- Build fixed on GitHub Actions and Render: the `.gitignore` rule `data/` also ignored `web/src/data/`, so the map GeoJSON was never committed (rule anchored to the root, file tracked); `Dockerfile.app` now mirrors the repository layout so that the guide-copy script finds `docs/guides`, and installs with `npm ci`.
 - The git history was rewritten before publication (3 October 2026) to remove a former default administrator password and two images that were not free of rights.
 
 ### Step 13 — Landing page, second version: own identity, zone explorer, fixes
