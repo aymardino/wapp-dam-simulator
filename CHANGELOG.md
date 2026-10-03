@@ -22,6 +22,8 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 - First-visit guided tour in the application (`Tour` in `web/src/components/ui.tsx`): two bubbles on the hall, three on the trainer desk, three on the trading floor, anchored with `data-tour`, remembered per page, replayable from the header ("Guided tour").
 - Fixed two links that still pointed to the old hall address (`/?code=` instead of `/app?code=`).
 - The git history was rewritten before publication (3 October 2026) to remove a former default administrator password and two images that were not free of rights.
+- Tests: the three indeterminate-price examples of the working paper (no marginal order, saturated line, no trade) are pinned on a network reduced to the zones involved, together with the price the rule restricted to accepted orders would publish (68 tests).
+- Landing page: the "Project framework" strip spans the full width (text on the left, logos on the right).
 
 ### Step 13 — Landing page, second version: own identity, zone explorer, fixes
 

@@ -166,6 +166,29 @@ def _one_zone(supply, demand, **kw):
     return run_clearing(supply, demand, hours=[12], ntc_override=NTC_ZERO, **kw)
 
 
+def test_worked_examples_of_indeterminate_prices():
+    """The three single-hour cases of the working paper (network reduced to the zones involved)."""
+    def S(zone, q, p): return dict(zone=zone, player='s', actor='Seller', segment=0, quantity=q, price=p, profile='flat')
+    def D(zone, q, p): return dict(zone=zone, player='d', actor='Buyer', segment=0, quantity=q, price=p)
+    def run(sup, dem, ntc=None, **kw):
+        return run_clearing(sup, dem, hours=[19], ntc_override={**NTC_ZERO, **(ntc or {})}, **kw)   # load profile = 1.00 at 19:00
+    # (a) no marginal order: any price in [20, 80] is admissible, the midpoint is published
+    assert run([S('GHA', 50, 20)], [D('GHA', 50, 80)])['prices']['GHA']['19'] == 50
+    assert run([S('GHA', 100, 20)], [D('GHA', 50, 80)])['prices']['GHA']['19'] == 20      # partial sell: the price is unique
+    # (b) saturated line: the importing zone takes the midpoint of its local interval [0, 100]
+    line = {('NGA', 'BEN'): 200}
+    res = run([S('NGA', 1000, 20)], [D('BEN', 200, 100)], line)
+    assert (res['prices']['NGA']['19'], res['prices']['BEN']['19'], res['flows']['NGA->BEN']['19']) == (20, 50, 200)
+    assert res['summary']['congestion_rent'] == 6000
+    assert run([S('NGA', 1000, 20)], [D('BEN', 300, 100)], line)['prices']['BEN']['19'] == 100   # partial buy sets the price
+    # (c) no trade: midpoint between the rejected buy and the rejected sell
+    res = run([S('GHA', 50, 90)], [D('GHA', 50, 30)])
+    assert res['volume'] == 0 and res['prices']['GHA']['19'] == 60
+    # the rule restricted to accepted orders has no information here: midpoint of the price bounds, one paradoxical rejection
+    res = run([S('GHA', 50, 90)], [D('GHA', 50, 30)], pricing='l2')
+    assert res['prices']['GHA']['19'] == 250 and res['summary']['diagnostics']['pro'] == 1
+
+
 def test_tie_rule_prorata_shares_equal_price_offers():
     sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=100, price=50, profile='baseload'),
            dict(zone='NGA', player='b', actor='B', segment=0, quantity=100, price=50, profile='baseload')]
