@@ -24,6 +24,9 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 - The git history was rewritten before publication (3 October 2026) to remove a former default administrator password and two images that were not free of rights.
 - Tests: the three indeterminate-price examples of the working paper (no marginal order, saturated line, no trade) are pinned on a network reduced to the zones involved, together with the price the rule restricted to accepted orders would publish (68 tests).
 - Landing page: the "Project framework" strip spans the full width (text on the left, logos on the right).
+- Explorer chart: the labels (country price, import or export, end of each curve) are placed where they cross no curve, with a white halo; the import or export label no longer sits on the dashed end of the demand curve.
+- Explorer sentence: a country that both receives and sends shows the two figures behind its net import or export; a price shared with a neighbour names that neighbour; the case where no order sets the price (Niger at 16:00 in the 2024 set) is explained by the midpoint rule instead of being attributed to a neighbour.
+- About section: handwritten signature removed.
 
 ### Step 13 — Landing page, second version: own identity, zone explorer, fixes
 

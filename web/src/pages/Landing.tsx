@@ -80,7 +80,6 @@ const L = {
       'Le projet a réuni cinq étudiants de la promotion 2025. Nous deux, Kodjovi et Enrico, avons écrit le moteur et l’application, livrés au printemps 2026, et nous continuons de les faire évoluer : règles de prix complètes, données 2024, mise en ligne.',
       'Tout est en accès libre, parce qu’un marché se comprend mieux quand on peut refaire le calcul soi-même. Vous formez, vous exploitez, vous régulez ou vous cherchez ? Écrivez-nous.',
     ],
-    sign: 'Kodjovi & Enrico',
     a_authors: 'Auteurs du simulateur', a_contrib: 'Groupe projet du Mastère', a_sup: 'Encadrement',
     p_title: 'Cadre du projet',
     p_note: 'Projet mené au Mastère Spécialisé OSE (Centre de Mathématiques Appliquées, Mines Paris – PSL), avec SENELEC. Ces institutions ont accueilli ou encadré le projet ; elles ne répondent pas du contenu du site.',
@@ -156,7 +155,6 @@ const L = {
       'The project brought together five students of the class of 2025. The two of us, Kodjovi and Enrico, wrote the engine and the application, delivered in the spring of 2026, and we keep developing them: complete pricing rules, 2024 data, an online site.',
       'Everything is open access, because a market is better understood when you can redo the computation yourself. You train, operate, regulate or research? Write to us.',
     ],
-    sign: 'Kodjovi & Enrico',
     a_authors: 'Authors of the simulator', a_contrib: 'Master’s project group', a_sup: 'Supervision',
     p_title: 'Project framework',
     p_note: 'Project carried out at the Advanced Master OSE (Centre for Applied Mathematics, Mines Paris – PSL), with SENELEC. These institutions hosted or supervised the project; they are not responsible for the content of this site.',
@@ -184,7 +182,7 @@ type Strings = typeof L.fr
 
 /* ── Explorer computations ────────────────────────────────────────────── */
 type Seg = { actor: string; price: number; qty: number }
-type Curves = { sup: Seg[]; dem: Seg[]; price: number; net: number; lines: { other: string; flow: number; cap: number; sat: boolean }[]; supAt: number; demAt: number }
+type Curves = { sup: Seg[]; dem: Seg[]; price: number; net: number; lines: { other: string; flow: number; cap: number; sat: boolean; price: number }[]; supAt: number; demAt: number }
 
 function zoneCurves(demo: Demo, zone: string, h: number): Curves {
   const prof = (name?: string) => demo.profiles[name || 'baseload'] || demo.profiles.flat || Array(24).fill(1)
@@ -195,7 +193,8 @@ function zoneCurves(demo: Demo, zone: string, h: number): Curves {
   for (const key of Object.keys(demo.ntc)) {
     const [u, v] = key.split('->'); if (u !== zone && v !== zone) continue
     const f = demo.flows[key]?.[String(h)] ?? 0; const cap = demo.ntc[key]; const out = u === zone ? f : -f
-    net += out; lines.push({ other: u === zone ? v : u, flow: out, cap, sat: Math.abs(f) >= cap - 1 })
+    const other = u === zone ? v : u
+    net += out; lines.push({ other, flow: out, cap, sat: Math.abs(f) >= cap - 1, price: demo.prices[other]?.[String(h)] ?? NaN })
   }
   const supAt = sup.filter(r => r.price <= price + 0.5).reduce((a, r) => a + r.qty, 0)
   const demAt = dem.filter(r => r.price >= price - 0.5).reduce((a, r) => a + r.qty, 0)
@@ -206,18 +205,40 @@ function sentence(c: Curves, zone: string, hour: number, lang: Lang) {
   const fr = lang === 'fr'; const name = ZONE_NAMES[zone][fr ? 0 : 1]; const p = Math.round(c.price); const n = Math.round(c.net)
   const plant = c.sup.find(r => Math.abs(r.price - c.price) <= 0.5); const load = c.dem.find(r => Math.abs(r.price - c.price) <= 0.5)
   const full = c.lines.filter(l => l.sat).map(l => `${zone}–${l.other}`)
+  // A transit country both receives and sends: the net figure alone is hard to read, so both sides are spelled out.
+  const inn = c.lines.filter(l => l.flow < -0.5), out = c.lines.filter(l => l.flow > 0.5)
+  const qIn = Math.round(inn.reduce((a, l) => a - l.flow, 0)), qOut = Math.round(out.reduce((a, l) => a + l.flow, 0))
+  const who = (ls: Curves['lines']) => ls.map(l => ZONE_NAMES[l.other][fr ? 0 : 1]).join(', ')
+  const transit = qIn > 0 && qOut > 0
+  // When no local order sits at the price: either a neighbour behind a line that is not full shares it, or nothing sets it
+  // and the engine applies its midpoint rule between the nearest order prices below and above.
+  const shared = c.lines.filter(l => !l.sat && Math.abs(l.price - c.price) <= 0.5)
+  const feminine = new Set(['CIV', 'GIN', 'SLE', 'GNB', 'GMB'])      // French country names take an article in a sentence
+  const named = shared.map(l => (fr ? `${feminine.has(l.other) ? 'la' : 'le'} ${ZONE_NAMES[l.other][0]}` : ZONE_NAMES[l.other][1]))
+  const sharedWith = named.length > 1 ? `${named.slice(0, -1).join(', ')} ${fr ? 'et' : 'and'} ${named[named.length - 1]}` : named[0]
+  const others = [...c.sup, ...c.dem].map(r => r.price)
+  const lo = Math.max(0, ...others.filter(v => v < c.price - 0.5)), hi = Math.min(500, ...others.filter(v => v > c.price + 0.5))
+  const atMid = Math.abs((lo + hi) / 2 - c.price) <= 0.5
   if (fr) {
-    const trade = n > 1 ? `Le pays exporte ${nf(n)} MW.` : n < -1 ? `Le pays importe ${nf(-n)} MW.` : 'Le pays n’échange presque rien avec ses voisins.'
+    const detail = `${nf(qIn)} MW entrent (${who(inn)}), ${nf(qOut)} MW sortent (${who(out)})`
+    const trade = transit
+      ? (n > 1 ? `Le pays exporte ${nf(n)} MW nets : ${detail}.` : n < -1 ? `Le pays importe ${nf(-n)} MW nets : ${detail}.` : `Entrées et sorties s’équilibrent : ${detail}.`)
+      : n > 1 ? `Le pays exporte ${nf(n)} MW.` : n < -1 ? `Le pays importe ${nf(-n)} MW.` : 'Le pays n’échange presque rien avec ses voisins.'
     const why = plant ? `La dernière centrale appelée, ${plant.actor}, demande ${p} $/MWh : c’est elle qui fixe le prix.`
       : load ? 'Ici, c’est la demande qui fixe le prix : la dernière tranche servie paie exactement ce montant.'
-      : 'Ce prix vient d’un pays voisin : aucune ligne pleine ne les sépare, ils forment un seul marché.'
+      : shared.length ? `Ce prix est partagé avec ${sharedWith} : aucune ligne pleine ne les sépare, ils forment un seul marché.`
+      : `Aucun ordre n’est servi en partie, donc aucun ne fixe le prix : entre ${nf(lo)} et ${nf(hi)} $/MWh, tout prix conviendrait. Le moteur publie ${atMid ? 'le milieu' : 'le plus proche du milieu que le réseau permet'}.`
     const lines = full.length ? ` ${full.length > 1 ? 'Lignes pleines' : 'Ligne pleine'} : ${full.join(', ')}.` : ''
     return frTypo(`${name}, ${hour} h : ${p} $/MWh. ${trade} ${why}${lines}`) as string
   }
-  const trade = n > 1 ? `The country exports ${nf(n)} MW.` : n < -1 ? `The country imports ${nf(-n)} MW.` : 'The country trades almost nothing with its neighbours.'
+  const detail = `${nf(qIn)} MW come in (${who(inn)}), ${nf(qOut)} MW go out (${who(out)})`
+  const trade = transit
+    ? (n > 1 ? `The country exports ${nf(n)} MW net: ${detail}.` : n < -1 ? `The country imports ${nf(-n)} MW net: ${detail}.` : `Inflows and outflows balance: ${detail}.`)
+    : n > 1 ? `The country exports ${nf(n)} MW.` : n < -1 ? `The country imports ${nf(-n)} MW.` : 'The country trades almost nothing with its neighbours.'
   const why = plant ? `The last plant called, ${plant.actor}, asks ${p} $/MWh: it sets the price.`
     : load ? 'Here demand sets the price: the last tranche served pays exactly that amount.'
-    : 'This price comes from a neighbouring country: no full line separates them, they form a single market.'
+    : shared.length ? `This price is shared with ${sharedWith}: no full line separates them, they form a single market.`
+    : `No order is partly served, so none sets the price: any price between ${nf(lo)} and ${nf(hi)} $/MWh would do. The engine publishes ${atMid ? 'the midpoint' : 'the closest to the midpoint that the network allows'}.`
   const lines = full.length ? ` Full line${full.length > 1 ? 's' : ''}: ${full.join(', ')}.` : ''
   return `${name}, ${String(hour).padStart(2, '0')}:00: ${p} $/MWh. ${trade} ${why}${lines}`
 }
@@ -316,10 +337,45 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
   const X = (q: number) => Lm + (q / xMax) * (W - Lm - Rm), Y = (p: number) => Tm + (1 - p / yMax) * (H - Tm - Bm)
   const path = (segs: Seg[]) => { let x = 0; const d: string[] = []; segs.forEach((r, i) => { d.push(i === 0 ? `M${X(0)} ${Y(r.price)}` : `L${X(x)} ${Y(r.price)}`); x += r.qty; d.push(`L${X(x)} ${Y(r.price)}`) }); return d.join(' ') }
   const lastS = c.sup.length ? c.sup[c.sup.length - 1].price : 0, lastD = c.dem.length ? c.dem[c.dem.length - 1].price : 0
-  const endLabel = (q: number, label: string) => { const x = X(q); const right = x + 150 <= W - Rm; return { x: right ? x + 6 : x - 6, anchor: right ? 'start' : 'end', text: `${label} ${nf(q)} MW` } }
-  const sEnd = endLabel(totalS, s.ex_sup_end), dEnd = endLabel(totalD, s.ex_dem_end)
-  const bx1 = X(Math.min(c.demAt, c.demAt + c.net)), bx2 = X(Math.max(c.demAt, c.demAt + c.net)); const by = Y(c.price)
+  const by = Y(c.price)
+
+  // Label placement. Everything drawn in the plot is listed as axis-aligned segments (in pixels); each label takes the
+  // first candidate position that crosses none of them, stays inside the plot and avoids the labels already placed.
+  type Box = { x: number; y: number; w: number; h: number }
+  const drawn: [number, number, number, number][] = []
+  const trace = (rows: Seg[], endY: number) => {
+    let q = 0
+    rows.forEach((r, i) => { if (i > 0) drawn.push([X(q), Y(rows[i - 1].price), X(q), Y(r.price)]); drawn.push([X(q), Y(r.price), X(q + r.qty), Y(r.price)]); q += r.qty })
+    if (rows.length) drawn.push([X(q), Y(rows[rows.length - 1].price), X(q), endY])
+  }
+  trace(c.sup, Y(yMax)); trace(c.dem, Y(0))
+  const crossed = (b: Box, pad = 3) => drawn.filter(([x1, y1, x2, y2]) => Math.max(x1, x2) >= b.x - pad && Math.min(x1, x2) <= b.x + b.w + pad && Math.max(y1, y2) >= b.y - pad && Math.min(y1, y2) <= b.y + b.h + pad).length
+  const overlap = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+  const outside = (b: Box) => b.x < Lm || b.x + b.w > W - Rm || b.y < Tm - 12 || b.y + b.h > H - Bm
+  const placed: Box[] = [{ x: Lm, y: Tm - 8, w: 300, h: 18 }]            // the legend, top left
+  const place = (cands: Box[]) => {
+    const scored = cands.map(b => ({ b, n: crossed(b) + 5 * placed.filter(o => overlap(b, o)).length + (outside(b) ? 100 : 0) }))
+    const pick = scored.reduce((a, k) => (k.n < a.n ? k : a)).b
+    placed.push(pick); return pick
+  }
+  const textW = (t: string, px: number) => t.length * px
+
+  // End of each curve: "possible output" at the top of the supply curve, "demand" at the foot of the demand curve
+  const sText = `${s.ex_sup_end} ${nf(totalS)} MW`, dText = `${s.ex_dem_end} ${nf(totalD)} MW`
+  const sw = textW(sText, 6.1), dw = textW(dText, 6.1)
+  const sBox = place([{ x: X(totalS) + 6, y: Tm + 4, w: sw, h: 14 }, { x: X(totalS) - 6 - sw, y: Tm + 4, w: sw, h: 14 }, { x: X(totalS) + 6, y: Tm + 22, w: sw, h: 14 }, { x: X(totalS) - 6 - sw, y: Tm + 22, w: sw, h: 14 }])
+  const dBox = place([{ x: X(totalD) + 6, y: Y(0) - 19, w: dw, h: 14 }, { x: X(totalD) - 6 - dw, y: Y(0) - 19, w: dw, h: 14 }, { x: X(totalD) + 6, y: Y(0) - 37, w: dw, h: 14 }, { x: X(totalD) - 6 - dw, y: Y(0) - 37, w: dw, h: 14 }])
+
+  // Price of the country: beside the dashed line, on the side and at the end where no curve passes
+  const pText = `${s.ex_price} ${nf(c.price, 1)}`, pw = textW(pText, 7.3) + 6
+  const pBox = place([{ x: Lm + 6, y: by - 19, w: pw, h: 15 }, { x: Lm + 6, y: by + 5, w: pw, h: 15 }, { x: W - Rm - 4 - pw, y: by - 19, w: pw, h: 15 }, { x: W - Rm - 4 - pw, y: by + 5, w: pw, h: 15 }])
+
+  // Import or export: a bar on the price line (a dot when it is too short to see), and a boxed label tied to it
+  const bx1 = X(Math.min(c.demAt, c.demAt + c.net)), bx2 = X(Math.max(c.demAt, c.demAt + c.net))
   const netLabel = c.net > 1 ? `${s.ex_export} ${nf(Math.round(c.net))} MW` : c.net < -1 ? `${s.ex_import} ${nf(Math.round(-c.net))} MW` : null
+  const tw = netLabel ? textW(netLabel, 7.2) + 18 : 0, th = 22
+  const nBox = netLabel ? place([12, -34, 44, -66, 76, -98].flatMap(dy => [{ x: bx2 + 14, y: by + dy, w: tw, h: th }, { x: bx1 - 14 - tw, y: by + dy, w: tw, h: th }])) : null
+  const halo = { paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 3.5, strokeLinejoin: 'round' } as const
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img">
       {ticks(yMax, 5).map(v => <g key={`y${v}`}><line x1={Lm} x2={W - Rm} y1={Y(v)} y2={Y(v)} stroke="#E2E0D9" /><text x={Lm - 8} y={Y(v) + 3.5} textAnchor="end" fontSize="11" fontFamily="JetBrains Mono, monospace" fill="#8C8B84">{nf(v)}</text></g>)}
@@ -329,32 +385,26 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
       <text x={W - Rm} y={Y(yMax) - 6} textAnchor="end" fontSize="11" fill="#8C8B84">{s.ex_cap}</text>
       <path d={path(c.sup)} fill="none" stroke="#0F6E56" strokeWidth={2.5} strokeLinejoin="round" />
       <path d={path(c.dem)} fill="none" stroke="#B5443C" strokeWidth={2.5} strokeLinejoin="round" />
-      {c.sup.length > 0 && <>
-        <line x1={X(totalS)} x2={X(totalS)} y1={Y(lastS)} y2={Y(yMax)} stroke="#0F6E56" strokeWidth={1.5} strokeDasharray="4 4" />
-        <text x={sEnd.x} y={Tm + 14} textAnchor={sEnd.anchor as 'start' | 'end'} fontSize="11" fill="#0F6E56">{sEnd.text}</text>
-      </>}
-      {c.dem.length > 0 && <>
-        <line x1={X(totalD)} x2={X(totalD)} y1={Y(lastD)} y2={Y(0)} stroke="#B5443C" strokeWidth={1.5} strokeDasharray="4 4" />
-        <text x={dEnd.x} y={Y(0) - 8} textAnchor={dEnd.anchor as 'start' | 'end'} fontSize="11" fill="#B5443C">{dEnd.text}</text>
-      </>}
+      {c.sup.length > 0 && <line x1={X(totalS)} x2={X(totalS)} y1={Y(lastS)} y2={Y(yMax)} stroke="#0F6E56" strokeWidth={1.5} strokeDasharray="4 4" />}
+      {c.dem.length > 0 && <line x1={X(totalD)} x2={X(totalD)} y1={Y(lastD)} y2={Y(0)} stroke="#B5443C" strokeWidth={1.5} strokeDasharray="4 4" />}
       <line x1={Lm} x2={W - Rm} y1={by} y2={by} stroke="#1B1B19" strokeDasharray="5 4" strokeWidth={1.2} />
-      <text x={W - Rm - 4} y={by - 6} textAnchor="end" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#1B1B19">{`${s.ex_price} ${nf(c.price, 1)}`}</text>
-      {netLabel && (() => {
+      {c.sup.length > 0 && <text x={sBox.x} y={sBox.y + 11} fontSize="11" fill="#0F6E56" style={halo}>{sText}</text>}
+      {c.dem.length > 0 && <text x={dBox.x} y={dBox.y + 11} fontSize="11" fill="#B5443C" style={halo}>{dText}</text>}
+      <text x={pBox.x + 3} y={pBox.y + 12} fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#1B1B19" style={halo}>{pText}</text>
+      {netLabel && nBox && (() => {
         const narrow = bx2 - bx1 < 12
-        const tw = netLabel.length * 7.2 + 18
-        const right = bx2 + 14 + tw <= W - Rm
-        const bx = right ? bx2 + 14 : bx1 - 14 - tw
+        const right = nBox.x >= bx2, below = nBox.y > by
         return (
           <g>
+            <line x1={right ? bx2 : bx1} x2={right ? nBox.x + 2 : nBox.x + tw - 2} y1={by} y2={below ? nBox.y + 2 : nBox.y + th - 2} stroke="#8C8B84" strokeWidth={1} />
             {narrow
               ? <circle cx={(bx1 + bx2) / 2} cy={by} r={4.5} fill="#F2B134" stroke="#1B1B19" strokeWidth={1} />
               : <>
                   <line x1={bx1} x2={bx2} y1={by} y2={by} stroke="#F2B134" strokeWidth={4} strokeLinecap="round" />
                   <line x1={bx1} x2={bx1} y1={by - 6} y2={by + 6} stroke="#F2B134" strokeWidth={2} /><line x1={bx2} x2={bx2} y1={by - 6} y2={by + 6} stroke="#F2B134" strokeWidth={2} />
                 </>}
-            <line x1={right ? bx2 : bx1} x2={right ? bx + 2 : bx + tw - 2} y1={by} y2={by + 22} stroke="#8C8B84" strokeWidth={1} />
-            <rect x={bx} y={by + 12} width={tw} height={22} rx={4} fill="#FFFFFF" stroke="#C8C6BE" />
-            <text x={bx + tw / 2} y={by + 27} textAnchor="middle" fontSize="12" fontWeight="600" fill="#854F0B">{netLabel}</text>
+            <rect x={nBox.x} y={nBox.y} width={tw} height={th} rx={4} fill="#FFFFFF" stroke="#C8C6BE" />
+            <text x={nBox.x + tw / 2} y={nBox.y + 15} textAnchor="middle" fontSize="12" fontWeight="600" fill="#854F0B">{netLabel}</text>
           </g>
         )
       })()}
@@ -484,7 +534,6 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
           <p className="font-display text-xl md:text-2xl leading-snug text-ink mt-6">{s.a_p[0]}</p>
           <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[1]}</p>
           <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[2]}</p>
-          <div className="font-hand text-4xl text-accent mt-5" style={{ transform: 'rotate(-2deg)', transformOrigin: 'left' }}>{s.sign}</div>
           <div className="mt-6 flex flex-wrap gap-6 text-base">
             {mail && <a href={`mailto:${mail}`} className="text-accent font-medium">{mail}</a>}
             <a href={LINKS.issues} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.contact} →</a>
