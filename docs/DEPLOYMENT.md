@@ -5,7 +5,7 @@
 ## 1. Production architecture
 
 ```
-Internet ──HTTPS 443──▶ Caddy or Render (automatic certificate, www → apex redirect)
+Internet ──HTTPS 443──▶ Caddy or Render (automatic certificate)
                            │
                            └──HTTP──▶ api (uvicorn): public page + application + REST API
                                          └── persistent volume: data/rooms.db (rooms, orders, clearings)
@@ -30,7 +30,7 @@ Render builds the `Dockerfile.app` image from GitHub and serves it with HTTPS; n
 2. In the Render dashboard: **New → Blueprint**, pick the repository, confirm. Render creates the `wapp-dam-simulator` service on the Starter plan with a 1 GB disk mounted on `/app/data`. The first build takes 3 to 5 minutes (front-end compilation, then Python installation).
    Without a Blueprint: **New → Web Service → the repository → Runtime Docker**, *Dockerfile path* `Dockerfile.app`, *Health check path* `/api/v1/health`, then the *Disks* tab: add a disk mounted on `/app/data`, and the *Environment* tab: the variables of `.env.example`.
 3. Check `https://<service>.onrender.com/api/v1/health`, then create a room and run a clearing.
-4. Domain name: *Settings → Custom Domains → Add* `wapp-dam-simulator.org` and `www.wapp-dam-simulator.org`. Render shows the DNS records to create at the registrar (an A or ALIAS record for the apex, a CNAME for www) and obtains the certificate by itself. Then put the domain in `WAPP_CORS_ORIGINS` (already the case in `render.yaml`).
+4. Domain name: *Settings → Custom Domains → Add* `wapp-dam-simulator.mastereose.fr`. Render shows the CNAME record to have created by the DNS administrator of the Mastère OSE and obtains the certificate by itself. Then put the domain in `WAPP_CORS_ORIGINS` (already the case in `render.yaml`).
 5. Updates: every `git push` on `main` redeploys (*autoDeploy*). Backups: *Disks → Snapshots* (daily, kept 7 days); for a local copy, `render ssh` then `sqlite3 /app/data/rooms.db .dump`.
 
 Points of attention: the Free plan accepts no disk (rooms would be lost at every restart) and puts the service to sleep after fifteen minutes of inactivity; take the Starter plan ($7/month, plus $0.25/month for the disk). With a disk attached, a deployment interrupts the service for a few seconds. The container listens on the port provided by Render (`PORT`); the image handles both cases.
@@ -39,29 +39,29 @@ Points of attention: the Free plan accepts no disk (rooms would be lost at every
 
 | Item | Recommended choice | Price range |
 |---|---|---|
-| Domain name | `wapp-dam-simulator.org` at a registrar (Gandi, OVH, Infomaniak, Namecheap) | €12 to €20 per year |
+| Domain name | `wapp-dam-simulator.mastereose.fr`, a subdomain provided by the Mastère OSE (DNS record managed by the school) | free |
 | Virtual server | Hetzner CX22, OVH VPS, Scaleway DEV1-S: 2 vCPU, 4 GB, Ubuntu 24.04 | €4 to €8 per month |
 
-Sizing: a reference clearing takes 0.5 s, a training case with blocks a few seconds; a room of 20 participants runs comfortably on 2 vCPU. Disk needs are a few tens of MB. An institutional alternative (a subdomain of the school or of SENELEC) is a CNAME record towards the server, or a relay by the IT department to port 443; the `DOMAIN` variable of the `.env` file then takes that name.
+Sizing: a reference clearing takes 0.5 s, a training case with blocks a few seconds; a room of 20 participants runs comfortably on 2 vCPU. Disk needs are a few tens of MB. The subdomain is served by a DNS record (CNAME or A) towards the server, or by a relay of the IT department to port 443. A domain name of your own (at a registrar: Gandi, OVH, Infomaniak, Namecheap; €12 to €20 per year) remains possible: the `DOMAIN` variable of the `.env` file then takes that name and, for an apex domain, a `www.` block redirecting to the apex is added to the `Caddyfile`.
 
-1. At the registrar, create two DNS records towards the server's IPv4 address: `A @` and `A www`. Allow up to an hour of propagation.
+1. Have the DNS administrator of the Mastère OSE create an `A` record `wapp-dam-simulator.mastereose.fr` towards the server's IPv4 address (or a `CNAME` towards its name). Allow up to an hour of propagation.
 2. Connect to the server and run the installation script (it installs Docker and the firewall, clones the repository, creates `.env`, starts the services):
 
 ```bash
 ssh root@<server-address>
 curl -fsSL https://raw.githubusercontent.com/<account>/wapp-dam-simulator/main/deploy/setup_server.sh -o setup_server.sh
-bash setup_server.sh https://github.com/<account>/wapp-dam-simulator.git wapp-dam-simulator.org
+bash setup_server.sh https://github.com/<account>/wapp-dam-simulator.git wapp-dam-simulator.mastereose.fr
 ```
 
-3. Check: `https://wapp-dam-simulator.org` shows the site, `https://wapp-dam-simulator.org/api/v1/health` answers `{"status":"ok", …}`, `https://www.wapp-dam-simulator.org` redirects to the apex. The certificate is obtained on first access (a few seconds).
+3. Check: `https://wapp-dam-simulator.mastereose.fr` shows the site, `https://wapp-dam-simulator.mastereose.fr/api/v1/health` answers `{"status":"ok", …}`. The certificate is obtained on first access (a few seconds).
 4. Create a room, join it from a phone, run a clearing.
 
 The `/opt/wapp/app/.env` file holds the settings (template in `.env.example`):
 
 | Variable | Role | Default |
 |---|---|---|
-| `DOMAIN` | name served by Caddy | wapp-dam-simulator.org |
-| `WAPP_CORS_ORIGINS` | allowed origins for the API | https://wapp-dam-simulator.org |
+| `DOMAIN` | name served by Caddy | wapp-dam-simulator.mastereose.fr |
+| `WAPP_CORS_ORIGINS` | allowed origins for the API | https://wapp-dam-simulator.mastereose.fr |
 | `WAPP_ROOM_TTL_DAYS` | purge of inactive rooms | 30 |
 | `WAPP_MAX_ROOMS_PER_IP_PER_DAY` | room creation quota | 20 |
 
@@ -118,7 +118,7 @@ docker run -d --name wapp -p 8000:8000 -v wapp-data:/app/data wapp-simulator
 uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
-Participants open `http://<trainer-IP-address>:8000/app` and enter the room code. If the venue's firewall blocks the port, a Wi-Fi hotspot from a phone or a tunnel (`ssh -R 80:localhost:8000 nokey@localhost.run`) works around it. With the site online, the simplest is `https://wapp-dam-simulator.org/app`.
+Participants open `http://<trainer-IP-address>:8000/app` and enter the room code. If the venue's firewall blocks the port, a Wi-Fi hotspot from a phone or a tunnel (`ssh -R 80:localhost:8000 nokey@localhost.run`) works around it. With the site online, the simplest is `https://wapp-dam-simulator.mastereose.fr/app`.
 
 ## 8. Checking that everything works
 

@@ -4,6 +4,11 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 
 ## [2.0.0-dev] — October 2026
 
+### Step 15 — Site online at wapp-dam-simulator.mastereose.fr
+
+- Public address: `https://wapp-dam-simulator.mastereose.fr`, a subdomain provided by the Mastère OSE, replaces the domain name planned in step 13 (`wapp-dam-simulator.org`) in the site links, the technical sheets, the READMEs, the deployment guides, the Caddyfile, `docker-compose.yml`, `render.yaml` and `.env.example`. The `www.` redirect of the Caddyfile, meant for an apex domain, is removed.
+- Trainer desk: the demonstration banner is shown only when no participant order took part in the run (with the "background actors" completion, every zone carries reference actors even when participants did submit).
+
 ### Step 14 — English-first repository, French documentation kept
 
 - Code, comments, docstrings, engine error messages, API documentation, tests, scripts and configuration files translated to English. Actor and plant names in the reference data keep their original language.

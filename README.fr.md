@@ -134,7 +134,7 @@ python -m engine.cli --reference --hours 19 --out resultat.json
 
 Le formateur dispose d'un jeu de base (Référence 2024, sources publiques) et de quatre variantes pédagogiques (sécheresse hydraulique, ligne Nigeria–Bénin indisponible, gaz cher, forte demande) qui ne modifient qu'un élément, pour la démonstration et la complétion des zones.
 
-Le nouveau front (React, dossier `web/`) se compile avec Node : `cd web && npm install && npm run build`, puis l'API le sert : site vitrine à `/`, hall des salles à `/app`, guides à `/guide/formateur` et `/guide/trader`. Fiche technique de deux pages : [docs/fr/FICHE_TECHNIQUE.md](docs/fr/FICHE_TECHNIQUE.md). Détails dans [docs/fr/ARCHITECTURE.md](docs/fr/ARCHITECTURE.md) ; mise en ligne (nom de domaine, Render, serveur, Docker, HTTPS) dans [docs/fr/DEPLOIEMENT.md](docs/fr/DEPLOIEMENT.md) et, à jour, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Site public : https://wapp-dam-simulator.org.
+Le nouveau front (React, dossier `web/`) se compile avec Node : `cd web && npm install && npm run build`, puis l'API le sert : site vitrine à `/`, hall des salles à `/app`, guides à `/guide/formateur` et `/guide/trader`. Fiche technique de deux pages : [docs/fr/FICHE_TECHNIQUE.md](docs/fr/FICHE_TECHNIQUE.md). Détails dans [docs/fr/ARCHITECTURE.md](docs/fr/ARCHITECTURE.md) ; mise en ligne (nom de domaine, Render, serveur, Docker, HTTPS) dans [docs/fr/DEPLOIEMENT.md](docs/fr/DEPLOIEMENT.md) et, à jour, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Site public : https://wapp-dam-simulator.mastereose.fr.
 
 ## Tests
 

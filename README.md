@@ -1,7 +1,7 @@
 # WAPP Day-Ahead Market Simulator
 
 **Open reference implementation of day-ahead zonal market coupling for the West African Power Pool, built as a multi-user training tool.**
-MS OSE 2025 project — Mines Paris-PSL, with SENELEC and EPEX SPOT · version 2 (October 2026) · public site: https://wapp-dam-simulator.org
+MS OSE 2025 project — Mines Paris-PSL, with SENELEC and EPEX SPOT · version 2 (October 2026) · public site: https://wapp-dam-simulator.mastereose.fr
 
 *Version française : [README.fr.md](README.fr.md). Guides, market rules and reference data are also available in French under [docs/fr/](docs/fr/).*
 

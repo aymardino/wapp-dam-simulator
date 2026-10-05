@@ -1,6 +1,6 @@
 /** Public links of the website: update at publication time (GitHub repository, technical note, contact). */
 export const LINKS = {
-  site: 'https://wapp-dam-simulator.org',
+  site: 'https://wapp-dam-simulator.mastereose.fr',
   github: 'https://github.com/aymardino/wapp-dam-simulator',
   issues: 'https://github.com/aymardino/wapp-dam-simulator/issues',
   rules: 'https://github.com/aymardino/wapp-dam-simulator/blob/main/docs/MARKET_RULES.md',

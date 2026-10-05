@@ -1,11 +1,11 @@
-# Mettre en ligne wapp-dam-simulator.org
+# Mettre en ligne wapp-dam-simulator.mastereose.fr
 
 *Guide pratique, 2 octobre 2026 (version anglaise à jour : `docs/DEPLOYMENT.md` ; le nettoyage d'historique décrit en section 3 a été effectué le 3 octobre 2026). Quatre parties : ce qu'il faut acheter, publier le dépôt, installer le serveur, exploiter. Les sections sur l'exécution locale et en salle de formation sont à la fin.*
 
 ## 1. Architecture en production
 
 ```
-Internet ──HTTPS 443──▶ Caddy (certificat Let's Encrypt automatique, redirection www → apex)
+Internet ──HTTPS 443──▶ Caddy (certificat Let's Encrypt automatique)
                            │
                            └──HTTP 8000──▶ api (uvicorn) : site vitrine + application + API REST
                                               └── volume wapp-data : data/rooms.db (salles, ordres, clearings)
@@ -17,12 +17,12 @@ Une seule image Docker (`Dockerfile.app`) compile le front React et emballe l'AP
 
 | Poste | Choix recommandé | Ordre de prix |
 |---|---|---|
-| Nom de domaine | `wapp-dam-simulator.org` chez un registrar (Gandi, OVH, Infomaniak, Namecheap) | 12 à 20 € par an |
+| Nom de domaine | `wapp-dam-simulator.mastereose.fr`, sous-domaine fourni par le Mastère OSE (enregistrement DNS géré par l'école) | gratuit |
 | Serveur virtuel | Hetzner CX22, OVH VPS, Scaleway DEV1-S : 2 vCPU, 4 Go, Ubuntu 24.04 | 4 à 8 € par mois |
 
 Dimensionnement : un clearing de référence prend 0,5 s, un cas de formation avec blocs quelques secondes ; une salle de 20 participants tient sans difficulté sur 2 vCPU. Le disque nécessaire est de quelques dizaines de Mo.
 
-Alternative institutionnelle : un sous-domaine de l'école ou de SENELEC (par exemple `wapp-dam.mines-paristech.fr`) se fait par un enregistrement CNAME vers le serveur, ou par un relais de la DSI vers le port 443 ; la variable `DOMAIN` du fichier `.env` prend alors ce nom.
+Le sous-domaine est servi par un enregistrement DNS (CNAME ou A) vers le serveur, ou par un relais de la DSI vers le port 443. Un nom de domaine propre (chez un registrar : Gandi, OVH, Infomaniak, Namecheap ; 12 à 20 € par an) reste possible : la variable `DOMAIN` du fichier `.env` prend alors ce nom et, pour un domaine apex, on ajoute au `Caddyfile` un bloc `www.` qui redirige vers l'apex.
 
 ## 3. Publier le dépôt sur GitHub
 
@@ -67,31 +67,31 @@ Render construit l'image `Dockerfile.app` depuis GitHub et la met en ligne avec 
 2. Dans le tableau de bord Render : **New → Blueprint**, choisir le dépôt, valider. Render crée le service `wapp-dam-simulator` avec le plan Starter et un disque de 1 Go monté sur `/app/data`. La première construction prend 3 à 5 minutes (compilation du front puis installation de Python).
    Sans Blueprint : **New → Web Service → le dépôt → Runtime Docker**, *Dockerfile path* `Dockerfile.app`, *Health check path* `/api/v1/health`, puis onglet *Disks* : ajouter un disque monté sur `/app/data`, et onglet *Environment* : les variables de `.env.example`.
 3. Vérifier `https://wapp-dam-simulator.onrender.com/api/v1/health`, puis créer une salle et lancer un clearing.
-4. Nom de domaine : *Settings → Custom Domains → Add* `wapp-dam-simulator.org` et `www.wapp-dam-simulator.org`. Render affiche les enregistrements DNS à créer chez le registrar (un enregistrement A ou ALIAS pour l'apex, un CNAME pour www) et obtient le certificat tout seul. Mettre ensuite le domaine dans `WAPP_CORS_ORIGINS` (déjà le cas dans `render.yaml`).
+4. Nom de domaine : *Settings → Custom Domains → Add* `wapp-dam-simulator.mastereose.fr`. Render affiche l'enregistrement CNAME à faire créer par l'administrateur DNS du Mastère OSE et obtient le certificat tout seul. Mettre ensuite le domaine dans `WAPP_CORS_ORIGINS` (déjà le cas dans `render.yaml`).
 5. Mises à jour : chaque `git push` sur `main` redéploie (*autoDeploy*). Sauvegardes : *Disks → Snapshots* (quotidiens, conservés 7 jours) ; pour une copie locale, `render ssh` puis `sqlite3 /app/data/rooms.db .dump`.
 
 Points d'attention : le plan Free n'accepte pas de disque (les salles seraient perdues à chaque redémarrage) et endort le service après quinze minutes d'inactivité ; prendre le plan Starter (7 $/mois, plus 0,25 $/mois le disque). Avec un disque attaché, un déploiement coupe le service quelques secondes. Le conteneur écoute sur le port fourni par Render (`PORT`), l'image gère les deux cas.
 
 ## 4 bis. Option B : serveur virtuel (une fois)
 
-1. Chez le registrar, créer deux enregistrements DNS vers l'adresse IPv4 du serveur : `A @` et `A www`. Compter jusqu'à une heure de propagation.
+1. Faire créer par l'administrateur DNS du Mastère OSE un enregistrement `A` `wapp-dam-simulator.mastereose.fr` vers l'adresse IPv4 du serveur (ou un `CNAME` vers son nom). Compter jusqu'à une heure de propagation.
 2. Se connecter au serveur et lancer le script d'installation (il installe Docker et le pare-feu, clone le dépôt, crée `.env`, démarre les services) :
 
 ```bash
 ssh root@<adresse-du-serveur>
 curl -fsSL https://raw.githubusercontent.com/<compte>/wapp-dam-simulator/main/deploy/setup_server.sh -o setup_server.sh
-bash setup_server.sh https://github.com/<compte>/wapp-dam-simulator.git wapp-dam-simulator.org
+bash setup_server.sh https://github.com/<compte>/wapp-dam-simulator.git wapp-dam-simulator.mastereose.fr
 ```
 
-3. Vérifier : `https://wapp-dam-simulator.org` affiche le site, `https://wapp-dam-simulator.org/api/v1/health` répond `{"status":"ok", …}`, `https://www.wapp-dam-simulator.org` redirige vers l'apex. Le certificat est obtenu au premier accès (quelques secondes).
+3. Vérifier : `https://wapp-dam-simulator.mastereose.fr` affiche le site, `https://wapp-dam-simulator.mastereose.fr/api/v1/health` répond `{"status":"ok", …}`. Le certificat est obtenu au premier accès (quelques secondes).
 4. Créer une salle, la rejoindre depuis un téléphone, lancer un clearing.
 
 Le fichier `/opt/wapp/app/.env` contient les réglages (modèle dans `.env.example`) :
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `DOMAIN` | nom servi par Caddy | wapp-dam-simulator.org |
-| `WAPP_CORS_ORIGINS` | origines autorisées pour l'API | https://wapp-dam-simulator.org |
+| `DOMAIN` | nom servi par Caddy | wapp-dam-simulator.mastereose.fr |
+| `WAPP_CORS_ORIGINS` | origines autorisées pour l'API | https://wapp-dam-simulator.mastereose.fr |
 | `WAPP_ROOM_TTL_DAYS` | purge des salles inactives | 30 |
 | `WAPP_MAX_ROOMS_PER_IP_PER_DAY` | quota de création de salles | 20 |
 
@@ -148,7 +148,7 @@ docker run -d --name wapp -p 8000:8000 -v wapp-data:/app/data wapp-simulator
 uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
-Les participants ouvrent `http://<adresse-IP-du-formateur>:8000/app` et saisissent le code de la salle. Si le pare-feu de l'établissement bloque le port, un point d'accès Wi-Fi depuis un téléphone ou un tunnel (`ssh -R 80:localhost:8000 nokey@localhost.run`) contourne la difficulté. Avec le site en ligne, le plus simple reste d'utiliser `https://wapp-dam-simulator.org/app`.
+Les participants ouvrent `http://<adresse-IP-du-formateur>:8000/app` et saisissent le code de la salle. Si le pare-feu de l'établissement bloque le port, un point d'accès Wi-Fi depuis un téléphone ou un tunnel (`ssh -R 80:localhost:8000 nokey@localhost.run`) contourne la difficulté. Avec le site en ligne, le plus simple reste d'utiliser `https://wapp-dam-simulator.mastereose.fr/app`.
 
 ## 9. Vérifier que tout fonctionne
 

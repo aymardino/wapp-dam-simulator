@@ -5,6 +5,16 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 15 — Site en ligne sur wapp-dam-simulator.mastereose.fr
+
+- Adresse publique : `https://wapp-dam-simulator.mastereose.fr`, sous-domaine fourni par le Mastère OSE, remplace le
+  nom de domaine prévu à l'étape 13 (`wapp-dam-simulator.org`) dans les liens du site, les fiches techniques, les
+  README, les guides de déploiement, le Caddyfile, `docker-compose.yml`, `render.yaml` et `.env.example`. La
+  redirection `www.` du Caddyfile, prévue pour un domaine apex, est retirée.
+- Poste du formateur : la bannière « Démonstration » n'apparaît que si aucun ordre de participant n'a pris part au
+  calcul (avec la complétion « acteurs de fond », toutes les zones portent des acteurs de référence même quand des
+  participants ont déposé des ordres).
+
 ### Étape 14 — Dépôt en anglais d'abord, documentation française conservée
 
 - Code, commentaires, docstrings, messages d'erreur du moteur, documentation de l'API, tests, scripts et fichiers

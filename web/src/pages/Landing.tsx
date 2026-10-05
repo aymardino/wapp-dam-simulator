@@ -1,4 +1,4 @@
-/** Public home page (wapp-dam-simulator.org). Identity: editorial serif headings, price ticker, dark
+/** Public home page (wapp-dam-simulator.mastereose.fr). Identity: editorial serif headings, price ticker, dark
  *  "control room" map driven by a histogram hour selector, per-zone supply / demand explorer built on the
  *  reference orders, spec sheet, terminal block. Bilingual FR/EN. */
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
