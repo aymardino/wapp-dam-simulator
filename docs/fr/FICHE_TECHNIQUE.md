@@ -78,7 +78,7 @@ Les prix produits sont des résultats de simulation sur ces données, pas des pr
 
 ## 8. Qualité et vérification
 
-- 66 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
+- 68 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
 - Campagne de cas aléatoires (segments, blocs simples, liés, exclusifs, conditions, toutes les règles, 24 h ou une heure, capacités réduites) contrôlée par un vérificateur indépendant du solveur : prix dans les bornes, flux dans les capacités, équilibre horaire, positions nettes de somme nulle, accepté ≤ offert, règles de blocs, conditions satisfaites ou retirées, identité du welfare.
 - Reproduction en trois commandes (voir `README.md`).
 

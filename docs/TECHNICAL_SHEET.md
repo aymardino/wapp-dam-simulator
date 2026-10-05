@@ -78,7 +78,7 @@ Prices produced on these data are simulation results, not observed prices: the W
 
 ## 8. Quality and verification
 
-- 66 automated tests run on every change (continuous integration): regression values, block and condition rules, API, command line.
+- 68 automated tests run on every change (continuous integration): regression values, block and condition rules, API, command line.
 - Random-case campaign (segments, simple, linked and exclusive blocks, conditions, every rule, 24 hours or one hour, reduced capacities) checked by a solver-independent verifier: prices within bounds, flows within capacities, hourly balance, net positions summing to zero, accepted ≤ offered, block rules, conditions satisfied or withdrawn, welfare identity.
 - Reproduction in three commands (see `README.md`).
 
