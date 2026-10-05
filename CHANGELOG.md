@@ -28,6 +28,8 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 - Explorer sentence: a country that both receives and sends shows the two figures behind its net import or export; a price shared with a neighbour names that neighbour; the case where no order sets the price (Niger at 16:00 in the 2024 set) is explained by the midpoint rule instead of being attributed to a neighbour.
 - About section: handwritten signature removed.
 - Wording: a participant represents a market actor of a country (a utility, a producer, a distributor), not a country, and several actors can share a country; corrected in the hall subtitle, the landing page, the technical sheet (English and French) and the French README.
+- Explorer chart: the part of each curve that is served is drawn in full colour and the rest faint, with a "not accepted" legend entry and a sentence in the lead paragraph, so that the two curves are no longer read as having to end at the same quantity.
+- Explorer chart, fixes: the import or export bar now runs from the production served to the consumption served (it was shifted to the right whenever a demand tranche set the price); hourly quantities are rounded like the engine, halves to the even neighbour, which removes 1 MW differences with the engine; the price label can slide along the price line and the import or export label is centred on a long bar instead of leaving the plot.
 
 ### Step 13 — Landing page, second version: own identity, zone explorer, fixes
 

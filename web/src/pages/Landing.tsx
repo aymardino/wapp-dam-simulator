@@ -34,7 +34,7 @@ const L = {
     welfare: 'valeur créée', volume: 'énergie échangée', saturated: 'lignes pleines',
     loading: 'Le moteur calcule…', demo_err: 'Le serveur de démonstration ne répond pas.',
     ex_kicker: 'Comprendre un prix', ex_title: ['Pourquoi ce prix,', 'ici, à cette heure ?'],
-    ex_lead: 'On range les centrales d’un pays de la moins chère à la plus chère : c’est la courbe verte. La demande est en rouge. Le prix se fixe à leur rencontre, corrigé de ce que les lignes laissent entrer ou sortir.',
+    ex_lead: 'On range les centrales d’un pays de la moins chère à la plus chère : c’est la courbe verte. La demande est en rouge. Le prix se fixe à leur rencontre, corrigé de ce que les lignes laissent entrer ou sortir. Ce qui dépasse à droite, en trait pâle, n’est pas retenu à cette heure : des centrales trop chères, des demandes qui paient trop peu.',
     hand_ex: 'choisissez un pays, puis une heure',
     ex_cap: 'prix plafond : 500', ex_sup_end: 'production possible :', ex_dem_end: 'demande :', ex_supply: 'Offre des centrales', ex_demand: 'Demande', ex_price: 'prix du pays', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Offres', ex_accepted: 'retenu', ex_marginal: 'fixe le prix', ex_rejected: 'non retenu',
@@ -109,7 +109,7 @@ const L = {
     welfare: 'value created', volume: 'energy traded', saturated: 'full lines',
     loading: 'The engine is computing…', demo_err: 'The demonstration server is not responding.',
     ex_kicker: 'Understand a price', ex_title: ['Why this price,', 'here, at this hour?'],
-    ex_lead: 'Line up a country’s plants from cheapest to most expensive: that is the green curve. Demand is in red. The price settles where they meet, adjusted for what the lines let in or out.',
+    ex_lead: 'Line up a country’s plants from cheapest to most expensive: that is the green curve. Demand is in red. The price settles where they meet, adjusted for what the lines let in or out. What extends to the right, drawn faint, is not accepted at this hour: plants that are too expensive, demand that pays too little.',
     hand_ex: 'pick a country, then an hour',
     ex_cap: 'price cap: 500', ex_sup_end: 'possible output:', ex_dem_end: 'demand:', ex_supply: 'Supply from plants', ex_demand: 'Demand', ex_price: 'country price', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Orders', ex_accepted: 'accepted', ex_marginal: 'sets the price', ex_rejected: 'not accepted',
@@ -182,12 +182,14 @@ type Strings = typeof L.fr
 
 /* ── Explorer computations ────────────────────────────────────────────── */
 type Seg = { actor: string; price: number; qty: number }
-type Curves = { sup: Seg[]; dem: Seg[]; price: number; net: number; lines: { other: string; flow: number; cap: number; sat: boolean; price: number }[]; supAt: number; demAt: number }
+type Curves = { sup: Seg[]; dem: Seg[]; price: number; net: number; lines: { other: string; flow: number; cap: number; sat: boolean; price: number }[]; prod: number; cons: number }
+/** Rounds like the engine (Python sends halves to the even neighbour), so that the curves carry the engine's hourly quantities. */
+const pyRound = (x: number) => { const r = Math.round(x); return Math.abs(x - Math.trunc(x)) === 0.5 && r % 2 !== 0 ? r - 1 : r }
 
 function zoneCurves(demo: Demo, zone: string, h: number): Curves {
   const prof = (name?: string) => demo.profiles[name || 'baseload'] || demo.profiles.flat || Array(24).fill(1)
-  const sup = demo.supply.filter(r => r.zone === zone).map(r => ({ actor: r.actor, price: r.price, qty: Math.round(r.quantity * prof(r.profile)[h]) })).filter(r => r.qty > 0).sort((a, b) => a.price - b.price)
-  const dem = demo.demand.filter(r => r.zone === zone).map(r => ({ actor: r.actor, price: r.price, qty: Math.round(r.quantity * demo.load[h]) })).filter(r => r.qty > 0).sort((a, b) => b.price - a.price)
+  const sup = demo.supply.filter(r => r.zone === zone).map(r => ({ actor: r.actor, price: r.price, qty: pyRound(r.quantity * prof(r.profile)[h]) })).filter(r => r.qty > 0).sort((a, b) => a.price - b.price)
+  const dem = demo.demand.filter(r => r.zone === zone).map(r => ({ actor: r.actor, price: r.price, qty: pyRound(r.quantity * demo.load[h]) })).filter(r => r.qty > 0).sort((a, b) => b.price - a.price)
   const price = demo.prices[zone]?.[String(h)] ?? 0
   let net = 0; const lines: Curves['lines'] = []
   for (const key of Object.keys(demo.ntc)) {
@@ -196,9 +198,19 @@ function zoneCurves(demo: Demo, zone: string, h: number): Curves {
     const other = u === zone ? v : u
     net += out; lines.push({ other, flow: out, cap, sat: Math.abs(f) >= cap - 1, price: demo.prices[other]?.[String(h)] ?? NaN })
   }
-  const supAt = sup.filter(r => r.price <= price + 0.5).reduce((a, r) => a + r.qty, 0)
-  const demAt = dem.filter(r => r.price >= price - 0.5).reduce((a, r) => a + r.qty, 0)
-  return { sup, dem, price, net, lines, supAt, demAt }
+  // What is served on each side. Orders strictly better than the price are served in full, orders strictly worse are not
+  // served; only an order priced exactly at the country price can be served in part, and the balance of the zone
+  // (production - consumption = net export) says by how much.
+  const sum = (rows: Seg[], keep: (r: Seg) => boolean) => rows.filter(keep).reduce((a, r) => a + r.qty, 0)
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+  const sLt = sum(sup, r => r.price < price - 0.5), sEq = sum(sup, r => Math.abs(r.price - price) <= 0.5)
+  const dGt = sum(dem, r => r.price > price + 0.5), dEq = sum(dem, r => Math.abs(r.price - price) <= 0.5)
+  let prod: number, cons: number
+  if (sEq > 0 && dEq === 0) { cons = dGt; prod = clamp(cons + net, sLt, sLt + sEq) }               // a plant sets the price
+  else if (dEq > 0 && sEq === 0) { prod = sLt; cons = clamp(prod - net, dGt, dGt + dEq) }          // a demand tranche sets it
+  else if (sEq === 0) { prod = sLt; cons = dGt }                                                   // price set elsewhere
+  else { cons = clamp(sLt + sEq - net, dGt, dGt + dEq); prod = clamp(cons + net, sLt, sLt + sEq) } // both at the price
+  return { sup, dem, price, net, lines, prod, cons }
 }
 
 function sentence(c: Curves, zone: string, hour: number, lang: Lang) {
@@ -332,10 +344,26 @@ function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Stri
 function CurveChart({ c, s }: { c: Curves; s: Strings }) {
   const W = 760, H = 460, Lm = 56, Rm = 24, Tm = 24, Bm = 44
   const totalS = c.sup.reduce((a, r) => a + r.qty, 0), totalD = c.dem.reduce((a, r) => a + r.qty, 0)
-  const xMax = niceCeil(Math.max(totalS, totalD, c.demAt + Math.abs(c.net), 10) * 1.08)
+  const xMax = niceCeil(Math.max(totalS, totalD, c.prod, c.cons, 10) * 1.08)
   const yMax = 500   // regulatory price bounds of the market: the same frame for every zone
   const X = (q: number) => Lm + (q / xMax) * (W - Lm - Rm), Y = (p: number) => Tm + (1 - p / yMax) * (H - Tm - Bm)
-  const path = (segs: Seg[]) => { let x = 0; const d: string[] = []; segs.forEach((r, i) => { d.push(i === 0 ? `M${X(0)} ${Y(r.price)}` : `L${X(x)} ${Y(r.price)}`); x += r.qty; d.push(`L${X(x)} ${Y(r.price)}`) }); return d.join(' ') }
+  // Each curve is cut where it meets the country price: before that point the orders are served (full colour), after it
+  // they are not (faint). Returns the two SVG paths.
+  const split = (rows: Seg[], served: number, supply: boolean): [string, string] => {
+    const pts: [number, number][] = []; let q = 0
+    rows.forEach(r => { pts.push([q, r.price]); q += r.qty; pts.push([q, r.price]) })
+    const line = (ps: [number, number][]) => ps.map(([a, b], i) => `${i ? 'L' : 'M'}${X(a)} ${Y(b)}`).join(' ')
+    if (!pts.length || served <= 0.01) return ['', line(pts)]
+    if (served >= q - 0.01) return [line(pts), '']
+    const better = (v: number) => (supply ? v <= c.price + 0.5 : v >= c.price - 0.5)
+    const n = pts.findIndex(([a, b]) => a > served + 0.01 || (Math.abs(a - served) <= 0.01 && !better(b)))
+    const kept = pts.slice(0, n), rest = pts.slice(n)
+    const onRiser = Math.abs(rest[0][0] - served) <= 0.01
+    const lastP = kept[kept.length - 1][1], nextP = rest[0][1]
+    const cut: [number, number] = [served, onRiser ? Math.min(Math.max(c.price, Math.min(lastP, nextP)), Math.max(lastP, nextP)) : nextP]
+    return [line([...kept, cut]), line([cut, ...rest])]
+  }
+  const [supKept, supRest] = split(c.sup, c.prod, true), [demKept, demRest] = split(c.dem, c.cons, false)
   const lastS = c.sup.length ? c.sup[c.sup.length - 1].price : 0, lastD = c.dem.length ? c.dem[c.dem.length - 1].price : 0
   const by = Y(c.price)
 
@@ -352,7 +380,7 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
   const crossed = (b: Box, pad = 3) => drawn.filter(([x1, y1, x2, y2]) => Math.max(x1, x2) >= b.x - pad && Math.min(x1, x2) <= b.x + b.w + pad && Math.max(y1, y2) >= b.y - pad && Math.min(y1, y2) <= b.y + b.h + pad).length
   const overlap = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
   const outside = (b: Box) => b.x < Lm || b.x + b.w > W - Rm || b.y < Tm - 12 || b.y + b.h > H - Bm
-  const placed: Box[] = [{ x: Lm, y: Tm - 8, w: 300, h: 18 }]            // the legend, top left
+  const placed: Box[] = [{ x: Lm, y: Tm - 8, w: 380, h: 18 }]            // the legend, top left
   const place = (cands: Box[]) => {
     const scored = cands.map(b => ({ b, n: crossed(b) + 5 * placed.filter(o => overlap(b, o)).length + (outside(b) ? 100 : 0) }))
     const pick = scored.reduce((a, k) => (k.n < a.n ? k : a)).b
@@ -362,19 +390,25 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
 
   // End of each curve: "possible output" at the top of the supply curve, "demand" at the foot of the demand curve
   const sText = `${s.ex_sup_end} ${nf(totalS)} MW`, dText = `${s.ex_dem_end} ${nf(totalD)} MW`
-  const sw = textW(sText, 6.1), dw = textW(dText, 6.1)
+  const sw = textW(sText, 6.6), dw = textW(dText, 6.6)
   const sBox = place([{ x: X(totalS) + 6, y: Tm + 4, w: sw, h: 14 }, { x: X(totalS) - 6 - sw, y: Tm + 4, w: sw, h: 14 }, { x: X(totalS) + 6, y: Tm + 22, w: sw, h: 14 }, { x: X(totalS) - 6 - sw, y: Tm + 22, w: sw, h: 14 }])
   const dBox = place([{ x: X(totalD) + 6, y: Y(0) - 19, w: dw, h: 14 }, { x: X(totalD) - 6 - dw, y: Y(0) - 19, w: dw, h: 14 }, { x: X(totalD) + 6, y: Y(0) - 37, w: dw, h: 14 }, { x: X(totalD) - 6 - dw, y: Y(0) - 37, w: dw, h: 14 }])
 
   // Price of the country: beside the dashed line, on the side and at the end where no curve passes
   const pText = `${s.ex_price} ${nf(c.price, 1)}`, pw = textW(pText, 7.3) + 6
-  const pBox = place([{ x: Lm + 6, y: by - 19, w: pw, h: 15 }, { x: Lm + 6, y: by + 5, w: pw, h: 15 }, { x: W - Rm - 4 - pw, y: by - 19, w: pw, h: 15 }, { x: W - Rm - 4 - pw, y: by + 5, w: pw, h: 15 }])
+  const free = W - Rm - 4 - pw - (Lm + 6)                                   // room to slide the label along the line
+  const pBox = place([0, 1, 1 / 3, 2 / 3].flatMap(k => [{ x: Lm + 6 + k * free, y: by - 19, w: pw, h: 15 }, { x: Lm + 6 + k * free, y: by + 5, w: pw, h: 15 }]))
 
   // Import or export: a bar on the price line (a dot when it is too short to see), and a boxed label tied to it
-  const bx1 = X(Math.min(c.demAt, c.demAt + c.net)), bx2 = X(Math.max(c.demAt, c.demAt + c.net))
+  const bx1 = X(Math.min(c.prod, c.cons)), bx2 = X(Math.max(c.prod, c.cons))
   const netLabel = c.net > 1 ? `${s.ex_export} ${nf(Math.round(c.net))} MW` : c.net < -1 ? `${s.ex_import} ${nf(Math.round(-c.net))} MW` : null
   const tw = netLabel ? textW(netLabel, 7.2) + 18 : 0, th = 22
-  const nBox = netLabel ? place([12, -34, 44, -66, 76, -98].flatMap(dy => [{ x: bx2 + 14, y: by + dy, w: tw, h: th }, { x: bx1 - 14 - tw, y: by + dy, w: tw, h: th }])) : null
+  const dys = [12, -34, 44, -66, 76, -98]
+  const mid = Math.min(Math.max((bx1 + bx2) / 2 - tw / 2, Lm + 2), W - Rm - tw - 2)      // centred on the bar, kept inside the plot
+  const nBox = netLabel ? place([
+    ...[14, 60].flatMap(dx => dys.flatMap(dy => [{ x: bx2 + dx, y: by + dy, w: tw, h: th }, { x: bx1 - dx - tw, y: by + dy, w: tw, h: th }])),
+    ...dys.map(dy => ({ x: mid, y: by + dy, w: tw, h: th })),
+  ]) : null
   const halo = { paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 3.5, strokeLinejoin: 'round' } as const
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img">
@@ -383,20 +417,24 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
       <text x={W - Rm} y={H - 6} textAnchor="end" fontSize="11" fill="#5C5B56">MW</text>
       <text x={Lm - 8} y={Tm - 8} textAnchor="end" fontSize="11" fill="#5C5B56">$/MWh</text>
       <text x={W - Rm} y={Y(yMax) - 6} textAnchor="end" fontSize="11" fill="#8C8B84">{s.ex_cap}</text>
-      <path d={path(c.sup)} fill="none" stroke="#0F6E56" strokeWidth={2.5} strokeLinejoin="round" />
-      <path d={path(c.dem)} fill="none" stroke="#B5443C" strokeWidth={2.5} strokeLinejoin="round" />
-      {c.sup.length > 0 && <line x1={X(totalS)} x2={X(totalS)} y1={Y(lastS)} y2={Y(yMax)} stroke="#0F6E56" strokeWidth={1.5} strokeDasharray="4 4" />}
-      {c.dem.length > 0 && <line x1={X(totalD)} x2={X(totalD)} y1={Y(lastD)} y2={Y(0)} stroke="#B5443C" strokeWidth={1.5} strokeDasharray="4 4" />}
+      <path d={supRest} fill="none" stroke="#0F6E56" strokeWidth={2} strokeLinejoin="round" opacity={0.3} />
+      <path d={demRest} fill="none" stroke="#B5443C" strokeWidth={2} strokeLinejoin="round" opacity={0.3} />
+      <path d={supKept} fill="none" stroke="#0F6E56" strokeWidth={2.5} strokeLinejoin="round" />
+      <path d={demKept} fill="none" stroke="#B5443C" strokeWidth={2.5} strokeLinejoin="round" />
+      {c.sup.length > 0 && <line x1={X(totalS)} x2={X(totalS)} y1={Y(lastS)} y2={Y(yMax)} stroke="#0F6E56" strokeWidth={1.5} strokeDasharray="4 4" opacity={0.45} />}
+      {c.dem.length > 0 && <line x1={X(totalD)} x2={X(totalD)} y1={Y(lastD)} y2={Y(0)} stroke="#B5443C" strokeWidth={1.5} strokeDasharray="4 4" opacity={0.45} />}
       <line x1={Lm} x2={W - Rm} y1={by} y2={by} stroke="#1B1B19" strokeDasharray="5 4" strokeWidth={1.2} />
       {c.sup.length > 0 && <text x={sBox.x} y={sBox.y + 11} fontSize="11" fill="#0F6E56" style={halo}>{sText}</text>}
       {c.dem.length > 0 && <text x={dBox.x} y={dBox.y + 11} fontSize="11" fill="#B5443C" style={halo}>{dText}</text>}
       <text x={pBox.x + 3} y={pBox.y + 12} fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#1B1B19" style={halo}>{pText}</text>
       {netLabel && nBox && (() => {
         const narrow = bx2 - bx1 < 12
-        const right = nBox.x >= bx2, below = nBox.y > by
+        const below = nBox.y > by
+        const from = Math.min(Math.max(nBox.x + tw / 2, bx1), bx2)                        // point of the bar nearest to the label
+        const to = Math.min(Math.max(from, nBox.x + 3), nBox.x + tw - 3)
         return (
           <g>
-            <line x1={right ? bx2 : bx1} x2={right ? nBox.x + 2 : nBox.x + tw - 2} y1={by} y2={below ? nBox.y + 2 : nBox.y + th - 2} stroke="#8C8B84" strokeWidth={1} />
+            <line x1={from} x2={to} y1={by} y2={below ? nBox.y + 2 : nBox.y + th - 2} stroke="#8C8B84" strokeWidth={1} />
             {narrow
               ? <circle cx={(bx1 + bx2) / 2} cy={by} r={4.5} fill="#F2B134" stroke="#1B1B19" strokeWidth={1} />
               : <>
@@ -411,6 +449,7 @@ function CurveChart({ c, s }: { c: Curves; s: Strings }) {
       <g fontSize="12" fill="#5C5B56">
         <line x1={Lm} x2={Lm + 22} y1={Tm + 2} y2={Tm + 2} stroke="#0F6E56" strokeWidth={3} /><text x={Lm + 28} y={Tm + 6}>{s.ex_supply}</text>
         <line x1={Lm + 150} x2={Lm + 172} y1={Tm + 2} y2={Tm + 2} stroke="#B5443C" strokeWidth={3} /><text x={Lm + 178} y={Tm + 6}>{s.ex_demand}</text>
+        <line x1={Lm + 250} x2={Lm + 272} y1={Tm + 2} y2={Tm + 2} stroke="#5C5B56" strokeWidth={3} opacity={0.3} /><text x={Lm + 278} y={Tm + 6}>{s.ex_rejected}</text>
       </g>
     </svg>
   )
