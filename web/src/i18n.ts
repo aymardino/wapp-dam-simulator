@@ -38,7 +38,7 @@ const STR: Record<string, [string, string]> = {
   trader_count: ['traders', 'traders'], back: ['Accueil', 'Home'],
   my_rooms: ['Vos salles', 'Your rooms'], as_trainer: ['Poste du formateur', 'Trainer desk'], as_member: ['Salle de marché', 'Trading floor'],
   forget: ['Oublier', 'Forget'], switch_desk: ['Passer au poste du formateur', 'Switch to the trainer desk'], switch_room: ['Entrer dans la salle comme trader', 'Enter the floor as a trader'],
-  hero_1: ['Chaque participant représente un pays du West African Power Pool, dépose ses offres pour le lendemain et observe le clearing.', 'Each participant represents a West African Power Pool country, submits orders for the next day and watches the clearing.'],
+  hero_1: ['Chaque participant représente un acteur du marché dans un pays du West African Power Pool : société d\u2019électricité, producteur ou distributeur. Il dépose ses offres pour le lendemain et observe le clearing. Plusieurs acteurs peuvent partager un pays.', 'Each participant represents a market actor in a West African Power Pool country: a utility, a producer or a distributor. They submit orders for the next day and watch the clearing. Several actors can share a country.'],
   empty_supply: ['Aucune offre de vente. Ajoutez un segment prix / quantité par centrale.', 'No sell order yet. Add a price / quantity segment per plant.'],
   empty_demand: ['Aucune offre d\u2019achat. Ajoutez la demande de votre réseau par segment.', 'No buy order yet. Add your grid demand by segment.'],
   empty_blocks: ['Aucun bloc. Un bloc est accepté en totalité sur sa plage horaire, ou rejeté.', 'No block. A block is fully accepted over its hours, or rejected.'],

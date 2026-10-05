@@ -62,7 +62,7 @@ const L = {
     ] as [string, string][],
     w_title: ['Trois façons', 'de s’en servir.'],
     w: [
-      ['Former', 'Une séance en trois manches. Chacun représente un pays, dépose ses offres, découvre son résultat.'],
+      ['Former', 'Une séance en trois manches. Chacun représente un acteur d’un pays, dépose ses offres, découvre son résultat.'],
       ['Étudier', 'Des règles écrites, un cas-test public, un moteur ouvert : de quoi travailler sur les prix et les blocs.'],
       ['Comparer', 'Rejouez un cas et confrontez le résultat à celui d’une autre plateforme, avant le lancement du marché.'],
     ] as [string, string][],
@@ -137,7 +137,7 @@ const L = {
     ] as [string, string][],
     w_title: ['Three ways', 'to use it.'],
     w: [
-      ['Train', 'A three-round session. Everyone represents a country, submits orders and discovers their result.'],
+      ['Train', 'A three-round session. Everyone represents an actor in a country, submits orders and discovers their result.'],
       ['Study', 'Written rules, a public test case, an open engine: material to work on prices and blocks.'],
       ['Compare', 'Replay a case and confront the result with another platform’s, before the market opens.'],
     ] as [string, string][],

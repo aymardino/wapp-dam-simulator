@@ -14,7 +14,7 @@
 
 ## 1. What the tool does
 
-Each participant represents a WAPP country, submits sell and buy orders for every hour of the next day, and the trainer runs the clearing. The engine answers three questions, in order: **who trades** (the set of trades that creates the most value within line capacities), **how to break ties** between equivalent solutions (the most energy traded), **at what price** (one price per country and per hour, chosen within the complete set of prices consistent with the quantities). Every rule is written in a public document and checked by automated tests.
+Each participant represents a market actor of a WAPP country (a utility, a producer, a distributor; several can share a country), submits sell and buy orders for every hour of the next day, and the trainer runs the clearing. The engine answers three questions, in order: **who trades** (the set of trades that creates the most value within line capacities), **how to break ties** between equivalent solutions (the most energy traded), **at what price** (one price per country and per hour, chosen within the complete set of prices consistent with the quantities). Every rule is written in a public document and checked by automated tests.
 
 Three uses: **train** (a three-round market session, one country per participant), **study** (a public test case, written rules, an open engine), **compare** (replay a case, confront the results with another platform's, discuss tie-break rules before the market opens).
 

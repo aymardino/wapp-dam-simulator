@@ -9,7 +9,7 @@ Projet MS OSE 2025 — Mines Paris-PSL × SENELEC × EPEX SPOT · version 2 (oct
 
 ## Ce que fait l'outil
 
-Chaque participant se connecte comme trader d'un pays, dépose ses offres de vente et d'achat pour chaque heure du lendemain, et l'administrateur lance le clearing. Le moteur répond à trois questions, dans l'ordre : **qui échange** (la combinaison d'échanges qui crée le plus de valeur sans dépasser la capacité des lignes), **comment départager** les ex æquo (le plus d'énergie échangée), **à quel prix** (un prix par pays et par heure, choisi dans l'ensemble des prix compatibles avec les quantités). Les règles sont écrites noir sur blanc dans [docs/fr/REGLES_DE_MARCHE.md](docs/fr/REGLES_DE_MARCHE.md) et vérifiées par des tests.
+Chaque participant rejoint une salle au nom d'une organisation d'un pays, dépose ses offres de vente et d'achat pour chaque heure du lendemain, et le formateur lance le clearing. Le moteur répond à trois questions, dans l'ordre : **qui échange** (la combinaison d'échanges qui crée le plus de valeur sans dépasser la capacité des lignes), **comment départager** les ex æquo (le plus d'énergie échangée), **à quel prix** (un prix par pays et par heure, choisi dans l'ensemble des prix compatibles avec les quantités). Les règles sont écrites noir sur blanc dans [docs/fr/REGLES_DE_MARCHE.md](docs/fr/REGLES_DE_MARCHE.md) et vérifiées par des tests.
 
 Nouveautés de la version 2 (détail dans [docs/fr/CHANGELOG.md](docs/fr/CHANGELOG.md)) :
 - ordres bloc, liés et exclusifs réellement modélisés (MILP), blocs paradoxaux traités selon la règle EUPHEMIA ;

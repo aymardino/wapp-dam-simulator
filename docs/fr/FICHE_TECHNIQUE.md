@@ -14,7 +14,7 @@
 
 ## 1. Ce que fait l'outil
 
-Les participants représentent chacun un pays du WAPP, déposent leurs offres de vente et d'achat pour chaque heure du lendemain, et le formateur lance le clearing. Le moteur répond à trois questions, dans l'ordre : **qui échange** (la combinaison d'échanges qui crée le plus de valeur sans dépasser la capacité des lignes), **comment départager** les solutions équivalentes (le plus d'énergie échangée), **à quel prix** (un prix par pays et par heure, choisi dans l'ensemble complet des prix compatibles avec les quantités). Chaque règle est écrite dans un document public et vérifiée par des tests automatiques.
+Les participants représentent chacun un acteur du marché d'un pays du WAPP (société d'électricité, producteur, distributeur ; plusieurs peuvent partager un pays), déposent leurs offres de vente et d'achat pour chaque heure du lendemain, et le formateur lance le clearing. Le moteur répond à trois questions, dans l'ordre : **qui échange** (la combinaison d'échanges qui crée le plus de valeur sans dépasser la capacité des lignes), **comment départager** les solutions équivalentes (le plus d'énergie échangée), **à quel prix** (un prix par pays et par heure, choisi dans l'ensemble complet des prix compatibles avec les quantités). Chaque règle est écrite dans un document public et vérifiée par des tests automatiques.
 
 Trois usages : **former** (séance de marché en trois manches, un pays par participant), **étudier** (cas-test public, règles écrites, moteur ouvert), **comparer** (rejouer un cas, confronter les résultats à ceux d'une autre plateforme, discuter des règles de départage avant le lancement du marché).
 
