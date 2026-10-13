@@ -14,3 +14,8 @@ This product includes or uses:
 - Map background: Natural Earth (public domain), through world-atlas (ISC)
 "WAPP", "West African Power Pool" and the WAPP logo belong to the West African Power Pool. This educational
 simulator is independent and is not affiliated with the WAPP.
+
+Photos of the public website (web/public/photos/, credited on the site and in web/src/photos.ts), from Wikimedia Commons:
+- Spillway of the Akosombo dam, Ghana — ZSM, CC BY-SA 3.0, https://commons.wikimedia.org/w/index.php?curid=11989962
+- Technicians carrying a solar panel (Innovation: Africa) — IAfrica76, CC0 1.0, https://commons.wikimedia.org/w/index.php?curid=163952895
+- Rural electrification, Chori village, Nigeria — Kambai Akau, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=119450281

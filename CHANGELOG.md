@@ -7,6 +7,7 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 ### Step 15 — Site online at wapp-dam-simulator.mastereose.fr
 
 - Public address: `https://wapp-dam-simulator.mastereose.fr`, a subdomain provided by the Mastère OSE, replaces the domain name planned in step 13 (`wapp-dam-simulator.org`) in the site links, the technical sheets, the READMEs, the deployment guides, the Caddyfile, `docker-compose.yml`, `render.yaml` and `.env.example`. The `www.` redirect of the Caddyfile, meant for an apex domain, is removed.
+- Landing page redesigned in an institutional style, after the enermod-web site: Roboto instead of the serif display and handwriting fonts, bold section titles with a short rule, 1800 px container, full-width photo hero, the interactive map in its own section, two more photos (usages, about), shorter copy, team cards of equal size, sections revealed on scroll. Photos from Wikimedia Commons, credited on the page, in the footer and in NOTICE (web/src/photos.ts).
 - Trainer desk: the demonstration banner is shown only when no participant order took part in the run (with the "background actors" completion, every zone carries reference actors even when participants did submit).
 
 ### Step 14 — English-first repository, French documentation kept

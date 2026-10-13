@@ -11,6 +11,11 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   nom de domaine prévu à l'étape 13 (`wapp-dam-simulator.org`) dans les liens du site, les fiches techniques, les
   README, les guides de déploiement, le Caddyfile, `docker-compose.yml`, `render.yaml` et `.env.example`. La
   redirection `www.` du Caddyfile, prévue pour un domaine apex, est retirée.
+- Page d'accueil refondue dans un style institutionnel, sur le modèle du site enermod-web : Roboto à la place des
+  polices serif et manuscrite, titres gras soulignés d'un court trait, conteneur de 1 800 px, photo pleine largeur en
+  couverture, carte interactive dans sa propre section, deux autres photos (usages, à propos), textes raccourcis,
+  cartes de l'équipe de même taille, sections révélées au défilement. Photos de Wikimedia Commons, créditées sur la
+  page, en pied de page et dans NOTICE (web/src/photos.ts).
 - Poste du formateur : la bannière « Démonstration » n'apparaît que si aucun ordre de participant n'a pris part au
   calcul (avec la complétion « acteurs de fond », toutes les zones portent des acteurs de référence même quand des
   participants ont déposé des ordres).

@@ -1,6 +1,6 @@
-/** Public home page (wapp-dam-simulator.mastereose.fr). Identity: editorial serif headings, price ticker, dark
- *  "control room" map driven by a histogram hour selector, per-zone supply / demand explorer built on the
- *  reference orders, spec sheet, terminal block. Bilingual FR/EN. */
+/** Public home page (wapp-dam-simulator.mastereose.fr). Institutional layout: full-width photo hero, bold sans-serif
+ *  titles with a short rule, price ticker, dark "control room" map driven by a histogram hour selector, per-zone
+ *  supply / demand explorer built on the reference orders, spec sheet, terminal block, team. Bilingual FR/EN. */
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang, type Lang } from '../i18n'
@@ -9,6 +9,7 @@ import NetworkMap from '../components/NetworkMap'
 import PriceHeatmap from '../components/PriceHeatmap'
 import { LINKS } from '../links'
 import { AUTHORS, CONTRIBUTORS, SUPERVISORS, PARTNERS, TIMELINE, type Person, type Partner } from '../about'
+import { PHOTOS, photoAlt, photoCredit, type PhotoId } from '../photos'
 
 type SupRow = { zone: string; actor: string; segment: number; quantity: number; price: number; profile?: string }
 type DemRow = { zone: string; actor: string; segment: number; quantity: number; price: number }
@@ -24,30 +25,31 @@ const L = {
   fr: {
     nav: [['#explorer', 'Comprendre'], ['#moteur', 'Le calcul'], ['#fiche', 'Fiche'], ['#ouvert', 'Code'], ['#apropos', 'À propos']] as [string, string][],
     nav_guides: 'Guides', nav_app: 'Essayer le simulateur',
-    kicker: 'Simulateur ouvert · marché de l’électricité d’Afrique de l’Ouest',
-    title: ['Comment quatorze pays fixeront, chaque jour,', 'le prix de leur électricité.'],
+    kicker: 'Simulateur ouvert du marché de l’électricité d’Afrique de l’Ouest',
+    title: ['Comment quatorze pays fixeront, chaque jour,', 'le prix de leur électricité'],
     lead: 'L’Afrique de l’Ouest doit ouvrir en 2027 un marché commun de l’électricité. Ce simulateur montre le calcul, étape par étape : qui vend, qui achète, à quel prix.',
     cta_app: 'Essayer le simulateur', cta_explore: 'Comprendre un prix',
     computed: (t: number) => `Calculé à l’instant par le moteur, en ${t.toFixed(2)} s, sur des données 2024 reconstituées.`,
-    hand_map: 'cliquez un pays, changez d’heure',
-    map_hint: 'Un cercle, un pays et son prix en $/MWh. En corail, les lignes pleines : de chaque côté, le prix n’est plus le même. Prix simulés, pas observés.',
+    map_label: 'Cliquez un pays, changez d’heure',
+    map_hint: 'Un cercle par pays, avec son prix en $/MWh. En corail, les lignes pleines : le prix n’est plus le même de chaque côté.',
+    mk_kicker: 'Le marché simulé', mk_title: 'Quatorze pays, un prix par heure', mk_lead: 'Le moteur a calculé cette journée à l’ouverture de la page, sur des données 2024 reconstituées. Prix simulés, pas observés.', credits: 'Photos',
     welfare: 'valeur créée', volume: 'énergie échangée', saturated: 'lignes pleines',
     loading: 'Le moteur calcule…', demo_err: 'Le serveur de démonstration ne répond pas.',
     ex_kicker: 'Comprendre un prix', ex_title: ['Pourquoi ce prix,', 'ici, à cette heure ?'],
-    ex_lead: 'On range les centrales d’un pays de la moins chère à la plus chère : c’est la courbe verte. La demande est en rouge. Le prix se fixe à leur rencontre, corrigé de ce que les lignes laissent entrer ou sortir. Ce qui dépasse à droite, en trait pâle, n’est pas retenu à cette heure : des centrales trop chères, des demandes qui paient trop peu.',
-    hand_ex: 'choisissez un pays, puis une heure',
+    ex_lead: 'Les centrales d’un pays, de la moins chère à la plus chère, forment la courbe verte ; la demande, la courbe rouge. Le prix se fixe à leur rencontre, corrigé de ce que les lignes laissent entrer ou sortir.',
+    ex_label: 'Choisissez un pays, puis une heure',
     ex_cap: 'prix plafond : 500', ex_sup_end: 'production possible :', ex_dem_end: 'demande :', ex_supply: 'Offre des centrales', ex_demand: 'Demande', ex_price: 'prix du pays', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Offres', ex_accepted: 'retenu', ex_marginal: 'fixe le prix', ex_rejected: 'non retenu',
     ex_prices_title: 'Les prix des quatorze pays, heure par heure', ex_prices_hint: 'Même couleur, même prix : ces pays forment un seul marché. Un trait sépare ceux qu’une ligne pleine isole. Cliquez un pays pour l’explorer.',
-    m_kicker: 'Le calcul', m_title: ['Trois questions,', 'dans l’ordre.'],
-    m_lead: 'Chaque jour, le marché répond à trois questions. Le moteur fait pareil, à livre ouvert.',
+    m_kicker: 'Le calcul', m_title: ['Trois questions,', 'dans l’ordre'],
+    m_lead: 'Le marché répond chaque jour à trois questions, dans cet ordre. Le moteur fait de même, à livre ouvert.',
     steps: [
       ['1', 'P1 · optimisation', 'Qui est servi ?', 'On retient les échanges qui créent le plus de valeur, sans dépasser la capacité des lignes.'],
       ['2', 'P1bis · optimisation', 'Combien ?', 'À valeur égale, on échange le plus d’énergie possible.'],
       ['3', 'P2 · optimisation', 'À quel prix ?', 'Parmi tous les prix compatibles avec ces échanges, on retient celui du milieu.'],
     ] as [string, string, string, string][],
-    m_interval: ['prix le plus bas possible', 'retenu', 'le plus haut'], m_note: 'Et les cas particuliers ? Une offre « tout ou rien » acceptée à perte est retirée, puis on recalcule. Deux offres au même prix se partagent la quantité. Tout est écrit dans les règles de marché.',
-    f_kicker: 'Sous le capot', f_title: ['Ce qu’il y a', 'dans la boîte.'], f_lead: 'Un moteur de calcul, des salles de formation et des données, dans un seul dépôt.',
+    m_interval: ['prix le plus bas possible', 'retenu', 'le plus haut'], m_note: 'Cas particuliers : une offre « tout ou rien » acceptée à perte est retirée et le calcul relancé ; deux offres au même prix partagent la quantité. Tout est écrit dans les règles de marché.',
+    f_kicker: 'Sous le capot', f_title: ['Ce qu’il y a', 'dans la boîte'], f_lead: 'Un moteur de calcul, des salles de formation et des données, dans un seul dépôt.',
     spec: [
       ['Offres', 'Prix et quantité par tranche, avec un profil horaire : solaire, hydraulique, base, pointe'],
       ['Blocs', 'Offres « tout ou rien », liées entre elles ou exclusives'],
@@ -60,25 +62,24 @@ const L = {
       ['Solveur', 'HiGHS, libre et inclus ; Gurobi s’il est installé'],
       ['Licence', 'Apache 2.0 pour le code, CC BY 4.0 pour les données'],
     ] as [string, string][],
-    w_title: ['Trois façons', 'de s’en servir.'],
+    w_title: ['Trois façons', 'de s’en servir'],
     w: [
       ['Former', 'Une séance en trois manches. Chacun représente un acteur d’un pays, dépose ses offres, découvre son résultat.'],
       ['Étudier', 'Des règles écrites, un cas-test public, un moteur ouvert : de quoi travailler sur les prix et les blocs.'],
       ['Comparer', 'Rejouez un cas et confrontez le résultat à celui d’une autre plateforme, avant le lancement du marché.'],
     ] as [string, string][],
     guide_trainer: 'Guide du formateur', guide_trader: 'Guide du trader',
-    o_kicker: 'Code ouvert', o_title: ['Rien à croire', 'sur parole.'],
+    o_kicker: 'Code ouvert', o_title: ['Rien à croire', 'sur parole'],
     o_lead: 'Le code, les règles et les données sont publics. Trois commandes suffisent pour tout refaire chez vous.',
     o_links: ['Fiche technique', 'Règles de marché', 'Données de référence', 'Architecture', 'Déploiement', 'Dépôt GitHub'],
     o_note: 'Vous devez retrouver exactement ces chiffres : valeur créée 22 317 910, énergie échangée 167 900 MWh.',
     d_title: 'À savoir',
-    d1: 'Ce simulateur est un outil pédagogique indépendant. Il n’est affilié ni au West African Power Pool, ni à son centre de coordination, ni à un fournisseur de plateforme. « WAPP » et « West African Power Pool » appartiennent au WAPP.',
-    d2: 'Les prix affichés sont simulés sur des données reconstituées de sources publiques. Ce ne sont pas des prix observés : le marché n’a pas encore démarré. À utiliser pour former et étudier, pas pour exploiter un réseau.',
+    d1: 'Outil pédagogique indépendant, non affilié au West African Power Pool, à son centre de coordination ni à un fournisseur de plateforme. « WAPP » et « West African Power Pool » appartiennent au WAPP.',
+    d2: 'Les prix affichés sont simulés sur des données reconstituées de sources publiques, pas observés : le marché n’a pas encore démarré. Pour former et étudier, pas pour exploiter un réseau.',
     a_kicker: 'À propos', a_title: ['Qui est derrière', 'ce simulateur ?'],
     a_p: [
-      'Ce simulateur est né d’un projet de groupe du Mastère Spécialisé OSE de Mines Paris – PSL. SENELEC nous a proposé le sujet : refaire, pour le comprendre, le calcul qui fixera les prix du futur marché ouest-africain.',
-      'Le projet a réuni cinq étudiants de la promotion 2025. Nous deux, Kodjovi et Enrico, avons écrit le moteur et l’application, livrés au printemps 2026, et nous continuons de les faire évoluer : règles de prix complètes, données 2024, mise en ligne.',
-      'Tout est en accès libre, parce qu’un marché se comprend mieux quand on peut refaire le calcul soi-même. Vous formez, vous exploitez, vous régulez ou vous cherchez ? Écrivez-nous.',
+      'Ce simulateur est né d’un projet de groupe du Mastère Spécialisé OSE de Mines Paris – PSL, sur un sujet proposé par SENELEC : refaire, pour le comprendre, le calcul qui fixera les prix du futur marché ouest-africain.',
+      'Kodjovi et Enrico ont écrit le moteur et l’application, livrés au printemps 2026, et continuent de les faire évoluer. Tout est en accès libre : un marché se comprend mieux quand on peut refaire le calcul soi-même.',
     ],
     a_authors: 'Auteurs du simulateur', a_contrib: 'Groupe projet du Mastère', a_sup: 'Encadrement',
     p_title: 'Cadre du projet',
@@ -99,30 +100,31 @@ const L = {
   en: {
     nav: [['#explorer', 'Understand'], ['#moteur', 'The maths'], ['#fiche', 'Spec sheet'], ['#ouvert', 'Code'], ['#apropos', 'About']] as [string, string][],
     nav_guides: 'Guides', nav_app: 'Try the simulator',
-    kicker: 'Open simulator · West African electricity market',
-    title: ['How fourteen countries will set, every day,', 'the price of their electricity.'],
+    kicker: 'Open simulator of the West African electricity market',
+    title: ['How fourteen countries will set, every day,', 'the price of their electricity'],
     lead: 'West Africa is due to open a common electricity market in 2027. This simulator shows the computation, step by step: who sells, who buys, at what price.',
     cta_app: 'Try the simulator', cta_explore: 'Understand a price',
     computed: (t: number) => `Computed just now by the engine, in ${t.toFixed(2)} s, on reconstructed 2024 data.`,
-    hand_map: 'click a country, change the hour',
-    map_hint: 'One circle, one country and its price in $/MWh. In coral, the full lines: the price is no longer the same on either side. Simulated prices, not observed ones.',
+    map_label: 'Click a country, change the hour',
+    map_hint: 'One circle per country, with its price in $/MWh. In coral, the full lines: the price differs on either side.',
+    mk_kicker: 'The simulated market', mk_title: 'Fourteen countries, one price per hour', mk_lead: 'The engine computed this day when the page opened, on reconstructed 2024 data. Simulated prices, not observed ones.', credits: 'Photos',
     welfare: 'value created', volume: 'energy traded', saturated: 'full lines',
     loading: 'The engine is computing…', demo_err: 'The demonstration server is not responding.',
     ex_kicker: 'Understand a price', ex_title: ['Why this price,', 'here, at this hour?'],
-    ex_lead: 'Line up a country’s plants from cheapest to most expensive: that is the green curve. Demand is in red. The price settles where they meet, adjusted for what the lines let in or out. What extends to the right, drawn faint, is not accepted at this hour: plants that are too expensive, demand that pays too little.',
-    hand_ex: 'pick a country, then an hour',
+    ex_lead: 'A country’s plants, from cheapest to most expensive, form the green curve; demand, the red one. The price settles where they meet, adjusted for what the lines let in or out.',
+    ex_label: 'Choose a country, then an hour',
     ex_cap: 'price cap: 500', ex_sup_end: 'possible output:', ex_dem_end: 'demand:', ex_supply: 'Supply from plants', ex_demand: 'Demand', ex_price: 'country price', ex_export: 'export', ex_import: 'import',
     ex_seg_title: 'Orders', ex_accepted: 'accepted', ex_marginal: 'sets the price', ex_rejected: 'not accepted',
     ex_prices_title: 'The prices of the fourteen countries, hour by hour', ex_prices_hint: 'Same colour, same price: those countries form a single market. A rule separates the ones a full line isolates. Click a country to explore it.',
-    m_kicker: 'The maths', m_title: ['Three questions,', 'in order.'],
-    m_lead: 'Every day, the market answers three questions. The engine does the same, with the book open.',
+    m_kicker: 'The maths', m_title: ['Three questions,', 'in order'],
+    m_lead: 'Every day the market answers three questions, in this order. The engine does the same, with the book open.',
     steps: [
       ['1', 'P1 · optimisation', 'Who is served?', 'Keep the trades that create the most value, without exceeding line capacities.'],
       ['2', 'P1bis · optimisation', 'How much?', 'At equal value, trade as much energy as possible.'],
       ['3', 'P2 · optimisation', 'At what price?', 'Among all prices consistent with those trades, take the one in the middle.'],
     ] as [string, string, string, string][],
-    m_interval: ['lowest possible price', 'chosen', 'highest'], m_note: 'And the special cases? An “all or nothing” order accepted at a loss is removed, then we recompute. Two orders at the same price share the quantity. Everything is written in the market rules.',
-    f_kicker: 'Under the hood', f_title: ['What is', 'in the box.'], f_lead: 'A clearing engine, training rooms and data, in a single repository.',
+    m_interval: ['lowest possible price', 'chosen', 'highest'], m_note: 'Special cases: an “all or nothing” order accepted at a loss is withdrawn and the computation rerun; two orders at the same price share the quantity. Everything is written in the market rules.',
+    f_kicker: 'Under the hood', f_title: ['What is', 'in the box'], f_lead: 'A clearing engine, training rooms and data, in a single repository.',
     spec: [
       ['Orders', 'Price and quantity by tranche, with an hourly profile: solar, hydro, baseload, peaking'],
       ['Blocks', '“All or nothing” orders, linked to one another or exclusive'],
@@ -135,25 +137,24 @@ const L = {
       ['Solver', 'HiGHS, open source and included; Gurobi when installed'],
       ['Licence', 'Apache 2.0 for the code, CC BY 4.0 for the data'],
     ] as [string, string][],
-    w_title: ['Three ways', 'to use it.'],
+    w_title: ['Three ways', 'to use it'],
     w: [
       ['Train', 'A three-round session. Everyone represents an actor in a country, submits orders and discovers their result.'],
       ['Study', 'Written rules, a public test case, an open engine: material to work on prices and blocks.'],
       ['Compare', 'Replay a case and confront the result with another platform’s, before the market opens.'],
     ] as [string, string][],
     guide_trainer: 'Trainer guide', guide_trader: 'Trader guide',
-    o_kicker: 'Open code', o_title: ['Nothing to take', 'on faith.'],
+    o_kicker: 'Open code', o_title: ['Nothing to take', 'on faith'],
     o_lead: 'The code, the rules and the data are public. Three commands are enough to redo everything at home.',
     o_links: ['Technical sheet', 'Market rules', 'Reference data', 'Architecture', 'Deployment', 'GitHub repository'],
     o_note: 'You should get exactly these figures: value created 22,317,910, energy traded 167,900 MWh.',
     d_title: 'Good to know',
-    d1: 'This simulator is an independent educational tool. It is not affiliated with the West African Power Pool, its coordination centre or any platform vendor. “WAPP” and “West African Power Pool” belong to the WAPP.',
-    d2: 'The prices shown are simulated on data rebuilt from public sources. They are not observed prices: the market has not started yet. Use it to train and to study, not to operate a network.',
+    d1: 'Independent educational tool, not affiliated with the West African Power Pool, its coordination centre or any platform vendor. “WAPP” and “West African Power Pool” belong to the WAPP.',
+    d2: 'The prices shown are simulated on data rebuilt from public sources, not observed: the market has not started yet. For training and study, not for operating a network.',
     a_kicker: 'About', a_title: ['Who is behind', 'this simulator?'],
     a_p: [
-      'This simulator grew out of a group project of the Advanced Master OSE at Mines Paris – PSL. SENELEC gave us the subject: redo, in order to understand it, the computation that will set the prices of the future West African market.',
-      'The project brought together five students of the class of 2025. The two of us, Kodjovi and Enrico, wrote the engine and the application, delivered in the spring of 2026, and we keep developing them: complete pricing rules, 2024 data, an online site.',
-      'Everything is open access, because a market is better understood when you can redo the computation yourself. You train, operate, regulate or research? Write to us.',
+      'This simulator grew out of a group project of the Advanced Master OSE at Mines Paris – PSL, on a subject proposed by SENELEC: redo, in order to understand it, the computation that will set the prices of the future West African market.',
+      'Kodjovi and Enrico wrote the engine and the application, delivered in spring 2026, and keep developing them. Everything is open access: a market is better understood when you can redo the computation yourself.',
     ],
     a_authors: 'Authors of the simulator', a_contrib: 'Master’s project group', a_sup: 'Supervision',
     p_title: 'Project framework',
@@ -299,42 +300,83 @@ function SimBadge({ label, light }: { label: string; light?: boolean }) {
 }
 
 function Kicker({ children, light }: { children: ReactNode; light?: boolean }) {
-  return <div className={`font-mono text-xs uppercase tracking-[0.18em] ${light ? 'text-mint' : 'text-accent'}`}>{children}</div>
+  return <div className={`text-[13px] font-bold uppercase tracking-[0.06em] ${light ? 'text-mint' : 'text-accent'}`}>{children}</div>
 }
 
-function Hero({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Strings; lang: Lang }) {
+/** Institutional section title: bold heading, a short rule underneath, an optional lead paragraph. */
+function SectionTitle({ children, light, lead }: { children: ReactNode; light?: boolean; lead?: ReactNode }) {
+  return (
+    <div>
+      <h2 className={`mt-3 text-3xl md:text-4xl font-bold leading-tight tracking-tight ${light ? 'text-white' : 'text-ink'}`}>{children}</h2>
+      <span aria-hidden className={`mt-4 block h-1 w-14 rounded-full ${light ? 'bg-amber' : 'bg-accent'}`} />
+      {lead && <p className={`mt-5 text-lg leading-relaxed max-w-3xl ${light ? 'text-brand-ink' : 'text-ink-2'}`}>{lead}</p>}
+    </div>
+  )
+}
+
+/** Full-width photo strip with its credit (Creative Commons: author, licence, source). */
+function PhotoBand({ id, lang }: { id: PhotoId; lang: Lang }) {
+  const p = PHOTOS[id]
+  return (
+    <figure className="relative h-[240px] md:h-[360px] overflow-hidden">
+      <img src={p.src} alt={photoAlt(id, lang)} loading="lazy" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: p.position }} />
+      <figcaption className="absolute bottom-2 right-3 text-[11.5px] text-white/85"><a href={p.source} target="_blank" rel="noreferrer" className="bg-black/35 rounded px-2 py-0.5 hover:underline">{photoAlt(id, lang)} · {photoCredit(id, lang)}</a></figcaption>
+    </figure>
+  )
+}
+
+function Hero({ s, lang }: { s: Strings; lang: Lang }) {
+  const p = PHOTOS['akosombo-dam']
+  return (
+    <section id="marche" className="relative isolate overflow-hidden bg-deep text-white">
+      <img src={p.src} alt={photoAlt('akosombo-dam', lang)} className="absolute inset-0 -z-20 w-full h-full object-cover" style={{ objectPosition: p.position }} />
+      <div aria-hidden className="hero-shade absolute inset-0 -z-10" />
+      <div className="wrap min-h-[540px] flex items-center py-16 md:py-20">
+        <div className="max-w-[900px]">
+          <Kicker light>{s.kicker}</Kicker>
+          <h1 className="text-4xl md:text-5xl font-bold leading-[1.08] tracking-tight mt-4">{s.title[0]} {s.title[1]}</h1>
+          <p className="text-lg md:text-xl leading-relaxed text-brand-ink mt-6 max-w-[36em]">{s.lead}</p>
+          <div className="flex flex-wrap gap-3 mt-9">
+            <Link to="/app" className="h-12 px-6 inline-flex items-center rounded bg-white text-brand font-medium hover:bg-brand-ink whitespace-nowrap">{s.cta_app}</Link>
+            <a href="#explorer" className="h-12 px-6 inline-flex items-center rounded border border-white/40 text-white hover:bg-white/10 whitespace-nowrap">{s.cta_explore}</a>
+          </div>
+        </div>
+      </div>
+      <a href={p.source} target="_blank" rel="noreferrer" title={photoAlt('akosombo-dam', lang)} className="absolute bottom-2 right-3 text-[11.5px] text-white/70 hover:text-white hover:underline">{photoCredit('akosombo-dam', lang)}</a>
+    </section>
+  )
+}
+
+function MarketMap({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s: Strings; lang: Lang }) {
   const [hour, setHour] = useState(19); const [play, setPlay] = useState(true); const [sel, setSel] = useState<string | null>(null)
   useEffect(() => { if (!play || !demo) return; const id = setInterval(() => setHour(h => (h + 1) % 24), 1600); return () => clearInterval(id) }, [play, demo])
   const readout = useMemo(() => { if (!demo || !sel) return null; const c = zoneCurves(demo, sel, hour); const n = Math.round(c.net); return { name: ZONE_NAMES[sel][lang === 'fr' ? 0 : 1], p: Math.round(c.price), n } }, [demo, sel, hour, lang])
   return (
-    <section id="marche" className="text-white" style={{ background: 'url(/patterns/topo-dark.svg) center / cover no-repeat, radial-gradient(1100px 700px at 75% 15%, #10493A 0%, #0B3D30 50%, #07241C 100%)' }}>
+    <section id="carte" className="text-white" style={{ background: 'url(/patterns/topo-dark.svg) center / cover no-repeat, radial-gradient(1100px 700px at 75% 15%, #10493A 0%, #0B3D30 50%, #07241C 100%)' }}>
       {demo && <Ticker demo={demo} hour={hour} s={s} />}
-      <div className="wrap grid lg:grid-cols-12 gap-x-12 gap-y-10 pt-14 pb-16 items-center">
-        <div className="lg:col-span-5 min-w-0">
-          <Kicker light>{s.kicker}</Kicker>
-          <h1 className="font-display font-normal text-4xl md:text-6xl leading-[0.98] tracking-tight mt-5">{s.title[0]} <em className="text-amber">{s.title[1]}</em></h1>
-          <p className="font-display text-xl md:text-2xl leading-snug text-white/90 mt-6 max-w-xl">{s.lead}</p>
-          <div className="flex flex-wrap gap-3 mt-8">
-            <Link to="/app" className="h-11 px-5 inline-flex items-center rounded bg-white text-brand font-medium hover:bg-brand-ink whitespace-nowrap">{s.cta_app}</Link>
-            <a href="#explorer" className="h-11 px-5 inline-flex items-center rounded border border-white/30 text-white hover:bg-white/10 whitespace-nowrap">{s.cta_explore}</a>
-          </div>
-          {demo && <div className="font-mono text-xs text-mint/80 mt-8">{s.computed(demo.elapsed)}</div>}
-        </div>
-        <div className="lg:col-span-7 min-w-0">
-          {demo ? (
+      <div className="wrap grid lg:grid-cols-12 gap-x-12 gap-y-10 py-16 items-start" data-reveal>
+        <div className="lg:col-span-4 min-w-0">
+          <Kicker light>{s.mk_kicker}</Kicker>
+          <SectionTitle light lead={s.mk_lead}>{s.mk_title}</SectionTitle>
+          {demo && (
             <>
-              <div className="font-hand text-2xl text-amber text-right pr-3 -mb-1 hidden sm:block" style={{ transform: 'rotate(-1.5deg)' }}>{s.hand_map} ↓</div>
-              <NetworkMap theme="dark" lang={lang} prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
-              <div className="mt-4 flex items-center gap-4">
+              <div className="mt-8 text-sm font-medium text-mint">{s.map_label}</div>
+              <div className="mt-3 flex items-center gap-4">
                 <button onClick={() => setPlay(p => !p)} className="font-mono text-sm text-amber w-8 shrink-0" aria-label={play ? 'pause' : 'play'}>{play ? '❚❚' : '▶'}</button>
                 <div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={h => { setPlay(false); setHour(h) }} dark /></div>
                 <div className="font-mono text-xl text-white w-14 text-right shrink-0">{hh(hour)}</div>
               </div>
-              <p className="text-sm text-mint/70 mt-3">
+              <p className="text-sm text-mint/80 mt-5 leading-relaxed">
                 {readout ? <span className="text-white"><span className="text-amber">{sel}</span> {readout.name} · {readout.p} $/MWh · {readout.n > 1 ? `${s.ex_export} ${nf(readout.n)} MW` : readout.n < -1 ? `${s.ex_import} ${nf(-readout.n)} MW` : '± 0 MW'}</span> : s.map_hint}
               </p>
+              <div className="font-mono text-xs text-mint/70 mt-6">{s.computed(demo.elapsed)}</div>
+              <a href="#explorer" className="inline-block mt-6 text-amber font-medium hover:underline underline-offset-4">{s.cta_explore} →</a>
             </>
-          ) : <div className="aspect-[560/340] flex items-center justify-center text-mint/70">{err ? s.demo_err : s.loading}</div>}
+          )}
+        </div>
+        <div className="lg:col-span-8 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
+          {demo ? <NetworkMap theme="dark" lang={lang} prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
+            : <div className="aspect-[560/340] flex items-center justify-center text-mint/70">{err ? s.demo_err : s.loading}</div>}
         </div>
       </div>
     </section>
@@ -486,9 +528,8 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
         <div className="grid lg:grid-cols-12 gap-x-16 gap-y-10">
           <div className="lg:col-span-5 min-w-0">
             <Kicker>{s.ex_kicker}</Kicker>
-            <h2 className="mt-4">{s.ex_title[0]} <em className="text-accent">{s.ex_title[1]}</em></h2>
-            <p className="font-display text-xl leading-snug text-ink mt-5">{s.ex_lead}</p>
-            <div className="font-hand text-2xl text-accent mt-7 -mb-1" style={{ transform: 'rotate(-1deg)', transformOrigin: 'left' }}>{s.hand_ex} ↓</div>
+            <SectionTitle lead={s.ex_lead}>{s.ex_title[0]} {s.ex_title[1]}</SectionTitle>
+            <div className="mt-8 text-sm font-medium text-ink-2">{s.ex_label}</div>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {ZONES.map(z => <button key={z} onClick={() => setZone(z)} className={`h-8 px-2.5 rounded font-mono text-sm border transition-colors ${z === zone ? 'bg-brand text-white border-brand' : 'bg-surface text-ink-2 border-line hover:border-line-strong'}`}>{z}</button>)}
             </div>
@@ -497,14 +538,14 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
           </div>
           <div className="lg:col-span-7 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
             <div className="bg-surface border border-line rounded-lg p-4 md:p-6">
-              <div className="flex items-center justify-between flex-wrap gap-2 mb-2"><span className="font-display text-2xl">{ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]} <span className="font-mono text-sm text-ink-3">{zone} · {hh(hour)}</span></span><SimBadge label={s.sim_badge} /></div>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-2"><span className="text-xl font-bold">{ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]} <span className="font-mono text-sm text-ink-3">{zone} · {hh(hour)}</span></span><SimBadge label={s.sim_badge} /></div>
               <CurveChart c={c} s={s} />
               <SegmentTable c={c} s={s} />
             </div>
           </div>
         </div>
         <div className="mt-14 bg-surface border border-line rounded-lg p-6 md:p-8">
-          <div className="flex items-center justify-between flex-wrap gap-3"><span className="font-display text-2xl">{s.src_title}</span><SimBadge label={s.sim_badge} /></div>
+          <div className="flex items-center justify-between flex-wrap gap-3"><span className="text-xl font-bold">{s.src_title}</span><SimBadge label={s.sim_badge} /></div>
           <div className="grid md:grid-cols-3 gap-8 mt-6">
             {s.src_items.map(([k, v]) => <div key={k}><div className="font-mono text-xs uppercase tracking-wider text-accent">{k}</div><p className="text-ink-2 mt-2 leading-relaxed text-sm">{v}</p></div>)}
           </div>
@@ -512,7 +553,7 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
           <a href={LINKS.data} target="_blank" rel="noreferrer" className="inline-block mt-3 text-accent font-medium hover:underline underline-offset-4">{s.src_link} →</a>
         </div>
         <div className="mt-14 border-t border-line pt-8">
-          <div className="flex items-center justify-between flex-wrap gap-3"><span className="font-display text-2xl flex items-center gap-3">{s.ex_prices_title} <SimBadge label={s.sim_badge} /></span><span className="text-sm text-ink-3 max-w-xl">{s.ex_prices_hint}</span></div>
+          <div className="flex items-center justify-between flex-wrap gap-3"><span className="text-xl font-bold flex items-center gap-3">{s.ex_prices_title} <SimBadge label={s.sim_badge} /></span><span className="text-sm text-ink-3 max-w-xl">{s.ex_prices_hint}</span></div>
           <div className="mt-5"><PriceHeatmap prices={demo.prices} hours={demo.hours} highlight={zone} unit="$/MWh" lang={lang} onSelect={setZone} /></div>
         </div>
       </div>
@@ -539,7 +580,7 @@ function Avatar({ p, size }: { p: Person; size: number }) {
   const [loaded, setLoaded] = useState(false)
   const words = p.name.split(/\s+/); const initials = (words[0][0] + words[words.length - 1][0]).toUpperCase()
   return (
-    <span className="relative inline-flex shrink-0 rounded-full overflow-hidden bg-brand text-white font-display items-center justify-center" style={{ width: size, height: size, fontSize: size * 0.36 }}>
+    <span className="relative inline-flex shrink-0 rounded-full overflow-hidden bg-brand text-white font-bold items-center justify-center" style={{ width: size, height: size, fontSize: size * 0.36 }}>
       {!loaded && <span aria-hidden>{initials}</span>}
       {p.photo && <img src={p.photo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'absolute inset-0 w-full h-full object-cover' : 'hidden'} />}
     </span>
@@ -550,7 +591,7 @@ function PartnerMark({ p }: { p: Partner }) {
   const [loaded, setLoaded] = useState(false)
   return (
     <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center justify-center min-h-24 px-4 md:px-8 text-center text-ink-2 hover:text-ink">
-      {!loaded && <span className="font-display text-xl leading-tight">{p.name}</span>}
+      {!loaded && <span className="text-lg font-bold leading-tight">{p.name}</span>}
       {p.logo && <img src={p.logo} alt={p.name} onLoad={() => setLoaded(true)} className={loaded ? 'max-h-14 md:max-h-24 max-w-full object-contain' : 'hidden'} />}
     </a>
   )
@@ -563,7 +604,7 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
     <div key={p.name} data-reveal style={{ transitionDelay: `${k * 90}ms` }} className="bg-surface border border-line rounded-lg p-4 flex items-center gap-4 min-w-0">
       <Avatar p={p} size={72} />
       <div className="min-w-0">
-        <div className="font-display text-xl leading-tight">{p.name}</div>
+        <div className="text-lg font-bold leading-tight">{p.name}</div>
         <div className="text-sm text-ink-2 mt-0.5">{p.role[i]}</div>
         <div className="text-xs text-ink-3 mt-0.5">{p.org}</div>
         {p.linkedin && <a href={p.linkedin} target="_blank" rel="noreferrer" className="inline-block mt-1.5 text-accent text-sm font-medium">LinkedIn →</a>}
@@ -578,13 +619,12 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
   )
   return (
     <section id="apropos" className="bg-page" style={{ backgroundImage: 'url(/patterns/mesh-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <PhotoBand id="rural-electrification-nigeria" lang={lang} />
       <div className="wrap py-20 grid lg:grid-cols-12 gap-x-16 gap-y-12" data-reveal>
         <div className="lg:col-span-6 min-w-0">
           <Kicker>{s.a_kicker}</Kicker>
-          <h2 className="mt-4">{s.a_title[0]} <em className="text-accent">{s.a_title[1]}</em></h2>
-          <p className="font-display text-xl md:text-2xl leading-snug text-ink mt-6">{s.a_p[0]}</p>
-          <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[1]}</p>
-          <p className="text-ink-2 leading-relaxed mt-4">{s.a_p[2]}</p>
+          <SectionTitle>{s.a_title[0]} {s.a_title[1]}</SectionTitle>
+          {s.a_p.map((t, k) => <p key={k} className={k === 0 ? 'text-lg leading-relaxed text-ink mt-6' : 'text-ink-2 leading-relaxed mt-4'}>{t}</p>)}
           <div className="mt-6 flex flex-wrap gap-6 text-base">
             {mail && <a href={`mailto:${mail}`} className="text-accent font-medium">{mail}</a>}
             <a href={LINKS.issues} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.contact} →</a>
@@ -631,7 +671,7 @@ function VideoSection({ s }: { s: Strings }) {
   return (
     <section id="video" className="bg-deep text-white">
       <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center" data-reveal>
-        <div className="lg:col-span-4"><Kicker light>{s.v_kicker}</Kicker><h2 className="mt-4 text-white">{s.v_title}</h2></div>
+        <div className="lg:col-span-4"><Kicker light>{s.v_kicker}</Kicker><SectionTitle light>{s.v_title}</SectionTitle></div>
         <div className="lg:col-span-8" data-reveal style={{ transitionDelay: '150ms' }}><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
           {file ? <video src={url} controls preload="metadata" className="w-full h-full" /> : <iframe src={url} title={s.v_title} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full h-full" />}
         </div></div>
@@ -669,7 +709,7 @@ export default function Landing() {
     <div className="min-h-screen landing">
       <header className="bg-brand text-white sticky top-0 z-10">
         <div className="wrap flex items-center justify-between h-16">
-          <a href="#marche" className="flex items-center gap-3"><img src="/mark-light.svg" alt="" className="h-9 w-9" /><span className="font-display text-2xl whitespace-nowrap hidden sm:inline">WAPP DAM Simulator</span></a>
+          <a href="#marche" className="flex items-center gap-3"><img src="/mark-light.svg" alt="" className="h-9 w-9" /><span className="text-xl font-bold whitespace-nowrap hidden sm:inline">WAPP DAM Simulator</span></a>
           <nav className="flex items-center gap-5 text-sm">
             {s.nav.map(([href, label]) => <a key={href} href={href} className="hidden lg:inline text-brand-ink hover:text-white">{label}</a>)}
             <Link to="/guide/formateur" className="hidden md:inline text-brand-ink hover:text-white">{s.nav_guides}</Link>
@@ -680,19 +720,20 @@ export default function Landing() {
       </header>
 
       <main>
-        <Hero demo={demo} err={err} s={s} lang={lang} />
+        <Hero s={s} lang={lang} />
+        <MarketMap demo={demo} err={err} s={s} lang={lang} />
         <VideoSection s={s} />
         {demo && <Explorer demo={demo} s={s} lang={lang} />}
 
         <section id="moteur" className="bg-brand text-white" style={{ backgroundImage: 'url(/patterns/mesh-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
-            <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><h2 className="mt-4 text-white">{s.m_title[0]} <em className="text-amber">{s.m_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.m_lead}</p></div>
+            <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><SectionTitle light lead={s.m_lead}>{s.m_title[0]} {s.m_title[1]}</SectionTitle></div>
             <div className="lg:col-span-8 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
               <ol className="grid md:grid-cols-3 gap-px bg-white/10 border border-white/10 rounded-lg overflow-hidden">
                 {s.steps.map(([code, kind, q, txt], i) => (
                   <li key={code} className="bg-brand p-6" data-reveal style={{ transitionDelay: `${i * 120}ms` }}>
-                    <div className="flex items-start justify-between gap-3"><span className="font-display text-6xl leading-[0.8] text-amber">{code}</span><span className="font-mono text-xs text-mint/70 text-right">{kind}</span></div>
-                    <div className="font-display text-3xl mt-5 leading-tight">{q}</div>
+                    <div className="flex items-start justify-between gap-3"><span className="text-5xl font-bold leading-[0.8] text-amber">{code}</span><span className="font-mono text-xs text-mint/70 text-right">{kind}</span></div>
+                    <div className="text-2xl font-bold mt-5 leading-tight">{q}</div>
                     <p className="text-brand-ink mt-3 leading-relaxed text-sm">{txt}</p>
                     {i === 2 && <IntervalSketch s={s} />}
                   </li>
@@ -705,7 +746,7 @@ export default function Landing() {
 
         <section id="fiche" className="bg-surface border-b border-line">
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
-            <div className="lg:col-span-4"><Kicker>{s.f_kicker}</Kicker><h2 className="mt-4">{s.f_title[0]} <em className="text-accent">{s.f_title[1]}</em></h2><p className="font-display text-xl leading-snug text-ink mt-5">{s.f_lead}</p></div>
+            <div className="lg:col-span-4"><Kicker>{s.f_kicker}</Kicker><SectionTitle lead={s.f_lead}>{s.f_title[0]} {s.f_title[1]}</SectionTitle></div>
             <dl className="lg:col-span-8 spec md:grid md:grid-cols-[180px_1fr] md:gap-x-8 border-t border-line" data-reveal style={{ transitionDelay: '150ms' }}>
               {s.spec.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
             </dl>
@@ -713,22 +754,28 @@ export default function Landing() {
         </section>
 
         <section id="publics" style={{ backgroundImage: 'url(/patterns/topo-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="wrap py-20" data-reveal>
-            <h2>{s.w_title[0]} <em className="text-accent">{s.w_title[1]}</em></h2>
-            <ol className="grid md:grid-cols-3 gap-x-12 gap-y-10 mt-10">
-              {s.w.map(([h, p], i) => <li key={h} className="border-t border-line pt-5" data-reveal style={{ transitionDelay: `${i * 120}ms` }}><div className="font-mono text-xs text-accent">0{i + 1}</div><div className="font-display text-3xl mt-2">{h}</div><p className="text-ink-2 mt-3 leading-relaxed">{p}</p></li>)}
-            </ol>
-            <div className="mt-10 flex flex-wrap gap-6 text-base">
-              <Link to="/guide/formateur" className="text-accent font-medium hover:underline underline-offset-4">{s.guide_trainer} →</Link>
-              <Link to="/guide/trader" className="text-accent font-medium hover:underline underline-offset-4">{s.guide_trader} →</Link>
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10 items-stretch" data-reveal>
+            <div className="lg:col-span-7 min-w-0">
+              <SectionTitle>{s.w_title[0]} {s.w_title[1]}</SectionTitle>
+              <ol className="grid md:grid-cols-3 gap-x-8 gap-y-8 mt-10">
+                {s.w.map(([h, p], i) => <li key={h} className="border-t border-line pt-5" data-reveal style={{ transitionDelay: `${i * 120}ms` }}><div className="font-mono text-xs text-accent">0{i + 1}</div><div className="text-2xl font-bold mt-2">{h}</div><p className="text-ink-2 mt-3 leading-relaxed">{p}</p></li>)}
+              </ol>
+              <div className="mt-10 flex flex-wrap gap-6 text-base">
+                <Link to="/guide/formateur" className="text-accent font-medium hover:underline underline-offset-4">{s.guide_trainer} →</Link>
+                <Link to="/guide/trader" className="text-accent font-medium hover:underline underline-offset-4">{s.guide_trader} →</Link>
+              </div>
             </div>
+            <figure className="lg:col-span-5 min-w-0 relative rounded-lg overflow-hidden min-h-[300px]" data-reveal style={{ transitionDelay: '150ms' }}>
+              <img src={PHOTOS['solar-technicians'].src} alt={photoAlt('solar-technicians', lang)} loading="lazy" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: PHOTOS['solar-technicians'].position }} />
+              <figcaption className="absolute bottom-2 right-3 text-[11.5px] text-white/85"><a href={PHOTOS['solar-technicians'].source} target="_blank" rel="noreferrer" className="bg-black/35 rounded px-2 py-0.5 hover:underline">{photoCredit('solar-technicians', lang)}</a></figcaption>
+            </figure>
           </div>
         </section>
 
         <section id="ouvert" className="bg-deep text-white" style={{ backgroundImage: 'url(/patterns/topo-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
             <div className="lg:col-span-5">
-              <Kicker light>{s.o_kicker}</Kicker><h2 className="mt-4 text-white">{s.o_title[0]} <em className="text-amber">{s.o_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.o_lead}</p>
+              <Kicker light>{s.o_kicker}</Kicker><SectionTitle light lead={s.o_lead}>{s.o_title[0]} {s.o_title[1]}</SectionTitle>
               <ul className="mt-8">{s.o_links.map((label, i) => <li key={label}>{ext(docLinks[i], <><span>{label}</span><span className="font-mono text-mint/70">→</span></>, 'flex items-center justify-between border-b border-white/10 py-3 text-white hover:text-amber')}</li>)}</ul>
             </div>
             <div className="lg:col-span-7 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
@@ -746,7 +793,7 @@ export default function Landing() {
 
         <section id="avertissements" className="bg-surface border-b border-line">
           <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8" data-reveal>
-            <div className="lg:col-span-4"><h2>{s.d_title}</h2></div>
+            <div className="lg:col-span-4"><SectionTitle>{s.d_title}</SectionTitle></div>
             <div className="lg:col-span-8 grid md:grid-cols-2 gap-8" data-reveal style={{ transitionDelay: '150ms' }}><p className="text-ink-2 leading-relaxed">{s.d1}</p><p className="text-ink-2 leading-relaxed">{s.d2}</p></div>
           </div>
         </section>
@@ -760,6 +807,7 @@ export default function Landing() {
           <span>© 2026 Kodjovi Plakoo, Enrico Patanè · {s.footer}</span>
           <span className="flex gap-5">{ext(LINKS.licence, 'Apache 2.0')}{ext(LINKS.github, 'GitHub')}<Link to="/app">{s.nav_app}</Link></span>
         </div>
+        <p className="wrap pb-6 text-xs text-ink-3 leading-relaxed">{s.credits} : {(Object.keys(PHOTOS) as PhotoId[]).map((id, i) => <Fragment key={id}>{i > 0 && ' · '}{photoAlt(id, lang)}, <a href={PHOTOS[id].source} target="_blank" rel="noreferrer" className="hover:underline">{PHOTOS[id].creator}, {PHOTOS[id].license}</a></Fragment>)} (Wikimedia Commons)</p>
       </footer>
     </div>
   )
