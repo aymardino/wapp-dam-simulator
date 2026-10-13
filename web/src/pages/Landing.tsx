@@ -482,7 +482,7 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
   const c = useMemo(() => zoneCurves(demo, zone, hour), [demo, zone, hour])
   return (
     <section id="explorer" className="landing bg-surface border-b border-line">
-      <div className="wrap py-20">
+      <div className="wrap py-20" data-reveal>
         <div className="grid lg:grid-cols-12 gap-x-16 gap-y-10">
           <div className="lg:col-span-5 min-w-0">
             <Kicker>{s.ex_kicker}</Kicker>
@@ -559,14 +559,26 @@ function PartnerMark({ p }: { p: Partner }) {
 function About({ s, lang }: { s: Strings; lang: Lang }) {
   const i = lang === 'fr' ? 0 : 1
   const mail = LINKS.contact ? LINKS.contact.join('@') : null
-  const small = (p: Person) => (
-    <li key={p.name} className="flex items-center gap-3 py-2.5 border-b border-line last:border-b-0">
-      <Avatar p={p} size={40} /><div className="min-w-0"><div className="font-medium text-ink truncate">{p.name}</div><div className="text-sm text-ink-3 truncate">{p.role[i]} · {p.org}</div></div>
-    </li>
+  const card = (p: Person, k: number) => (
+    <div key={p.name} data-reveal style={{ transitionDelay: `${k * 90}ms` }} className="bg-surface border border-line rounded-lg p-4 flex items-center gap-4 min-w-0">
+      <Avatar p={p} size={72} />
+      <div className="min-w-0">
+        <div className="font-display text-xl leading-tight">{p.name}</div>
+        <div className="text-sm text-ink-2 mt-0.5">{p.role[i]}</div>
+        <div className="text-xs text-ink-3 mt-0.5">{p.org}</div>
+        {p.linkedin && <a href={p.linkedin} target="_blank" rel="noreferrer" className="inline-block mt-1.5 text-accent text-sm font-medium">LinkedIn →</a>}
+      </div>
+    </div>
+  )
+  const group = (label: string, people: Person[], cls = '') => (
+    <div className={cls}>
+      <div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-3">{label}</div>
+      <div className="grid sm:grid-cols-2 gap-4">{people.map(card)}</div>
+    </div>
   )
   return (
     <section id="apropos" className="bg-page" style={{ backgroundImage: 'url(/patterns/mesh-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-      <div className="wrap py-20 grid lg:grid-cols-12 gap-x-16 gap-y-12">
+      <div className="wrap py-20 grid lg:grid-cols-12 gap-x-16 gap-y-12" data-reveal>
         <div className="lg:col-span-6 min-w-0">
           <Kicker>{s.a_kicker}</Kicker>
           <h2 className="mt-4">{s.a_title[0]} <em className="text-accent">{s.a_title[1]}</em></h2>
@@ -588,22 +600,9 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
           </ol>
         </div>
         <div className="lg:col-span-6 min-w-0">
-          <div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-4">{s.a_authors}</div>
-          <div className="grid sm:grid-cols-2 gap-6">
-            {AUTHORS.map(p => (
-              <div key={p.name} className="bg-surface border border-line rounded-lg p-5 min-w-0">
-                <Avatar p={p} size={96} />
-                <div className="font-display text-2xl mt-4 leading-tight">{p.name}</div>
-                <div className="text-ink-2 mt-1">{p.role[i]}</div>
-                <div className="text-sm text-ink-3 mt-1">{p.org}</div>
-                {p.linkedin && <a href={p.linkedin} target="_blank" rel="noreferrer" className="inline-block mt-3 text-accent text-sm font-medium">LinkedIn →</a>}
-              </div>
-            ))}
-          </div>
-          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-8 mt-8">
-            <div className="min-w-0"><div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-1">{s.a_sup}</div><ul>{SUPERVISORS.map(small)}</ul></div>
-            <div className="min-w-0"><div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-1">{s.a_contrib}</div><ul>{CONTRIBUTORS.map(small)}</ul></div>
-          </div>
+          {group(s.a_authors, AUTHORS)}
+          {group(s.a_sup, SUPERVISORS, 'mt-8')}
+          {group(s.a_contrib, CONTRIBUTORS, 'mt-8')}
         </div>
       </div>
     </section>
@@ -613,7 +612,7 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
 function Partners({ s }: { s: Strings }) {
   return (
     <section id="cadre" className="bg-surface border-t border-line">
-      <div className="wrap py-14 grid lg:grid-cols-12 gap-x-16 gap-y-8 items-center">
+      <div className="wrap py-14 grid lg:grid-cols-12 gap-x-16 gap-y-8 items-center" data-reveal>
         <div className="lg:col-span-4 min-w-0">
           <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3">{s.p_title}</div>
           <p className="text-sm text-ink-3 mt-4 leading-relaxed">{s.p_note}</p>
@@ -631,7 +630,7 @@ function VideoSection({ s }: { s: Strings }) {
   const file = /\.(mp4|webm)$/i.test(url)
   return (
     <section id="video" className="bg-deep text-white">
-      <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center">
+      <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center" data-reveal>
         <div className="lg:col-span-4"><Kicker light>{s.v_kicker}</Kicker><h2 className="mt-4 text-white">{s.v_title}</h2></div>
         <div className="lg:col-span-8"><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
           {file ? <video src={url} controls preload="metadata" className="w-full h-full" /> : <iframe src={url} title={s.v_title} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full h-full" />}
@@ -641,11 +640,27 @@ function VideoSection({ s }: { s: Strings }) {
   )
 }
 
+/** Reveal on scroll: every [data-reveal] element gets the class is-visible once it enters the viewport (see styles.css).
+ *  Runs again when `deps` change, so that sections mounted later (the explorer, once the demo is loaded) are observed too. */
+function useReveal(deps: unknown[]) {
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]:not(.is-visible)'))
+    if (!nodes.length) return
+    if (!('IntersectionObserver' in window)) { nodes.forEach(n => n.classList.add('is-visible')); return }
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target) } })
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 })
+    nodes.forEach(n => io.observe(n))
+    return () => io.disconnect()
+  }, deps)   // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 export default function Landing() {
   const { lang } = useLang(); const s = L[lang]
   const [demo, setDemo] = useState<Demo | null>(null); const [err, setErr] = useState(false)
   useEffect(() => { fetch(`${BASE}/demo`).then(r => { if (!r.ok) throw new Error(); return r.json() }).then(setDemo).catch(() => setErr(true)) }, [])
   useEffect(() => { document.title = lang === 'fr' ? 'Simulateur de marché day-ahead du WAPP' : 'WAPP day-ahead market simulator' }, [lang])
+  useReveal([demo, lang])
   const ext = (href: string, children: ReactNode, cls = '') => <a href={href} target="_blank" rel="noreferrer" className={cls}>{children}</a>
   const docLinks = [lang === 'fr' ? LINKS.sheet_fr : LINKS.sheet, LINKS.rules, LINKS.data, LINKS.architecture, LINKS.deploy, LINKS.github]
   const repo = LINKS.github.replace(/^https?:\/\//, '')
@@ -670,12 +685,12 @@ export default function Landing() {
         {demo && <Explorer demo={demo} s={s} lang={lang} />}
 
         <section id="moteur" className="bg-brand text-white" style={{ backgroundImage: 'url(/patterns/mesh-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
             <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><h2 className="mt-4 text-white">{s.m_title[0]} <em className="text-amber">{s.m_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.m_lead}</p></div>
             <div className="lg:col-span-8 min-w-0">
               <ol className="grid md:grid-cols-3 gap-px bg-white/10 border border-white/10 rounded-lg overflow-hidden">
                 {s.steps.map(([code, kind, q, txt], i) => (
-                  <li key={code} className="bg-brand p-6">
+                  <li key={code} className="bg-brand p-6" data-reveal style={{ transitionDelay: `${i * 120}ms` }}>
                     <div className="flex items-start justify-between gap-3"><span className="font-display text-6xl leading-[0.8] text-amber">{code}</span><span className="font-mono text-xs text-mint/70 text-right">{kind}</span></div>
                     <div className="font-display text-3xl mt-5 leading-tight">{q}</div>
                     <p className="text-brand-ink mt-3 leading-relaxed text-sm">{txt}</p>
@@ -689,7 +704,7 @@ export default function Landing() {
         </section>
 
         <section id="fiche" className="bg-surface border-b border-line">
-          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
             <div className="lg:col-span-4"><Kicker>{s.f_kicker}</Kicker><h2 className="mt-4">{s.f_title[0]} <em className="text-accent">{s.f_title[1]}</em></h2><p className="font-display text-xl leading-snug text-ink mt-5">{s.f_lead}</p></div>
             <dl className="lg:col-span-8 spec md:grid md:grid-cols-[180px_1fr] md:gap-x-8 border-t border-line">
               {s.spec.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
@@ -698,10 +713,10 @@ export default function Landing() {
         </section>
 
         <section id="publics" style={{ backgroundImage: 'url(/patterns/topo-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="wrap py-20">
+          <div className="wrap py-20" data-reveal>
             <h2>{s.w_title[0]} <em className="text-accent">{s.w_title[1]}</em></h2>
             <ol className="grid md:grid-cols-3 gap-x-12 gap-y-10 mt-10">
-              {s.w.map(([h, p], i) => <li key={h} className="border-t border-line pt-5"><div className="font-mono text-xs text-accent">0{i + 1}</div><div className="font-display text-3xl mt-2">{h}</div><p className="text-ink-2 mt-3 leading-relaxed">{p}</p></li>)}
+              {s.w.map(([h, p], i) => <li key={h} className="border-t border-line pt-5" data-reveal style={{ transitionDelay: `${i * 120}ms` }}><div className="font-mono text-xs text-accent">0{i + 1}</div><div className="font-display text-3xl mt-2">{h}</div><p className="text-ink-2 mt-3 leading-relaxed">{p}</p></li>)}
             </ol>
             <div className="mt-10 flex flex-wrap gap-6 text-base">
               <Link to="/guide/formateur" className="text-accent font-medium hover:underline underline-offset-4">{s.guide_trainer} →</Link>
@@ -711,7 +726,7 @@ export default function Landing() {
         </section>
 
         <section id="ouvert" className="bg-deep text-white" style={{ backgroundImage: 'url(/patterns/topo-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
             <div className="lg:col-span-5">
               <Kicker light>{s.o_kicker}</Kicker><h2 className="mt-4 text-white">{s.o_title[0]} <em className="text-amber">{s.o_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.o_lead}</p>
               <ul className="mt-8">{s.o_links.map((label, i) => <li key={label}>{ext(docLinks[i], <><span>{label}</span><span className="font-mono text-mint/70">→</span></>, 'flex items-center justify-between border-b border-white/10 py-3 text-white hover:text-amber')}</li>)}</ul>
@@ -720,7 +735,7 @@ export default function Landing() {
               <pre className="bg-black/40 border border-white/10 rounded-lg p-5 font-mono text-sm leading-6 overflow-x-auto text-brand-ink"><code>
 <span className="text-amber">$</span> git clone https://{repo}.git && cd wapp-dam-simulator{'\n'}
 <span className="text-amber">$</span> pip install -r requirements.txt && pytest -q{'\n'}
-<span className="text-white">65 passed</span>{'\n'}
+<span className="text-white">68 passed</span>{'\n'}
 <span className="text-amber">$</span> python -m engine.cli --reference --out resultat.json --prices-csv prix.csv{'\n'}
 <span className="text-white">welfare=22,317,910 volume=167,900 MWh elapsed=0.5s solver=appsi_highs</span>
               </code></pre>
@@ -730,7 +745,7 @@ export default function Landing() {
         </section>
 
         <section id="avertissements" className="bg-surface border-b border-line">
-          <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8">
+          <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8" data-reveal>
             <div className="lg:col-span-4"><h2>{s.d_title}</h2></div>
             <div className="lg:col-span-8 grid md:grid-cols-2 gap-8"><p className="text-ink-2 leading-relaxed">{s.d1}</p><p className="text-ink-2 leading-relaxed">{s.d2}</p></div>
           </div>
