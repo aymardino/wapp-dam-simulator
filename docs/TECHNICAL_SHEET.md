@@ -6,7 +6,7 @@
 |---|---|
 | **Name** | WAPP DAM Simulator — day-ahead market simulator of the West African Power Pool |
 | **Nature** | open reference implementation of zonal market coupling, with multi-participant training rooms |
-| **Site** | https://wapp-dam-simulator.org |
+| **Site** | https://wapp-dam-simulator.mastereose.fr |
 | **Source code** | https://github.com/aymardino/wapp-dam-simulator |
 | **Licence** | Apache 2.0 (code); CC BY 4.0 (reference data and documentation) |
 | **Authors** | Kodjovi Plakoo, Enrico Patanè (Mines Paris-PSL, Advanced Master OSE 2025); supervised by El Hadji Tamsir Diop (SENELEC) and Adrien Atayi (EPEX SPOT) |
@@ -100,7 +100,7 @@ Not modelled: losses, reserves, ramps and minimum running times, flow-based cons
 
 | Date | Step |
 |---|---|
-| October 2026 | online under a domain name, GitHub organisation, data validation with SENELEC |
+| October 2026 | online at wapp-dam-simulator.mastereose.fr (done), GitHub organisation, data validation with SENELEC |
 | Mid-November 2026 | technical note (working paper) and public test cases; comparison campaign proposed to the coordination centre |
 | December 2026 | first training session on the online site |
 | 1 January 2027 | planned launch of the WAPP day-ahead market |
