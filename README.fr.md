@@ -143,7 +143,7 @@ pip install pytest
 pytest -q
 ```
 
-Soixante-six tests, dont ceux qui reproduisent les valeurs du Livrable 2 (welfare 22 317 910 et volume 167 900 MWh sur le cas de référence, 23 082 419 avec blocs, 23 775 223 avec blocs liés et exclusifs) et vérifient les propriétés des prix. Les tests utilisent une base temporaire (`WAPP_DB_PATH`) et ne touchent jamais `data/market.db`.
+Soixante-huit tests, dont ceux qui reproduisent les valeurs du Livrable 2 (welfare 22 317 910 et volume 167 900 MWh sur le cas de référence, 23 082 419 avec blocs, 23 775 223 avec blocs liés et exclusifs) et vérifient les propriétés des prix. Les tests utilisent une base temporaire (`WAPP_DB_PATH`) et ne touchent jamais `data/market.db`.
 
 ## Données et confidentialité
 
