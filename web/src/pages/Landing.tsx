@@ -495,7 +495,7 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
             <div className="mt-6 flex items-center gap-4"><div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={setHour} /></div><div className="font-mono text-xl w-14 text-right">{hh(hour)}</div></div>
             <p className="mt-8 text-base leading-relaxed text-ink border-l-2 border-amber pl-4">{sentence(c, zone, hour, lang)}</p>
           </div>
-          <div className="lg:col-span-7 min-w-0">
+          <div className="lg:col-span-7 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
             <div className="bg-surface border border-line rounded-lg p-4 md:p-6">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2"><span className="font-display text-2xl">{ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]} <span className="font-mono text-sm text-ink-3">{zone} · {hh(hour)}</span></span><SimBadge label={s.sim_badge} /></div>
               <CurveChart c={c} s={s} />
@@ -599,7 +599,7 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
             ))}
           </ol>
         </div>
-        <div className="lg:col-span-6 min-w-0">
+        <div className="lg:col-span-6 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
           {group(s.a_authors, AUTHORS)}
           {group(s.a_sup, SUPERVISORS, 'mt-8')}
           {group(s.a_contrib, CONTRIBUTORS, 'mt-8')}
@@ -617,7 +617,7 @@ function Partners({ s }: { s: Strings }) {
           <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3">{s.p_title}</div>
           <p className="text-sm text-ink-3 mt-4 leading-relaxed">{s.p_note}</p>
         </div>
-        <div className="lg:col-span-8 min-w-0 grid grid-cols-3 items-center divide-x divide-line">
+        <div className="lg:col-span-8 min-w-0 grid grid-cols-3 items-center divide-x divide-line" data-reveal style={{ transitionDelay: '150ms' }}>
           {PARTNERS.map(p => <PartnerMark key={p.name} p={p} />)}
         </div>
       </div>
@@ -632,7 +632,7 @@ function VideoSection({ s }: { s: Strings }) {
     <section id="video" className="bg-deep text-white">
       <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center" data-reveal>
         <div className="lg:col-span-4"><Kicker light>{s.v_kicker}</Kicker><h2 className="mt-4 text-white">{s.v_title}</h2></div>
-        <div className="lg:col-span-8"><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
+        <div className="lg:col-span-8" data-reveal style={{ transitionDelay: '150ms' }}><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
           {file ? <video src={url} controls preload="metadata" className="w-full h-full" /> : <iframe src={url} title={s.v_title} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full h-full" />}
         </div></div>
       </div>
@@ -687,7 +687,7 @@ export default function Landing() {
         <section id="moteur" className="bg-brand text-white" style={{ backgroundImage: 'url(/patterns/mesh-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
             <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><h2 className="mt-4 text-white">{s.m_title[0]} <em className="text-amber">{s.m_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.m_lead}</p></div>
-            <div className="lg:col-span-8 min-w-0">
+            <div className="lg:col-span-8 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
               <ol className="grid md:grid-cols-3 gap-px bg-white/10 border border-white/10 rounded-lg overflow-hidden">
                 {s.steps.map(([code, kind, q, txt], i) => (
                   <li key={code} className="bg-brand p-6" data-reveal style={{ transitionDelay: `${i * 120}ms` }}>
@@ -706,7 +706,7 @@ export default function Landing() {
         <section id="fiche" className="bg-surface border-b border-line">
           <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
             <div className="lg:col-span-4"><Kicker>{s.f_kicker}</Kicker><h2 className="mt-4">{s.f_title[0]} <em className="text-accent">{s.f_title[1]}</em></h2><p className="font-display text-xl leading-snug text-ink mt-5">{s.f_lead}</p></div>
-            <dl className="lg:col-span-8 spec md:grid md:grid-cols-[180px_1fr] md:gap-x-8 border-t border-line">
+            <dl className="lg:col-span-8 spec md:grid md:grid-cols-[180px_1fr] md:gap-x-8 border-t border-line" data-reveal style={{ transitionDelay: '150ms' }}>
               {s.spec.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
             </dl>
           </div>
@@ -731,7 +731,7 @@ export default function Landing() {
               <Kicker light>{s.o_kicker}</Kicker><h2 className="mt-4 text-white">{s.o_title[0]} <em className="text-amber">{s.o_title[1]}</em></h2><p className="font-display text-xl leading-snug text-white/90 mt-5">{s.o_lead}</p>
               <ul className="mt-8">{s.o_links.map((label, i) => <li key={label}>{ext(docLinks[i], <><span>{label}</span><span className="font-mono text-mint/70">→</span></>, 'flex items-center justify-between border-b border-white/10 py-3 text-white hover:text-amber')}</li>)}</ul>
             </div>
-            <div className="lg:col-span-7 min-w-0">
+            <div className="lg:col-span-7 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
               <pre className="bg-black/40 border border-white/10 rounded-lg p-5 font-mono text-sm leading-6 overflow-x-auto text-brand-ink"><code>
 <span className="text-amber">$</span> git clone https://{repo}.git && cd wapp-dam-simulator{'\n'}
 <span className="text-amber">$</span> pip install -r requirements.txt && pytest -q{'\n'}
@@ -747,7 +747,7 @@ export default function Landing() {
         <section id="avertissements" className="bg-surface border-b border-line">
           <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8" data-reveal>
             <div className="lg:col-span-4"><h2>{s.d_title}</h2></div>
-            <div className="lg:col-span-8 grid md:grid-cols-2 gap-8"><p className="text-ink-2 leading-relaxed">{s.d1}</p><p className="text-ink-2 leading-relaxed">{s.d2}</p></div>
+            <div className="lg:col-span-8 grid md:grid-cols-2 gap-8" data-reveal style={{ transitionDelay: '150ms' }}><p className="text-ink-2 leading-relaxed">{s.d1}</p><p className="text-ink-2 leading-relaxed">{s.d2}</p></div>
           </div>
         </section>
 
