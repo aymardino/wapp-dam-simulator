@@ -1,5 +1,7 @@
 /** WAPP network map on a geographic background (Natural Earth, public domain): 14 zones coloured by price,
- *  15 lines whose width follows the flow at the chosen hour, saturated lines in red. */
+ *  15 lines whose width follows the flow at the chosen hour, saturated lines in red. With `animated` (the website),
+ *  the lines draw themselves and the countries pop in when the map appears, and dashes run along each line in the
+ *  direction of its flow (see .map-live in styles.css). */
 import { useId, useMemo } from 'react'
 import { geoMercator, geoPath } from 'd3-geo'
 import westAfrica from '../data/west_africa.geo.json'
@@ -18,8 +20,8 @@ const EXTENT: any = { type: 'Polygon', coordinates: [[[-18.5, 3.5], [-18.5, 24.5
 type Theme = 'light' | 'dark'
 /** Palettes: light (application) and dark (website). Nodes go from colour "lo" (low price) to "hi" (high price). */
 const PALETTE = {
-  light: { sea: '#DCE7EE', member: '#F6F5EF', other: '#E8E6DF', border: '#1B1B19', borderOp: [0.9, 0.5], lo: [225, 245, 238], hi: [11, 61, 48], flow: '#0F6E56', sat: '#A32D2D', nodeStroke: '#FFFFFF', selStroke: '#0F6E56', legendBg: '#FFFFFF', legendText: '#5C5B56', credit: '#8C8B84', leader: '#1B1B19' },
-  dark: { sea: '#07241C', member: '#10493A', other: '#0C352A', border: '#D7E8E1', borderOp: [0.45, 0.2], lo: [168, 224, 196], hi: [242, 177, 52], flow: '#8FD3B5', sat: '#FF6B4A', nodeStroke: '#07241C', selStroke: '#FFFFFF', legendBg: '#07241C', legendText: '#D7E8E1', credit: '#8FA89F', leader: '#D7E8E1' },
+  light: { sea: '#DCE7EE', member: '#F6F5EF', other: '#E8E6DF', border: '#1B1B19', borderOp: [0.9, 0.5], lo: [225, 245, 238], hi: [11, 61, 48], flow: '#0F6E56', sat: '#A32D2D', dash: '#FFFFFF', nodeStroke: '#FFFFFF', selStroke: '#0F6E56', legendBg: '#FFFFFF', legendText: '#5C5B56', credit: '#8C8B84', leader: '#1B1B19' },
+  dark: { sea: '#07241C', member: '#10493A', other: '#0C352A', border: '#D7E8E1', borderOp: [0.45, 0.2], lo: [168, 224, 196], hi: [242, 177, 52], flow: '#8FD3B5', sat: '#FF6B4A', dash: '#FFFFFF', nodeStroke: '#07241C', selStroke: '#FFFFFF', legendBg: '#07241C', legendText: '#D7E8E1', credit: '#8FA89F', leader: '#D7E8E1' },
 }
 
 function color(p: number, lo: number, hi: number, pal: typeof PALETTE.light) {
@@ -28,7 +30,7 @@ function color(p: number, lo: number, hi: number, pal: typeof PALETTE.light) {
   return { fill: `rgb(${c[0]},${c[1]},${c[2]})`, dark: x > 0.45 }
 }
 
-export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, theme = 'light', onSelect, lang = 'fr' }: { prices: Record<string, Record<string, number>>; flows: Record<string, Record<string, number>>; ntc: Record<string, number>; hour: number; selected?: string | null; unit: string; theme?: Theme; onSelect?: (zone: string) => void; lang?: 'fr' | 'en' }) {
+export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, theme = 'light', onSelect, lang = 'fr', animated = false }: { prices: Record<string, Record<string, number>>; flows: Record<string, Record<string, number>>; ntc: Record<string, number>; hour: number; selected?: string | null; unit: string; theme?: Theme; onSelect?: (zone: string) => void; lang?: 'fr' | 'en'; animated?: boolean }) {
   const pal = PALETTE[theme]; const gid = useId()
   const { paths, pos, anchor } = useMemo(() => {
     const projection = geoMercator().fitExtent([[6, 6], [W - 6, H - 30]], EXTENT)
@@ -47,7 +49,7 @@ export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, t
   const vals = Object.keys(NODES).map(z => prices[z]?.[h] ?? 0)
   const lo = Math.min(...vals), hi = Math.max(...vals)
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img">
+    <svg viewBox={`0 0 ${W} ${H}`} className={animated ? 'w-full h-auto map-live' : 'w-full h-auto'} role="img">
       <title>{lang === 'fr' ? 'Réseau WAPP, prix et flux à' : 'WAPP network, prices and flows at'} {`H${h.padStart(2, '0')}`}</title>
       <rect x="0" y="0" width={W} height={H} fill={pal.sea} />
       {paths.map(p => <path key={p.id} d={p.d} fill={p.member ? pal.member : pal.other} stroke={pal.border} strokeWidth={p.member ? 0.8 : 0.5} strokeOpacity={p.member ? pal.borderOp[0] : pal.borderOp[1]} />)}
@@ -61,19 +63,22 @@ export default function NetworkMap({ prices, flows, ntc, hour, selected, unit, t
         const stroke = sat ? pal.sat : pal.flow
         return (
           <g key={key}>
-            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth={w} strokeOpacity={Math.abs(f) < 1 ? 0.3 : 0.85} strokeLinecap="round">
+            {/* pathLength 1: the draw-in animation (styles.css) dashes the line in fractions of its length */}
+            <line className="map-line" pathLength={1} x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth={w} strokeOpacity={Math.abs(f) < 1 ? 0.3 : 0.85} strokeLinecap="round">
               <title>{`${key} : ${Math.round(f)} / ${cap} MW`}</title>
             </line>
+            {/* dashes running from the sending to the receiving country (the line is drawn in that direction) */}
+            {animated && Math.abs(f) >= 1 && <line className="map-flow" x1={fx1} y1={fy1} x2={fx2} y2={fy2} stroke={pal.dash} strokeWidth={Math.max(1.4, w - 3)} strokeOpacity={0.7} strokeDasharray="5 9" strokeLinecap="round" pointerEvents="none" />}
             {Math.abs(f) >= 1 && <polygon points="-5,-4 5,0 -5,4" transform={`translate(${mx} ${my}) rotate(${ang})`} fill={stroke} />}
           </g>
         )
       })}
-      {Object.entries(pos).map(([z, [x, y]]) => {
+      {Object.entries(pos).map(([z, [x, y]], i) => {
         const p = prices[z]?.[h]; const c = color(p ?? lo, lo, hi, pal); const isSel = selected === z
         const [ax, ay] = anchor[z]; const moved = OFFSET[z] != null
         const txt = theme === 'dark' ? '#07241C' : c.dark ? '#FFFFFF' : '#0B3D30'; const txt2 = theme === 'dark' ? '#0B3D30' : c.dark ? '#D7E8E1' : '#0B3D30'
         return (
-          <g key={z} onClick={onSelect ? () => onSelect(z) : undefined} style={onSelect ? { cursor: 'pointer' } : undefined}>
+          <g key={z} className="map-node" onClick={onSelect ? () => onSelect(z) : undefined} style={{ cursor: onSelect ? 'pointer' : undefined, animationDelay: animated ? `${0.5 + i * 0.045}s` : undefined }}>
             {moved && <><line x1={ax} y1={ay} x2={x} y2={y} stroke={pal.leader} strokeWidth={0.8} strokeOpacity={0.6} /><circle cx={ax} cy={ay} r={1.8} fill={pal.leader} /></>}
             <circle cx={x} cy={y} r={isSel ? R + 3 : R} fill={c.fill} stroke={isSel ? pal.selStroke : pal.nodeStroke} strokeWidth={isSel ? 2.5 : 1.5} />
             <text x={x} y={y - 2.5} textAnchor="middle" fontSize="8.5" fontWeight="600" fill={txt}>{z}</text>

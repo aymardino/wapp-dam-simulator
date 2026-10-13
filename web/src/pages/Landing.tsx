@@ -1,7 +1,7 @@
 /** Public home page (wapp-dam-simulator.mastereose.fr). Institutional layout: full-width photo hero, bold sans-serif
  *  titles with a short rule, price ticker, dark "control room" map driven by a histogram hour selector, per-zone
  *  supply / demand explorer built on the reference orders, spec sheet, terminal block, team. Bilingual FR/EN. */
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang, type Lang } from '../i18n'
 import { LangToggle } from '../components/ui'
@@ -299,19 +299,46 @@ function SimBadge({ label, light }: { label: string; light?: boolean }) {
   return <span className={`text-sm italic ${light ? 'text-mint/70' : 'text-ink-3'}`}>{label}</span>
 }
 
-function Kicker({ children, light }: { children: ReactNode; light?: boolean }) {
-  return <div className={`text-[13px] font-bold uppercase tracking-[0.06em] ${light ? 'text-mint' : 'text-accent'}`}>{children}</div>
+/** Entrance of a revealed element (see [data-reveal] in styles.css): text columns come from the left, visuals from
+ *  the right, cards and lists rise, photos settle from a slight zoom, the rule under a title draws itself. */
+type Reveal = 'up' | 'left' | 'right' | 'zoom' | 'fade' | 'rule'
+
+function Kicker({ children, light, reveal = 'left', className = '' }: { children: ReactNode; light?: boolean; reveal?: Reveal | null; className?: string }) {
+  return <div data-reveal={reveal ?? undefined} className={`text-[13px] font-bold uppercase tracking-[0.06em] ${light ? 'text-mint' : 'text-accent'} ${className}`}>{children}</div>
 }
 
-/** Institutional section title: bold heading, a short rule underneath, an optional lead paragraph. */
-function SectionTitle({ children, light, lead }: { children: ReactNode; light?: boolean; lead?: ReactNode }) {
+/** Institutional section title: bold heading, a short rule underneath, an optional lead paragraph. Each part is
+ *  revealed on its own, so that they follow one another: heading, rule, lead. */
+function SectionTitle({ children, light, lead, reveal = 'left' }: { children: ReactNode; light?: boolean; lead?: ReactNode; reveal?: Reveal }) {
   return (
     <div>
-      <h2 className={`mt-3 text-3xl md:text-4xl font-bold leading-tight tracking-tight ${light ? 'text-white' : 'text-ink'}`}>{children}</h2>
-      <span aria-hidden className={`mt-4 block h-1 w-14 rounded-full ${light ? 'bg-amber' : 'bg-accent'}`} />
-      {lead && <p className={`mt-5 text-lg leading-relaxed max-w-3xl ${light ? 'text-brand-ink' : 'text-ink-2'}`}>{lead}</p>}
+      <h2 data-reveal={reveal} className={`mt-3 text-3xl md:text-4xl font-bold leading-tight tracking-tight ${light ? 'text-white' : 'text-ink'}`}>{children}</h2>
+      <span aria-hidden data-reveal="rule" className={`mt-4 block h-1 w-14 rounded-full ${light ? 'bg-amber' : 'bg-accent'}`} />
+      {lead && <p data-reveal={reveal} className={`mt-5 text-lg leading-relaxed max-w-3xl ${light ? 'text-brand-ink' : 'text-ink-2'}`}>{lead}</p>}
     </div>
   )
+}
+
+/** A figure that counts from zero up to its value (1.4 s, slowing down) the first time it comes into view; shown at
+ *  once when the system asks for reduced motion. */
+function CountUp({ value, format, duration = 1400 }: { value: number; format: (v: number) => string; duration?: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [shown, setShown] = useState<number | null>(null)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (still || !('IntersectionObserver' in window)) { setShown(value); return }
+    let raf = 0
+    const run = () => {
+      const t0 = performance.now()
+      const tick = (t: number) => { const k = Math.min(1, (t - t0) / duration); setShown(value * (1 - Math.pow(1 - k, 3))); if (k < 1) raf = requestAnimationFrame(tick) }
+      raf = requestAnimationFrame(tick)
+    }
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); run() } }, { threshold: 0.5 })
+    io.observe(el)
+    return () => { io.disconnect(); cancelAnimationFrame(raf) }
+  }, [value, duration])
+  return <span ref={ref}>{format(shown ?? 0)}</span>
 }
 
 /** Full-width photo strip with its credit (Creative Commons: author, licence, source). */
@@ -319,7 +346,7 @@ function PhotoBand({ id, lang }: { id: PhotoId; lang: Lang }) {
   const p = PHOTOS[id]
   return (
     <figure className="relative h-[240px] md:h-[360px] overflow-hidden">
-      <img src={p.src} alt={photoAlt(id, lang)} loading="lazy" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: p.position }} />
+      <img src={p.src} alt={photoAlt(id, lang)} loading="lazy" data-reveal="zoom" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: p.position }} />
       <figcaption className="absolute bottom-2 right-3 text-[11.5px] text-white/85"><a href={p.source} target="_blank" rel="noreferrer" className="bg-black/35 rounded px-2 py-0.5 hover:underline">{photoAlt(id, lang)} · {photoCredit(id, lang)}</a></figcaption>
     </figure>
   )
@@ -329,14 +356,14 @@ function Hero({ s, lang }: { s: Strings; lang: Lang }) {
   const p = PHOTOS['akosombo-dam']
   return (
     <section id="marche" className="relative isolate overflow-hidden bg-deep text-white">
-      <img src={p.src} alt={photoAlt('akosombo-dam', lang)} className="absolute inset-0 -z-20 w-full h-full object-cover" style={{ objectPosition: p.position }} />
+      <img src={p.src} alt={photoAlt('akosombo-dam', lang)} className="hero-photo absolute inset-0 -z-20 w-full h-full object-cover" style={{ objectPosition: p.position }} />
       <div aria-hidden className="hero-shade absolute inset-0 -z-10" />
       <div className="wrap min-h-[540px] flex items-center py-16 md:py-20">
         <div className="max-w-[900px]">
-          <Kicker light>{s.kicker}</Kicker>
-          <h1 className="text-4xl md:text-5xl font-bold leading-[1.08] tracking-tight mt-4">{s.title[0]} {s.title[1]}</h1>
-          <p className="text-lg md:text-xl leading-relaxed text-brand-ink mt-6 max-w-[36em]">{s.lead}</p>
-          <div className="flex flex-wrap gap-3 mt-9">
+          <Kicker light reveal={null} className="hero-rise">{s.kicker}</Kicker>
+          <h1 className="hero-rise text-4xl md:text-5xl font-bold leading-[1.08] tracking-tight mt-4" style={{ animationDelay: '120ms' }}>{s.title[0]} {s.title[1]}</h1>
+          <p className="hero-rise text-lg md:text-xl leading-relaxed text-brand-ink mt-6 max-w-[36em]" style={{ animationDelay: '240ms' }}>{s.lead}</p>
+          <div className="hero-rise flex flex-wrap gap-3 mt-9" style={{ animationDelay: '360ms' }}>
             <Link to="/app" className="h-12 px-6 inline-flex items-center rounded bg-white text-brand font-medium hover:bg-brand-ink whitespace-nowrap">{s.cta_app}</Link>
             <a href="#explorer" className="h-12 px-6 inline-flex items-center rounded border border-white/40 text-white hover:bg-white/10 whitespace-nowrap">{s.cta_explore}</a>
           </div>
@@ -354,29 +381,41 @@ function MarketMap({ demo, err, s, lang }: { demo: Demo | null; err: boolean; s:
   return (
     <section id="carte" className="text-white" style={{ background: 'url(/patterns/topo-dark.svg) center / cover no-repeat, radial-gradient(1100px 700px at 75% 15%, #10493A 0%, #0B3D30 50%, #07241C 100%)' }}>
       {demo && <Ticker demo={demo} hour={hour} s={s} />}
-      <div className="wrap grid lg:grid-cols-12 gap-x-12 gap-y-10 py-16 items-start" data-reveal>
-        <div className="lg:col-span-4 min-w-0">
+      <div className="wrap grid lg:grid-cols-12 gap-x-12 gap-y-10 py-16 items-start">
+        <div className="lg:col-span-4 min-w-0" data-cascade>
           <Kicker light>{s.mk_kicker}</Kicker>
           <SectionTitle light lead={s.mk_lead}>{s.mk_title}</SectionTitle>
           {demo && (
             <>
-              <div className="mt-8 text-sm font-medium text-mint">{s.map_label}</div>
-              <div className="mt-3 flex items-center gap-4">
+              <div className="mt-8 text-sm font-medium text-mint" data-reveal="left">{s.map_label}</div>
+              <div className="mt-3 flex items-center gap-4" data-reveal="left">
                 <button onClick={() => setPlay(p => !p)} className="font-mono text-sm text-amber w-8 shrink-0" aria-label={play ? 'pause' : 'play'}>{play ? '❚❚' : '▶'}</button>
                 <div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={h => { setPlay(false); setHour(h) }} dark /></div>
                 <div className="font-mono text-xl text-white w-14 text-right shrink-0">{hh(hour)}</div>
               </div>
-              <p className="text-sm text-mint/80 mt-5 leading-relaxed">
+              <p className="text-sm text-mint/80 mt-5 leading-relaxed" data-reveal="left">
                 {readout ? <span className="text-white"><span className="text-amber">{sel}</span> {readout.name} · {readout.p} $/MWh · {readout.n > 1 ? `${s.ex_export} ${nf(readout.n)} MW` : readout.n < -1 ? `${s.ex_import} ${nf(-readout.n)} MW` : '± 0 MW'}</span> : s.map_hint}
               </p>
-              <div className="font-mono text-xs text-mint/70 mt-6">{s.computed(demo.elapsed)}</div>
-              <a href="#explorer" className="inline-block mt-6 text-amber font-medium hover:underline underline-offset-4">{s.cta_explore} →</a>
+              <div className="font-mono text-xs text-mint/70 mt-6" data-reveal="left">{s.computed(demo.elapsed)}</div>
+              <a href="#explorer" className="inline-block mt-6 text-amber font-medium hover:underline underline-offset-4" data-reveal="left">{s.cta_explore} →</a>
             </>
           )}
         </div>
-        <div className="lg:col-span-8 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
-          {demo ? <NetworkMap theme="dark" lang={lang} prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} />
-            : <div className="aspect-[560/340] flex items-center justify-center text-mint/70">{err ? s.demo_err : s.loading}</div>}
+        <div className="lg:col-span-8 min-w-0" data-cascade>
+          <div data-reveal="right">
+            {demo ? <NetworkMap theme="dark" lang={lang} prices={demo.prices} flows={demo.flows} ntc={demo.ntc} hour={hour} unit="$/MWh" selected={sel} onSelect={z => setSel(z === sel ? null : z)} animated />
+              : <div className="aspect-[560/340] flex items-center justify-center text-mint/70">{err ? s.demo_err : s.loading}</div>}
+          </div>
+          {demo && (
+            <dl className="mt-6 grid sm:grid-cols-3 gap-x-8 gap-y-4 border-t border-white/10 pt-5" data-reveal="up">
+              {([[s.welfare, demo.welfare, (v: number) => money(v)], [s.volume, demo.volume, (v: number) => `${nf(v)} MWh`], [s.saturated, demo.saturated_lines, (v: number) => `${Math.round(v)}/15`]] as [string, number, (v: number) => string][]).map(([label, value, format]) => (
+                <div key={label} className="min-w-0">
+                  <dt className="text-xs uppercase tracking-wide text-mint/80">{label}</dt>
+                  <dd className="font-mono text-2xl md:text-3xl text-white mt-1 tabular-nums whitespace-nowrap"><CountUp value={value} format={format} /></dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
       </div>
     </section>
@@ -524,37 +563,37 @@ function Explorer({ demo, s, lang }: { demo: Demo; s: Strings; lang: Lang }) {
   const c = useMemo(() => zoneCurves(demo, zone, hour), [demo, zone, hour])
   return (
     <section id="explorer" className="landing bg-surface border-b border-line">
-      <div className="wrap py-20" data-reveal>
+      <div className="wrap py-20">
         <div className="grid lg:grid-cols-12 gap-x-16 gap-y-10">
-          <div className="lg:col-span-5 min-w-0">
+          <div className="lg:col-span-5 min-w-0" data-cascade>
             <Kicker>{s.ex_kicker}</Kicker>
             <SectionTitle lead={s.ex_lead}>{s.ex_title[0]} {s.ex_title[1]}</SectionTitle>
-            <div className="mt-8 text-sm font-medium text-ink-2">{s.ex_label}</div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-8 text-sm font-medium text-ink-2" data-reveal="left">{s.ex_label}</div>
+            <div className="mt-3 flex flex-wrap gap-1.5" data-reveal="left">
               {ZONES.map(z => <button key={z} onClick={() => setZone(z)} className={`h-8 px-2.5 rounded font-mono text-sm border transition-colors ${z === zone ? 'bg-brand text-white border-brand' : 'bg-surface text-ink-2 border-line hover:border-line-strong'}`}>{z}</button>)}
             </div>
-            <div className="mt-6 flex items-center gap-4"><div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={setHour} /></div><div className="font-mono text-xl w-14 text-right">{hh(hour)}</div></div>
-            <p className="mt-8 text-base leading-relaxed text-ink border-l-2 border-amber pl-4">{sentence(c, zone, hour, lang)}</p>
+            <div className="mt-6 flex items-center gap-4" data-reveal="left"><div className="flex-1 min-w-0"><HourStrip demo={demo} hour={hour} onPick={setHour} /></div><div className="font-mono text-xl w-14 text-right">{hh(hour)}</div></div>
+            <p className="mt-8 text-base leading-relaxed text-ink border-l-2 border-amber pl-4" data-reveal="left">{sentence(c, zone, hour, lang)}</p>
           </div>
-          <div className="lg:col-span-7 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
-            <div className="bg-surface border border-line rounded-lg p-4 md:p-6">
+          <div className="lg:col-span-7 min-w-0" data-cascade>
+            <div className="bg-surface border border-line rounded-lg p-4 md:p-6" data-reveal="right">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2"><span className="text-xl font-bold">{ZONE_NAMES[zone][lang === 'fr' ? 0 : 1]} <span className="font-mono text-sm text-ink-3">{zone} · {hh(hour)}</span></span><SimBadge label={s.sim_badge} /></div>
               <CurveChart c={c} s={s} />
               <SegmentTable c={c} s={s} />
             </div>
           </div>
         </div>
-        <div className="mt-14 bg-surface border border-line rounded-lg p-6 md:p-8">
-          <div className="flex items-center justify-between flex-wrap gap-3"><span className="text-xl font-bold">{s.src_title}</span><SimBadge label={s.sim_badge} /></div>
+        <div className="mt-14 bg-surface border border-line rounded-lg p-6 md:p-8" data-cascade>
+          <div className="flex items-center justify-between flex-wrap gap-3" data-reveal="up"><span className="text-xl font-bold">{s.src_title}</span><SimBadge label={s.sim_badge} /></div>
           <div className="grid md:grid-cols-3 gap-8 mt-6">
-            {s.src_items.map(([k, v]) => <div key={k}><div className="font-mono text-xs uppercase tracking-wider text-accent">{k}</div><p className="text-ink-2 mt-2 leading-relaxed text-sm">{v}</p></div>)}
+            {s.src_items.map(([k, v]) => <div key={k} data-reveal="up"><div className="font-mono text-xs uppercase tracking-wider text-accent">{k}</div><p className="text-ink-2 mt-2 leading-relaxed text-sm">{v}</p></div>)}
           </div>
-          <p className="text-ink mt-6 leading-relaxed max-w-4xl">{s.src_note}</p>
-          <a href={LINKS.data} target="_blank" rel="noreferrer" className="inline-block mt-3 text-accent font-medium hover:underline underline-offset-4">{s.src_link} →</a>
+          <p className="text-ink mt-6 leading-relaxed max-w-4xl" data-reveal="up">{s.src_note}</p>
+          <a href={LINKS.data} target="_blank" rel="noreferrer" className="inline-block mt-3 text-accent font-medium hover:underline underline-offset-4" data-reveal="up">{s.src_link} →</a>
         </div>
-        <div className="mt-14 border-t border-line pt-8">
-          <div className="flex items-center justify-between flex-wrap gap-3"><span className="text-xl font-bold flex items-center gap-3">{s.ex_prices_title} <SimBadge label={s.sim_badge} /></span><span className="text-sm text-ink-3 max-w-xl">{s.ex_prices_hint}</span></div>
-          <div className="mt-5"><PriceHeatmap prices={demo.prices} hours={demo.hours} highlight={zone} unit="$/MWh" lang={lang} onSelect={setZone} /></div>
+        <div className="mt-14 border-t border-line pt-8" data-cascade>
+          <div className="flex items-center justify-between flex-wrap gap-3" data-reveal="up"><span className="text-xl font-bold flex items-center gap-3">{s.ex_prices_title} <SimBadge label={s.sim_badge} /></span><span className="text-sm text-ink-3 max-w-xl">{s.ex_prices_hint}</span></div>
+          <div className="mt-5" data-reveal="up"><PriceHeatmap prices={demo.prices} hours={demo.hours} highlight={zone} unit="$/MWh" lang={lang} onSelect={setZone} /></div>
         </div>
       </div>
     </section>
@@ -600,8 +639,8 @@ function PartnerMark({ p }: { p: Partner }) {
 function About({ s, lang }: { s: Strings; lang: Lang }) {
   const i = lang === 'fr' ? 0 : 1
   const mail = LINKS.contact ? LINKS.contact.join('@') : null
-  const card = (p: Person, k: number) => (
-    <div key={p.name} data-reveal style={{ transitionDelay: `${k * 90}ms` }} className="bg-surface border border-line rounded-lg p-4 flex items-center gap-4 min-w-0">
+  const card = (p: Person) => (
+    <div key={p.name} data-reveal="up" className="bg-surface border border-line rounded-lg p-4 flex items-center gap-4 min-w-0">
       <Avatar p={p} size={72} />
       <div className="min-w-0">
         <div className="text-lg font-bold leading-tight">{p.name}</div>
@@ -613,24 +652,24 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
   )
   const group = (label: string, people: Person[], cls = '') => (
     <div className={cls}>
-      <div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-3">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-ink-3 font-medium mb-3" data-reveal="up">{label}</div>
       <div className="grid sm:grid-cols-2 gap-4">{people.map(card)}</div>
     </div>
   )
   return (
     <section id="apropos" className="bg-page" style={{ backgroundImage: 'url(/patterns/mesh-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <PhotoBand id="rural-electrification-nigeria" lang={lang} />
-      <div className="wrap py-20 grid lg:grid-cols-12 gap-x-16 gap-y-12" data-reveal>
-        <div className="lg:col-span-6 min-w-0">
+      <div className="wrap py-20 grid lg:grid-cols-12 gap-x-16 gap-y-12">
+        <div className="lg:col-span-6 min-w-0" data-cascade>
           <Kicker>{s.a_kicker}</Kicker>
           <SectionTitle>{s.a_title[0]} {s.a_title[1]}</SectionTitle>
-          {s.a_p.map((t, k) => <p key={k} className={k === 0 ? 'text-lg leading-relaxed text-ink mt-6' : 'text-ink-2 leading-relaxed mt-4'}>{t}</p>)}
-          <div className="mt-6 flex flex-wrap gap-6 text-base">
+          {s.a_p.map((t, k) => <p key={k} data-reveal="left" className={k === 0 ? 'text-lg leading-relaxed text-ink mt-6' : 'text-ink-2 leading-relaxed mt-4'}>{t}</p>)}
+          <div className="mt-6 flex flex-wrap gap-6 text-base" data-reveal="left">
             {mail && <a href={`mailto:${mail}`} className="text-accent font-medium">{mail}</a>}
             <a href={LINKS.issues} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.contact} →</a>
             {LINKS.paper ? <a href={LINKS.paper} target="_blank" rel="noreferrer" className="text-accent font-medium">{s.a_paper_link} →</a> : <span className="text-ink-3">{s.a_paper}</span>}
           </div>
-          <ol className="mt-10 border-l border-line-strong">
+          <ol className="mt-10 border-l border-line-strong" data-reveal="left">
             {TIMELINE.map(([date, fr, en]) => (
               <li key={date} className="relative pl-6 pb-5 last:pb-0">
                 <span className="absolute -left-[5px] top-1.5 w-[9px] h-[9px] rounded-full bg-accent" />
@@ -639,7 +678,7 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
             ))}
           </ol>
         </div>
-        <div className="lg:col-span-6 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
+        <div className="lg:col-span-6 min-w-0" data-cascade="70">
           {group(s.a_authors, AUTHORS)}
           {group(s.a_sup, SUPERVISORS, 'mt-8')}
           {group(s.a_contrib, CONTRIBUTORS, 'mt-8')}
@@ -652,12 +691,12 @@ function About({ s, lang }: { s: Strings; lang: Lang }) {
 function Partners({ s }: { s: Strings }) {
   return (
     <section id="cadre" className="bg-surface border-t border-line">
-      <div className="wrap py-14 grid lg:grid-cols-12 gap-x-16 gap-y-8 items-center" data-reveal>
-        <div className="lg:col-span-4 min-w-0">
-          <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3">{s.p_title}</div>
-          <p className="text-sm text-ink-3 mt-4 leading-relaxed">{s.p_note}</p>
+      <div className="wrap py-14 grid lg:grid-cols-12 gap-x-16 gap-y-8 items-center">
+        <div className="lg:col-span-4 min-w-0" data-cascade>
+          <div className="font-mono text-xs uppercase tracking-[0.18em] text-ink-3" data-reveal="left">{s.p_title}</div>
+          <p className="text-sm text-ink-3 mt-4 leading-relaxed" data-reveal="left">{s.p_note}</p>
         </div>
-        <div className="lg:col-span-8 min-w-0 grid grid-cols-3 items-center divide-x divide-line" data-reveal style={{ transitionDelay: '150ms' }}>
+        <div className="lg:col-span-8 min-w-0 grid grid-cols-3 items-center divide-x divide-line" data-reveal="right">
           {PARTNERS.map(p => <PartnerMark key={p.name} p={p} />)}
         </div>
       </div>
@@ -670,9 +709,9 @@ function VideoSection({ s }: { s: Strings }) {
   const file = /\.(mp4|webm)$/i.test(url)
   return (
     <section id="video" className="bg-deep text-white">
-      <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center" data-reveal>
-        <div className="lg:col-span-4"><Kicker light>{s.v_kicker}</Kicker><SectionTitle light>{s.v_title}</SectionTitle></div>
-        <div className="lg:col-span-8" data-reveal style={{ transitionDelay: '150ms' }}><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
+      <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center">
+        <div className="lg:col-span-4" data-cascade><Kicker light>{s.v_kicker}</Kicker><SectionTitle light>{s.v_title}</SectionTitle></div>
+        <div className="lg:col-span-8" data-reveal="right"><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
           {file ? <video src={url} controls preload="metadata" className="w-full h-full" /> : <iframe src={url} title={s.v_title} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full h-full" />}
         </div></div>
       </div>
@@ -681,14 +720,29 @@ function VideoSection({ s }: { s: Strings }) {
 }
 
 /** Reveal on scroll: every [data-reveal] element gets the class is-visible once it enters the viewport (see styles.css).
- *  Runs again when `deps` change, so that sections mounted later (the explorer, once the demo is loaded) are observed too. */
+ *  Elements that enter together are staggered: within each [data-cascade] container (a column), in document order,
+ *  by the container's step in ms (80 by default); the second container of the same batch starts 200 ms after the
+ *  first, so that the visual of a section follows the text beside it. An element that enters alone, later, is shown
+ *  at once. Runs again when `deps` change, so that parts mounted later (the explorer, once the demo is loaded) are
+ *  observed too. */
 function useReveal(deps: unknown[]) {
   useEffect(() => {
     const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]:not(.is-visible)'))
     if (!nodes.length) return
-    if (!('IntersectionObserver' in window)) { nodes.forEach(n => n.classList.add('is-visible')); return }
+    const show = (n: HTMLElement, delay: number) => { n.style.transitionDelay = delay ? `${delay}ms` : ''; n.classList.add('is-visible') }
+    if (!('IntersectionObserver' in window)) { nodes.forEach(n => show(n, 0)); return }
     const io = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target) } })
+      const hit = entries.filter(e => e.isIntersecting).map(e => e.target as HTMLElement)
+      hit.forEach(n => io.unobserve(n))
+      hit.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+      const groups = new Map<Element, HTMLElement[]>()
+      hit.forEach(n => { const g = n.parentElement?.closest('[data-cascade]') || n; groups.set(g, [...(groups.get(g) || []), n]) })
+      let gi = 0
+      groups.forEach((items, g) => {
+        const step = Number((g as HTMLElement).dataset.cascade) || 80
+        items.forEach((n, i) => show(n, Math.min(gi, 2) * 200 + Math.min(i, 8) * step))
+        gi++
+      })
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 })
     nodes.forEach(n => io.observe(n))
     return () => io.disconnect()
@@ -726,12 +780,12 @@ export default function Landing() {
         {demo && <Explorer demo={demo} s={s} lang={lang} />}
 
         <section id="moteur" className="bg-brand text-white" style={{ backgroundImage: 'url(/patterns/mesh-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
-            <div className="lg:col-span-4"><Kicker light>{s.m_kicker}</Kicker><SectionTitle light lead={s.m_lead}>{s.m_title[0]} {s.m_title[1]}</SectionTitle></div>
-            <div className="lg:col-span-8 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
-              <ol className="grid md:grid-cols-3 gap-px bg-white/10 border border-white/10 rounded-lg overflow-hidden">
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
+            <div className="lg:col-span-4" data-cascade><Kicker light>{s.m_kicker}</Kicker><SectionTitle light lead={s.m_lead}>{s.m_title[0]} {s.m_title[1]}</SectionTitle></div>
+            <div className="lg:col-span-8 min-w-0" data-cascade>
+              <ol className="grid md:grid-cols-3 gap-px bg-white/10 border border-white/10 rounded-lg overflow-hidden" data-reveal="right">
                 {s.steps.map(([code, kind, q, txt], i) => (
-                  <li key={code} className="bg-brand p-6" data-reveal style={{ transitionDelay: `${i * 120}ms` }}>
+                  <li key={code} className="bg-brand p-6" data-reveal="up">
                     <div className="flex items-start justify-between gap-3"><span className="text-5xl font-bold leading-[0.8] text-amber">{code}</span><span className="font-mono text-xs text-mint/70 text-right">{kind}</span></div>
                     <div className="text-2xl font-bold mt-5 leading-tight">{q}</div>
                     <p className="text-brand-ink mt-3 leading-relaxed text-sm">{txt}</p>
@@ -739,46 +793,46 @@ export default function Landing() {
                   </li>
                 ))}
               </ol>
-              <p className="mt-6 text-sm text-mint/80 leading-relaxed">{s.m_note}</p>
+              <p className="mt-6 text-sm text-mint/80 leading-relaxed" data-reveal="up">{s.m_note}</p>
             </div>
           </div>
         </section>
 
         <section id="fiche" className="bg-surface border-b border-line">
-          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
-            <div className="lg:col-span-4"><Kicker>{s.f_kicker}</Kicker><SectionTitle lead={s.f_lead}>{s.f_title[0]} {s.f_title[1]}</SectionTitle></div>
-            <dl className="lg:col-span-8 spec md:grid md:grid-cols-[180px_1fr] md:gap-x-8 border-t border-line" data-reveal style={{ transitionDelay: '150ms' }}>
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
+            <div className="lg:col-span-4" data-cascade><Kicker>{s.f_kicker}</Kicker><SectionTitle lead={s.f_lead}>{s.f_title[0]} {s.f_title[1]}</SectionTitle></div>
+            <dl className="lg:col-span-8 spec md:grid md:grid-cols-[180px_1fr] md:gap-x-8 border-t border-line" data-reveal="right">
               {s.spec.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
             </dl>
           </div>
         </section>
 
         <section id="publics" style={{ backgroundImage: 'url(/patterns/topo-light.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10 items-stretch" data-reveal>
-            <div className="lg:col-span-7 min-w-0">
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10 items-stretch">
+            <div className="lg:col-span-7 min-w-0" data-cascade>
               <SectionTitle>{s.w_title[0]} {s.w_title[1]}</SectionTitle>
               <ol className="grid md:grid-cols-3 gap-x-8 gap-y-8 mt-10">
-                {s.w.map(([h, p], i) => <li key={h} className="border-t border-line pt-5" data-reveal style={{ transitionDelay: `${i * 120}ms` }}><div className="font-mono text-xs text-accent">0{i + 1}</div><div className="text-2xl font-bold mt-2">{h}</div><p className="text-ink-2 mt-3 leading-relaxed">{p}</p></li>)}
+                {s.w.map(([h, p], i) => <li key={h} className="border-t border-line pt-5" data-reveal="up"><div className="font-mono text-xs text-accent">0{i + 1}</div><div className="text-2xl font-bold mt-2">{h}</div><p className="text-ink-2 mt-3 leading-relaxed">{p}</p></li>)}
               </ol>
-              <div className="mt-10 flex flex-wrap gap-6 text-base">
+              <div className="mt-10 flex flex-wrap gap-6 text-base" data-reveal="up">
                 <Link to="/guide/formateur" className="text-accent font-medium hover:underline underline-offset-4">{s.guide_trainer} →</Link>
                 <Link to="/guide/trader" className="text-accent font-medium hover:underline underline-offset-4">{s.guide_trader} →</Link>
               </div>
             </div>
-            <figure className="lg:col-span-5 min-w-0 relative rounded-lg overflow-hidden min-h-[300px]" data-reveal style={{ transitionDelay: '150ms' }}>
-              <img src={PHOTOS['solar-technicians'].src} alt={photoAlt('solar-technicians', lang)} loading="lazy" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: PHOTOS['solar-technicians'].position }} />
+            <figure className="lg:col-span-5 min-w-0 relative rounded-lg overflow-hidden min-h-[300px]" data-reveal="right">
+              <img src={PHOTOS['solar-technicians'].src} alt={photoAlt('solar-technicians', lang)} loading="lazy" data-reveal="zoom" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: PHOTOS['solar-technicians'].position }} />
               <figcaption className="absolute bottom-2 right-3 text-[11.5px] text-white/85"><a href={PHOTOS['solar-technicians'].source} target="_blank" rel="noreferrer" className="bg-black/35 rounded px-2 py-0.5 hover:underline">{photoCredit('solar-technicians', lang)}</a></figcaption>
             </figure>
           </div>
         </section>
 
         <section id="ouvert" className="bg-deep text-white" style={{ backgroundImage: 'url(/patterns/topo-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10" data-reveal>
-            <div className="lg:col-span-5">
+          <div className="wrap py-20 grid lg:grid-cols-12 gap-x-12 gap-y-10">
+            <div className="lg:col-span-5" data-cascade>
               <Kicker light>{s.o_kicker}</Kicker><SectionTitle light lead={s.o_lead}>{s.o_title[0]} {s.o_title[1]}</SectionTitle>
-              <ul className="mt-8">{s.o_links.map((label, i) => <li key={label}>{ext(docLinks[i], <><span>{label}</span><span className="font-mono text-mint/70">→</span></>, 'flex items-center justify-between border-b border-white/10 py-3 text-white hover:text-amber')}</li>)}</ul>
+              <ul className="mt-8" data-reveal="left">{s.o_links.map((label, i) => <li key={label}>{ext(docLinks[i], <><span>{label}</span><span className="font-mono text-mint/70">→</span></>, 'flex items-center justify-between border-b border-white/10 py-3 text-white hover:text-amber')}</li>)}</ul>
             </div>
-            <div className="lg:col-span-7 min-w-0" data-reveal style={{ transitionDelay: '150ms' }}>
+            <div className="lg:col-span-7 min-w-0" data-reveal="right">
               <pre className="bg-black/40 border border-white/10 rounded-lg p-5 font-mono text-sm leading-6 overflow-x-auto text-brand-ink"><code>
 <span className="text-amber">$</span> git clone https://{repo}.git && cd wapp-dam-simulator{'\n'}
 <span className="text-amber">$</span> pip install -r requirements.txt && pytest -q{'\n'}
@@ -792,9 +846,9 @@ export default function Landing() {
         </section>
 
         <section id="avertissements" className="bg-surface border-b border-line">
-          <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8" data-reveal>
-            <div className="lg:col-span-4"><SectionTitle>{s.d_title}</SectionTitle></div>
-            <div className="lg:col-span-8 grid md:grid-cols-2 gap-8" data-reveal style={{ transitionDelay: '150ms' }}><p className="text-ink-2 leading-relaxed">{s.d1}</p><p className="text-ink-2 leading-relaxed">{s.d2}</p></div>
+          <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8">
+            <div className="lg:col-span-4" data-cascade><SectionTitle>{s.d_title}</SectionTitle></div>
+            <div className="lg:col-span-8 grid md:grid-cols-2 gap-8" data-cascade><p className="text-ink-2 leading-relaxed" data-reveal="up">{s.d1}</p><p className="text-ink-2 leading-relaxed" data-reveal="up">{s.d2}</p></div>
           </div>
         </section>
 

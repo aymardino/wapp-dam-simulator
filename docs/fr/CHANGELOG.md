@@ -16,6 +16,12 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   couverture, carte interactive dans sa propre section, deux autres photos (usages, à propos), textes raccourcis,
   cartes de l'équipe de même taille, sections révélées au défilement. Photos de Wikimedia Commons, créditées sur la
   page, en pied de page et dans NOTICE (web/src/photos.ts).
+- Animations de la page d'accueil, dans l'usage des sites institutionnels : les éléments d'une section apparaissent
+  en cascade (surtitre, titre, trait qui se trace, chapeau, contenu), les colonnes de texte arrivent de la gauche
+  et les visuels de la droite, les photos se posent depuis un léger zoom, la photo de couverture dézoome lentement à
+  l'ouverture ; sur la carte, les lignes se tracent, les pays apparaissent un à un et des tirets courent dans le
+  sens des flux ; trois chiffres clés (valeur créée, énergie échangée, lignes pleines) sous la carte se comptent de
+  zéro à leur valeur. Le tout est désactivé pour les personnes qui ont réduit les animations dans leur système.
 - Poste du formateur : la bannière « Démonstration » n'apparaît que si aucun ordre de participant n'a pris part au
   calcul (avec la complétion « acteurs de fond », toutes les zones portent des acteurs de référence même quand des
   participants ont déposé des ordres).
