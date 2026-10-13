@@ -6,7 +6,7 @@
 |---|---|
 | **Nom** | WAPP DAM Simulator — simulateur de marché day-ahead du West African Power Pool |
 | **Nature** | implémentation ouverte de référence du couplage de marché zonal, avec salles de formation multi-participants |
-| **Site** | https://wapp-dam-simulator.org |
+| **Site** | https://wapp-dam-simulator.mastereose.fr |
 | **Code source** | https://github.com/aymardino/wapp-dam-simulator |
 | **Licence** | Apache 2.0 (code) ; CC BY 4.0 (données de référence et documentation) |
 | **Auteurs** | Kodjovi Plakoo, Enrico Patanè (Mines Paris-PSL, Mastère Spécialisé OSE 2025) ; encadrement El Hadji Tamsir Diop (SENELEC) et Adrien Atayi (EPEX SPOT) |
@@ -78,7 +78,7 @@ Les prix produits sont des résultats de simulation sur ces données, pas des pr
 
 ## 8. Qualité et vérification
 
-- 66 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
+- 68 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
 - Campagne de cas aléatoires (segments, blocs simples, liés, exclusifs, conditions, toutes les règles, 24 h ou une heure, capacités réduites) contrôlée par un vérificateur indépendant du solveur : prix dans les bornes, flux dans les capacités, équilibre horaire, positions nettes de somme nulle, accepté ≤ offert, règles de blocs, conditions satisfaites ou retirées, identité du welfare.
 - Reproduction en trois commandes (voir `README.md`).
 
@@ -100,7 +100,7 @@ Non modélisés : pertes, réserves, rampes et durées minimales, contraintes fl
 
 | Échéance | Étape |
 |---|---|
-| Octobre 2026 | mise en ligne sous nom de domaine, organisation GitHub, validation des données avec SENELEC |
+| Octobre 2026 | mise en ligne sur wapp-dam-simulator.mastereose.fr (fait), organisation GitHub, validation des données avec SENELEC |
 | Mi-novembre 2026 | note technique (working paper) et cas-tests publics ; campagne de comparaison proposée au centre de coordination |
 | Décembre 2026 | première formation sur le site en ligne |
 | 1er janvier 2027 | lancement prévu du marché day-ahead du WAPP |

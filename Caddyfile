@@ -1,5 +1,5 @@
 # The domain comes from the DOMAIN variable of the .env file; Caddy obtains and renews the HTTPS certificate by itself.
-{$DOMAIN:wapp-dam-simulator.org} {
+{$DOMAIN:wapp-dam-simulator.mastereose.fr} {
     encode gzip
     header {
         Strict-Transport-Security "max-age=31536000"
@@ -10,6 +10,4 @@
     reverse_proxy api:8000
 }
 
-www.{$DOMAIN:wapp-dam-simulator.org} {
-    redir https://{$DOMAIN:wapp-dam-simulator.org}{uri} permanent
-}
+# For an apex domain of your own, add a `www.{$DOMAIN}` site block that redirects to the apex.

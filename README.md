@@ -1,7 +1,7 @@
 # WAPP Day-Ahead Market Simulator
 
 **Open reference implementation of day-ahead zonal market coupling for the West African Power Pool, built as a multi-user training tool.**
-MS OSE 2025 project — Mines Paris-PSL, with SENELEC and EPEX SPOT · version 2 (October 2026) · public site: https://wapp-dam-simulator.org
+MS OSE 2025 project — Mines Paris-PSL, with SENELEC and EPEX SPOT · version 2 (October 2026) · public site: https://wapp-dam-simulator.mastereose.fr
 
 *Version française : [README.fr.md](README.fr.md). Guides, market rules and reference data are also available in French under [docs/fr/](docs/fr/).*
 
@@ -80,7 +80,7 @@ pip install pytest
 pytest -q
 ```
 
-Sixty-six tests cover the engine (reference values of Deliverable 2: welfare 22,317,910 and volume 167,900 MWh on the test set, 23,082,419 with blocks, 23,775,223 with linked and exclusive blocks), the database migration, the API, the command line and a campaign of random cases checked by `engine/checks.py`. Tests use a temporary database (`WAPP_DB_PATH`) and never touch `data/`.
+Sixty-eight tests cover the engine (reference values of Deliverable 2: welfare 22,317,910 and volume 167,900 MWh on the test set, 23,082,419 with blocks, 23,775,223 with linked and exclusive blocks), the database migration, the API, the command line and a campaign of random cases checked by `engine/checks.py`. Tests use a temporary database (`WAPP_DB_PATH`) and never touch `data/`.
 
 ## Architecture
 

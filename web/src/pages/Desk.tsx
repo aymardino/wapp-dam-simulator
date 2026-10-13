@@ -56,6 +56,10 @@ export default function Desk() {
   const coveredZones = new Set(orders.filter(o => o.supply.length + o.demand.length + o.blocks.length > 0).map(o => o.participant.zone))
   const nZones = ref?.zones.length || 14
   const refZones: string[] = run?.result?.summary?.reference_zones || []
+  // A run is a pure demonstration when no participant order took part in it: with the "background actors"
+  // completion, reference_zones covers all zones even when participants did submit, so look at the actors instead.
+  const participantNames = new Set((room?.participants || []).map(p => p.name))
+  const demoRun = refZones.length === nZones && !((run?.result?.summary?.actors || []) as { player: string }[]).some(a => participantNames.has(a.player))
 
   return (
     <div className="min-h-screen">
@@ -125,7 +129,7 @@ export default function Desk() {
           <div className="flex flex-col gap-5">
             <Panel title={t('results')} right={<>{live && <Badge tone="up">{t('live')}</Badge>}{run && <><a className="text-sm text-accent font-medium" href={api.csvUrl(code, run.id)}>{t('export_csv')}</a><a className="text-sm text-accent font-medium" href={api.jsonUrl(code, run.id)} target="_blank" rel="noreferrer">{t('export_json')}</a><span className="text-sm text-ink-3">#{run.id} · {new Date(run.run_at).toLocaleTimeString()}</span></>}</>}>
               {!run || !d ? <Empty>{t('no_clearing')}</Empty> : <>
-                {refZones.length === nZones && <div className="mb-3 rounded bg-warn-soft text-warn px-4 py-2.5">{t('demo_badge')}</div>}
+                {demoRun && <div className="mb-3 rounded bg-warn-soft text-warn px-4 py-2.5">{t('demo_badge')}</div>}
                 <div className="flex flex-wrap gap-2 mb-4">
                   {refZones.length > 0 && refZones.length < nZones && <Badge tone="warn">{t('reference_badge')} · {refZones.length} {t('zones_word')}</Badge>}
                   <Badge tone={d.pro === 0 ? 'up' : 'down'}>{d.pro} {t('check_pro')}</Badge>

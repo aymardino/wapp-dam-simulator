@@ -19,7 +19,7 @@ services:
       sizeGB: 1
     envVars:
       - key: WAPP_CORS_ORIGINS
-        value: https://wapp-dam-simulator.org,https://wapp-dam-simulator.onrender.com
+        value: https://wapp-dam-simulator.mastereose.fr,https://wapp-dam-simulator.onrender.com
       - key: WAPP_ROOM_TTL_DAYS
         value: "30"
       - key: WAPP_MAX_ROOMS_PER_IP_PER_DAY

@@ -18,7 +18,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      DOMAIN: ${DOMAIN:-wapp-dam-simulator.org}
+      DOMAIN: ${DOMAIN:-wapp-dam-simulator.mastereose.fr}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
