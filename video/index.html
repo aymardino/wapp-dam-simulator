@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- WAPP DAM Simulator, motion design video (HyperFrames). Root composition: mounts the nine scenes of
+     compositions/ back to back. Each scene but the first wipes in over the last 0.7 s of the previous one (WAPP.wipeIn).
+     Scenes, start → end:
+       01-intro       0.00 s →   6.00 s  (6.0 s)
+       02-region      5.30 s →  14.30 s  (9.0 s)
+       03-question   13.60 s →  20.60 s  (7.0 s)
+       04-curves     19.90 s →  32.40 s  (12.5 s)
+       05-network    31.70 s →  43.20 s  (11.5 s)
+       06-engine     42.50 s →  54.00 s  (11.5 s)
+       07-day        53.30 s →  63.80 s  (10.5 s)
+       08-uses       63.10 s →  70.60 s  (7.5 s)
+       09-outro      69.90 s →  77.90 s  (8.0 s)
+     Language: the "lang" variable (fr by default; render with --variables '{"lang":"en"}'). Text: assets/strings.js. -->
+<html lang="fr" data-composition-variables='[{"id":"lang","type":"enum","label":"Langue / Language","default":"fr","options":[{"value":"fr","label":"Français"},{"value":"en","label":"English"}]}]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>WAPP DAM Simulator · video</title>
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="node_modules/gsap/dist/gsap.min.js"></script>
+    <script src="node_modules/gsap/dist/SplitText.min.js"></script>
+    <script src="node_modules/gsap/dist/DrawSVGPlugin.min.js"></script>
+    <script src="node_modules/gsap/dist/MotionPathPlugin.min.js"></script>
+    <script src="node_modules/gsap/dist/CustomEase.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #07241C; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #07241C; font-family: "Roboto", sans-serif; color: #FFFFFF; }
+      [data-composition-id="main"] > div[data-composition-src] { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="77.9" data-width="1920" data-height="1080">
+      <div id="el-01-intro" data-composition-id="01-intro" data-composition-src="compositions/01-intro.html" data-start="0.0" data-duration="6.0" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <div id="el-02-region" data-composition-id="02-region" data-composition-src="compositions/02-region.html" data-start="5.3" data-duration="9.0" data-track-index="2" data-width="1920" data-height="1080"></div>
+      <div id="el-03-question" data-composition-id="03-question" data-composition-src="compositions/03-question.html" data-start="13.6" data-duration="7.0" data-track-index="3" data-width="1920" data-height="1080"></div>
+      <div id="el-04-curves" data-composition-id="04-curves" data-composition-src="compositions/04-curves.html" data-start="19.9" data-duration="12.5" data-track-index="4" data-width="1920" data-height="1080"></div>
+      <div id="el-05-network" data-composition-id="05-network" data-composition-src="compositions/05-network.html" data-start="31.7" data-duration="11.5" data-track-index="5" data-width="1920" data-height="1080"></div>
+      <div id="el-06-engine" data-composition-id="06-engine" data-composition-src="compositions/06-engine.html" data-start="42.5" data-duration="11.5" data-track-index="6" data-width="1920" data-height="1080"></div>
+      <div id="el-07-day" data-composition-id="07-day" data-composition-src="compositions/07-day.html" data-start="53.3" data-duration="10.5" data-track-index="7" data-width="1920" data-height="1080"></div>
+      <div id="el-08-uses" data-composition-id="08-uses" data-composition-src="compositions/08-uses.html" data-start="63.1" data-duration="7.5" data-track-index="8" data-width="1920" data-height="1080"></div>
+      <div id="el-09-outro" data-composition-id="09-outro" data-composition-src="compositions/09-outro.html" data-start="69.9" data-duration="8.0" data-track-index="9" data-width="1920" data-height="1080"></div>
+    </div>
+    <!-- after the root element: the "lang" variable is only readable from here (WAPP.lang), and before the scenes -->
+    <script src="assets/strings.js"></script>
+    <script src="assets/data.js"></script>
+    <script src="assets/wapp.js"></script>
+    <script>
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

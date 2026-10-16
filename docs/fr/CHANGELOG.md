@@ -22,6 +22,12 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
   l'ouverture ; sur la carte, les lignes se tracent, les pays apparaissent un à un et des tirets courent dans le
   sens des flux ; trois chiffres clés (valeur créée, énergie échangée, lignes pleines) sous la carte se comptent de
   zéro à leur valeur. Le tout est désactivé pour les personnes qui ont réduit les animations dans leur système.
+- Vidéo en motion design sur la page d'accueil (« Le marché en 78 secondes »), en français et en anglais : le logo
+  qui s'assemble, la région, la question de chaque jour, l'offre qui rencontre la demande au Sénégal à 19 h, la ligne
+  Nigeria–Bénin qui se remplit et sépare les prix, les trois questions du moteur, une journée simulée sur la carte,
+  les usages, les crédits. Écrite en HTML et rendue avec HyperFrames (`video/`, voir son README) ; chiffres réels de
+  la journée de démonstration du moteur ; la page montre le fichier de la langue du site, avec une image d'aperçu et
+  le texte de la vidéo.
 - Poste du formateur : la bannière « Démonstration » n'apparaît que si aucun ordre de participant n'a pris part au
   calcul (avec la complétion « acteurs de fond », toutes les zones portent des acteurs de référence même quand des
   participants ont déposé des ordres).

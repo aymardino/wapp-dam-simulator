@@ -1,0 +1,42 @@
+{
+ "overlap": 0.7,
+ "total": 77.9,
+ "scenes": [
+  {
+   "id": "01-intro",
+   "duration": 6.0
+  },
+  {
+   "id": "02-region",
+   "duration": 9.0
+  },
+  {
+   "id": "03-question",
+   "duration": 7.0
+  },
+  {
+   "id": "04-curves",
+   "duration": 12.5
+  },
+  {
+   "id": "05-network",
+   "duration": 11.5
+  },
+  {
+   "id": "06-engine",
+   "duration": 11.5
+  },
+  {
+   "id": "07-day",
+   "duration": 10.5
+  },
+  {
+   "id": "08-uses",
+   "duration": 7.5
+  },
+  {
+   "id": "09-outro",
+   "duration": 8.0
+  }
+ ]
+}

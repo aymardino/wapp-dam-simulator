@@ -12,3 +12,8 @@ private/
 web/node_modules/
 web/dist/
 web/public/guides/
+# the video project (rendered files are published in web/public/video)
+video/node_modules/
+video/renders/
+video/.hyperframes/
+video/.scene-tests/

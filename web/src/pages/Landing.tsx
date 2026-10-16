@@ -84,7 +84,19 @@ const L = {
     a_authors: 'Auteurs du simulateur', a_contrib: 'Groupe projet du Mastère', a_sup: 'Encadrement',
     p_title: 'Cadre du projet',
     p_note: 'Projet mené au Mastère Spécialisé OSE (Centre de Mathématiques Appliquées, Mines Paris – PSL), avec SENELEC. Ces institutions ont accueilli ou encadré le projet ; elles ne répondent pas du contenu du site.',
-    v_kicker: 'En vidéo', v_title: 'Le simulateur en deux minutes',
+    v_kicker: 'En vidéo', v_title: 'Le marché en 78 secondes', v_lead: 'Comment se fixe le prix, scène par scène, avec les chiffres du moteur. Vidéo sans son.',
+    v_text_label: 'Lire le texte de la vidéo',
+    v_text: [
+      'Simulateur ouvert : le marché de l’électricité d’Afrique de l’Ouest, à livre ouvert.',
+      '14 pays, 15 lignes d’interconnexion : un marché commun de l’électricité, prévu pour 2027.',
+      'Chaque jour, pour chacune des 24 heures du lendemain : qui vend, qui achète, à quel prix ?',
+      'Au Sénégal à 19 h, les centrales se rangent de la moins chère à la plus chère, les acheteurs du plus offrant au moins offrant. Le prix se fixe à leur rencontre : 155 $/MWh, fixé par la dernière centrale appelée.',
+      'Entre le Nigeria et le Bénin, à 18 h, la ligne a de la place : un seul prix, 120 $/MWh. À 22 h, elle est pleine : les prix se séparent, 42 $/MWh au Nigeria, 95 au Bénin.',
+      'Le calcul répond à trois questions, dans l’ordre : qui est servi, combien, à quel prix.',
+      'Une journée simulée : 44,92 M USD de valeur créée, 281 977 MWh échangés, 10 lignes sur 15 pleines au moins une heure.',
+      'Pour former, étudier, comparer.',
+      'Code ouvert, sous licence Apache 2.0. Prix simulés sur des données 2024 reconstituées.',
+    ],
     a_paper: 'Note technique à paraître.', a_paper_link: 'Lire la note technique', contact: 'Questions et contributions',
     footer: 'Simulateur pédagogique indépendant, non affilié au WAPP.',
     sim_badge: 'Simulation sur des données 2024 reconstituées',
@@ -159,7 +171,19 @@ const L = {
     a_authors: 'Authors of the simulator', a_contrib: 'Master’s project group', a_sup: 'Supervision',
     p_title: 'Project framework',
     p_note: 'Project carried out at the Advanced Master OSE (Centre for Applied Mathematics, Mines Paris – PSL), with SENELEC. These institutions hosted or supervised the project; they are not responsible for the content of this site.',
-    v_kicker: 'On video', v_title: 'The simulator in two minutes',
+    v_kicker: 'On video', v_title: 'The market in 78 seconds', v_lead: 'How the price is set, scene by scene, with the engine’s own figures. No sound.',
+    v_text_label: 'Read the text of the video',
+    v_text: [
+      'Open simulator: the West African electricity market, computed in the open.',
+      '14 countries, 15 interconnection lines: a common electricity market, planned for 2027.',
+      'Every day, for each of the next day’s 24 hours: who sells, who buys, at what price?',
+      'In Senegal at 19:00, power plants line up from cheapest to most expensive, buyers from highest bid to lowest. The price is set where they meet: 155 $/MWh, set by the last plant called.',
+      'Between Nigeria and Benin, at 18:00 the line has room: one single price, 120 $/MWh. At 22:00 it is full: prices split, 42 $/MWh in Nigeria, 95 in Benin.',
+      'The computation answers three questions, in order: who is served, how much, at what price.',
+      'A simulated day: 44.92 M USD of value created, 281,977 MWh traded, 10 lines out of 15 full at least one hour.',
+      'To train, study, compare.',
+      'Open code, under the Apache 2.0 licence. Prices simulated on reconstructed 2024 data.',
+    ],
     a_paper: 'Technical note forthcoming.', a_paper_link: 'Read the technical note', contact: 'Questions and contributions',
     footer: 'Independent educational simulator, not affiliated with the WAPP.',
     sim_badge: 'Simulation on reconstructed 2024 data',
@@ -704,15 +728,25 @@ function Partners({ s }: { s: Strings }) {
   )
 }
 
-function VideoSection({ s }: { s: Strings }) {
-  const url = LINKS.video; if (!url) return null
-  const file = /\.(mp4|webm)$/i.test(url)
+function VideoSection({ s, lang }: { s: Strings; lang: Lang }) {
+  const v = LINKS.video; if (!v) return null
+  // one file per language (the video's on-screen text is translated), or a single file / embed URL
+  const { src, poster } = typeof v === 'string' ? { src: v, poster: undefined } : v[lang]
+  const file = /\.(mp4|webm)$/i.test(src)
   return (
-    <section id="video" className="bg-deep text-white">
+    <section id="video" className="bg-deep text-white" style={{ backgroundImage: 'url(/patterns/topo-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="wrap py-16 grid lg:grid-cols-12 gap-x-12 gap-y-8 items-center">
-        <div className="lg:col-span-4" data-cascade><Kicker light>{s.v_kicker}</Kicker><SectionTitle light>{s.v_title}</SectionTitle></div>
+        <div className="lg:col-span-4" data-cascade>
+          <Kicker light>{s.v_kicker}</Kicker><SectionTitle light lead={s.v_lead}>{s.v_title}</SectionTitle>
+          {typeof v !== 'string' && (
+            <details className="mt-6 text-sm text-brand-ink" data-reveal="left">
+              <summary className="cursor-pointer text-mint font-medium hover:text-white">{s.v_text_label}</summary>
+              <ol className="mt-3 space-y-2 list-decimal pl-5 leading-relaxed">{s.v_text.map((t, i) => <li key={i}>{t}</li>)}</ol>
+            </details>
+          )}
+        </div>
         <div className="lg:col-span-8" data-reveal="right"><div className="aspect-video rounded-lg overflow-hidden border border-white/10 bg-black">
-          {file ? <video src={url} controls preload="metadata" className="w-full h-full" /> : <iframe src={url} title={s.v_title} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full h-full" />}
+          {file ? <video key={src} src={src} poster={poster} controls playsInline preload="none" className="w-full h-full" aria-label={s.v_title} /> : <iframe src={src} title={s.v_title} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full h-full" />}
         </div></div>
       </div>
     </section>
@@ -776,7 +810,7 @@ export default function Landing() {
       <main>
         <Hero s={s} lang={lang} />
         <MarketMap demo={demo} err={err} s={s} lang={lang} />
-        <VideoSection s={s} />
+        <VideoSection s={s} lang={lang} />
         {demo && <Explorer demo={demo} s={s} lang={lang} />}
 
         <section id="moteur" className="bg-brand text-white" style={{ backgroundImage: 'url(/patterns/mesh-dark.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>

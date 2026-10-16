@@ -1,0 +1,111 @@
+<template>
+  <!-- 05 · network (11.5 s): Nigeria → Benin (WAPP.data.congestion). At 18 h the line has room and both countries
+       pay the same price; at 22 h it is full and each side keeps its own price. -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s05-cam { position: absolute; inset: 0; }
+    #s05-kicker { position: absolute; left: 128px; top: 120px; }
+    #s05-badge { position: absolute; right: 128px; top: 122px; }
+    #s05-pill { position: absolute; left: 860px; top: 214px; width: 200px; height: 64px; border-radius: 32px; overflow: hidden; background: rgba(242, 177, 52, 0.12); border: 2px solid rgba(242, 177, 52, 0.6); }
+    .s05-h { position: absolute; left: 0; right: 0; top: 0; line-height: 60px; text-align: center; font-size: 34px; font-weight: 500; color: var(--amber); }
+    #s05-svg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+    .s05-cap { position: absolute; left: 0; right: 0; top: 800px; text-align: center; font-size: 46px; font-weight: 500; color: #FFFFFF; }
+  </style>
+  <div id="root" data-composition-id="05-network" data-width="1920" data-height="1080" data-duration="11.5">
+    <div id="s05-stage" class="clip wapp-stage" data-start="0" data-duration="11.5" data-track-index="0">
+      <div id="s05-frame" class="wapp-frame wapp-bg-deep">
+        <div id="s05-cam">
+          <svg id="s05-svg" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+          <div id="s05-pill"><span id="s05-h1" class="s05-h wapp-mono"></span><span id="s05-h2" class="s05-h wapp-mono"></span></div>
+          <span id="s05-c1" class="s05-cap"></span>
+          <span id="s05-c2" class="s05-cap"></span>
+        </div>
+        <span id="s05-kicker" class="wapp-kicker"></span>
+        <span id="s05-badge" class="wapp-badge"></span>
+      </div>
+      <div id="s05-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      const g = WAPP.data.congestion, cap = g.cap
+      $('s05-kicker').textContent = WAPP.t('s05.kicker')
+      $('s05-badge').textContent = WAPP.t('badge')
+      $('s05-h1').textContent = WAPP.hour(g.free.h)
+      $('s05-h2').textContent = WAPP.hour(g.full.h)
+      $('s05-c1').textContent = WAPP.t('s05.free')
+      $('s05-c2').textContent = WAPP.t('s05.full')
+
+      const NS = 'http://www.w3.org/2000/svg', svg = $('s05-svg')
+      const add = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e }
+      const txt = (attrs, s, parent) => { const e = add('text', attrs, parent); e.textContent = s; return e }
+      const color = p => WAPP.priceColor(p, 40, 130)
+      // geography: Benin on the left, Nigeria on the right; the energy goes from Nigeria (from) to Benin (to)
+      const CY = 540, R = 112, XL = 560, XR = 1360
+      const T0 = XL + R + 26, T1 = XR - R - 26, TH = 44, TY = CY - TH / 2   // track
+      const node = (x, zone, id) => {
+        const grp = add('g', { id })
+        const circle = add('circle', { cx: x, cy: CY, r: R, fill: color(g.free.pu), stroke: '#07241C', 'stroke-width': 6 }, grp)
+        txt({ x, y: CY - 46, 'text-anchor': 'middle', 'font-size': 32, 'font-weight': 700, fill: '#07241C', 'font-family': 'Roboto, sans-serif' }, zone, grp)
+        const price = txt({ x, y: CY + 22, 'text-anchor': 'middle', 'font-size': 66, 'font-weight': 500, fill: '#07241C', 'font-family': 'JetBrains Mono, monospace' }, '0', grp)
+        txt({ x, y: CY + 62, 'text-anchor': 'middle', 'font-size': 26, fill: '#0B3D30', 'font-family': 'Roboto, sans-serif' }, '$/MWh', grp)
+        const name = txt({ x, y: CY + R + 64, 'text-anchor': 'middle', 'font-size': 40, 'font-weight': 700, fill: '#FFFFFF', 'font-family': 'Roboto, sans-serif' }, WAPP.zoneName(zone))
+        return { grp, circle, price, name }
+      }
+      const to = node(XL, g.to, 's05-to'), from = node(XR, g.from, 's05-from')
+
+      // the line as a capacity gauge, filled from the sending side
+      const track = add('rect', { x: T0, y: TY, width: T1 - T0, height: TH, rx: TH / 2, fill: 'rgba(255,255,255,0.06)', stroke: '#8FD3B5', 'stroke-opacity': 0.55, 'stroke-width': 3 })
+      const fill = add('rect', { x: T1, y: TY, width: 0, height: TH, rx: TH / 2, fill: '#8FD3B5' })
+      const dash = add('line', { x1: T1 - 18, y1: CY, x2: T1 - 18, y2: CY, stroke: '#07241C', 'stroke-opacity': 0.55, 'stroke-width': 8, 'stroke-linecap': 'round', 'stroke-dasharray': '14 22' })
+      const arrow = add('polygon', { points: `${T0 - 2},${CY} ${T0 + 22},${CY - 16} ${T0 + 22},${CY + 16}`, fill: '#8FD3B5', opacity: 0 })
+      const capLab = txt({ x: (T0 + T1) / 2, y: TY - 78, 'text-anchor': 'middle', 'font-size': 26, fill: '#8FD3B5', 'font-family': 'Roboto, sans-serif' }, `${WAPP.t('s05.capacity')} ${WAPP.num(cap)} MW`)
+      const flowLab = txt({ x: (T0 + T1) / 2, y: TY - 26, 'text-anchor': 'middle', 'font-size': 40, 'font-weight': 500, fill: '#FFFFFF', 'font-family': 'JetBrains Mono, monospace' }, WAPP.t('s05.flow', { f: 0, cap: WAPP.num(cap) }))
+      const W = T1 - T0
+      const o = { f: 0 }
+      const paint = () => {
+        const w = Math.max(0, Math.min(1, o.f / cap)) * W
+        fill.setAttribute('x', T1 - w); fill.setAttribute('width', w)
+        dash.setAttribute('x1', Math.min(T1 - 18, T1 - w + 18))
+        flowLab.textContent = WAPP.t('s05.flow', { f: WAPP.num(Math.round(o.f)), cap: WAPP.num(cap) })
+      }
+      paint()
+      const prices = { u: 0, v: 0 }   // u: from (Nigeria), v: to (Benin)
+      const show = v => (v < 0.5 ? '–' : WAPP.num(Math.round(v)))   // a dash until the prices are computed
+      const paintPrices = () => { from.price.textContent = show(prices.u); to.price.textContent = show(prices.v) }
+      paintPrices()
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s05-frame', '#s05-sweep', 0)
+      tl.fromTo('#s05-cam', { scale: 1 }, { scale: 1.03, transformOrigin: '50% 50%', duration: 11, ease: 'sine.inOut' }, 0.5)
+      WAPP.rise(tl, '#s05-kicker', 0.35)
+      tl.fromTo('#s05-badge', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'none' }, 0.6)
+      // the two countries and the line between them
+      tl.fromTo([to.grp, from.grp], { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.6, ease: 'back.out(1.5)', stagger: 0.15 }, 0.6)
+      WAPP.rise(tl, [to.name, from.name], 0.9, { y: 20, stagger: 0.15 })
+      tl.fromTo(track, { scaleX: 0, transformOrigin: '100% 50%' }, { scaleX: 1, duration: 0.7, ease: 'power2.inOut' }, 1.0)
+      tl.fromTo([capLab, flowLab], { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'none' }, 1.4)
+      // 18 h: the line has room, one single price
+      WAPP.rise(tl, '#s05-pill', 1.8, { y: 16 })
+      tl.to(o, { f: g.free.f, duration: 1.4, ease: 'power2.out', onUpdate: paint }, 2.0)
+      tl.to(prices, { u: g.free.pu, v: g.free.pv, duration: 1.4, ease: 'power2.out', onUpdate: paintPrices }, 2.0)
+      tl.fromTo(arrow, { opacity: 0, x: 12 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }, 2.6)
+      tl.fromTo(dash, { strokeDashoffset: 0 }, { strokeDashoffset: 36 * 9.5 * 1.4, duration: 9.5, ease: 'none' }, 2.0)
+      WAPP.rise(tl, '#s05-c1', 3.6)
+      // 22 h: the line is full, the prices split
+      tl.to('#s05-h1', { y: -60, opacity: 0, duration: 0.45, ease: 'power2.in' }, 5.6)
+      tl.fromTo('#s05-h2', { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 5.75)
+      tl.to(o, { f: g.full.f, duration: 1.2, ease: 'power2.inOut', onUpdate: paint }, 5.8)
+      tl.to([fill, arrow], { attr: { fill: '#FF6B4A' }, duration: 0.4, ease: 'none' }, 6.7)
+      tl.to(track, { attr: { stroke: '#FF6B4A', 'stroke-opacity': 1 }, duration: 0.4, ease: 'none' }, 6.7)
+      tl.fromTo(track, { attr: { 'stroke-width': 3 } }, { attr: { 'stroke-width': 10 }, duration: 0.25, ease: 'power2.out', yoyo: true, repeat: 1, immediateRender: false }, 6.9)
+      tl.to(prices, { u: g.full.pu, v: g.full.pv, duration: 1.0, ease: 'power2.inOut', onUpdate: paintPrices }, 7.0)
+      tl.to(from.circle, { attr: { fill: color(g.full.pu) }, duration: 1.0, ease: 'power2.inOut' }, 7.0)
+      tl.to(to.circle, { attr: { fill: color(g.full.pv) }, duration: 1.0, ease: 'power2.inOut' }, 7.0)
+      tl.to('#s05-c1', { y: -30, opacity: 0, duration: 0.4, ease: 'power2.in' }, 8.0)
+      WAPP.rise(tl, '#s05-c2', 8.25)
+      window.__timelines['05-network'] = tl
+    })()
+  </script>
+</template>

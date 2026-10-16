@@ -1,0 +1,61 @@
+<template>
+  <!-- 08 · uses (7.5 s): what the simulator is for — training sessions, study, comparison — beside a photo of
+       people at work (Innovation: Africa, CC0). -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s08-title { position: absolute; left: 128px; top: 130px; width: 820px; margin-top: 0; color: var(--ink); }
+    #s08-rule { position: absolute; left: 128px; top: 352px; margin-top: 0; }
+    /* the three uses flow in a column: a line that wraps pushes the next ones down */
+    #s08-list { position: absolute; left: 128px; top: 404px; width: 880px; display: flex; flex-direction: column; gap: 24px; }
+    .s08-item { position: relative; display: block; padding-top: 22px; }
+    .s08-line { position: absolute; left: 0; top: 0; width: 880px; height: 2px; background: var(--line-strong); transform-origin: left center; }
+    .s08-n { display: block; font-size: 26px; color: var(--accent); }
+    .s08-k { display: block; margin-top: 6px; font-size: 48px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+    .s08-v { display: block; margin-top: 8px; font-size: 30px; line-height: 1.3; color: var(--ink-2); }
+    #s08-photo { position: absolute; left: 1072px; top: 110px; width: 720px; height: 860px; border-radius: 18px; overflow: hidden; background: #0B3D30; }
+    #s08-img { position: absolute; left: 0; top: 0; width: 720px; height: 860px; object-fit: cover; object-position: 40% 35%; }
+    #s08-credit { position: absolute; right: 16px; bottom: 16px; font-size: 26px; color: #FFFFFF; background: rgba(0, 0, 0, 0.45); border-radius: 8px; padding: 4px 14px; }
+  </style>
+  <div id="root" data-composition-id="08-uses" data-width="1920" data-height="1080" data-duration="7.5">
+    <div id="s08-stage" class="clip wapp-stage" data-start="0" data-duration="7.5" data-track-index="0">
+      <div id="s08-frame" class="wapp-frame wapp-bg-light">
+        <div id="s08-photo">
+          <img id="s08-img" src="assets/site/photos/solar-technicians.jpg" alt="" />
+          <span id="s08-credit"></span>
+        </div>
+        <span id="s08-title" class="wapp-title"></span>
+        <span id="s08-rule" class="wapp-rule"></span>
+        <div id="s08-list">
+        <div id="s08-u1" class="s08-item"><span class="s08-line"></span><span class="s08-n wapp-mono">01</span><span id="s08-k1" class="s08-k"></span><span id="s08-v1" class="s08-v"></span></div>
+        <div id="s08-u2" class="s08-item"><span class="s08-line"></span><span class="s08-n wapp-mono">02</span><span id="s08-k2" class="s08-k"></span><span id="s08-v2" class="s08-v"></span></div>
+        <div id="s08-u3" class="s08-item"><span class="s08-line"></span><span class="s08-n wapp-mono">03</span><span id="s08-k3" class="s08-k"></span><span id="s08-v3" class="s08-v"></span></div>
+        </div>
+      </div>
+      <div id="s08-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      $('s08-title').textContent = WAPP.t('s08.title')
+      $('s08-credit').textContent = WAPP.t('s08.credit')
+      for (const i of [1, 2, 3]) { $('s08-k' + i).textContent = WAPP.t('s08.k' + i); $('s08-v' + i).textContent = WAPP.t('s08.v' + i) }
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s08-frame', '#s08-sweep', 0)
+      // the photo grows up from its bottom edge, then keeps settling from a slow zoom
+      tl.fromTo('#s08-photo', { clipPath: 'inset(100% 0% 0% 0% round 18px)' }, { clipPath: 'inset(0% 0% 0% 0% round 18px)', duration: 1.1, ease: 'power3.inOut' }, 0.35)
+      tl.fromTo('#s08-img', { scale: 1.1 }, { scale: 1, duration: 7.1, ease: 'sine.out' }, 0.35)
+      tl.fromTo('#s08-credit', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'none' }, 1.4)
+      WAPP.rise(tl, '#s08-title', 0.5)
+      WAPP.rule(tl, '#s08-rule', 1.0)
+      ;[1, 2, 3].forEach((i, k) => {
+        const at = 1.6 + k
+        tl.fromTo(`#s08-u${i} .s08-line`, { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: 'power2.out' }, at)
+        WAPP.rise(tl, [`#s08-u${i} .s08-n`, '#s08-k' + i], at + 0.1, { y: 24, stagger: 0.08 })
+        WAPP.rise(tl, '#s08-v' + i, at + 0.3, { y: 20 })
+      })
+      window.__timelines['08-uses'] = tl
+    })()
+  </script>
+</template>

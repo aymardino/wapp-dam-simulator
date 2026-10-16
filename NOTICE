@@ -19,3 +19,8 @@ Photos of the public website (web/public/photos/, credited on the site and in we
 - Spillway of the Akosombo dam, Ghana — ZSM, CC BY-SA 3.0, https://commons.wikimedia.org/w/index.php?curid=11989962
 - Technicians carrying a solar panel (Innovation: Africa) — IAfrica76, CC0 1.0, https://commons.wikimedia.org/w/index.php?curid=163952895
 - Rural electrification, Chori village, Nigeria — Kambai Akau, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=119450281
+
+Video of the website (web/public/video/, source in video/): rendered with HyperFrames (Apache 2.0, HeyGen) and
+animated with GSAP (GreenSock Standard licence), neither redistributed in this repository. Fonts: Roboto (Apache 2.0)
+and JetBrains Mono (SIL Open Font License 1.1). Photo: "Technicians carrying a solar panel", IAfrica76
+(Innovation: Africa), CC0 1.0, Wikimedia Commons. The rendered video is published under CC BY 4.0.

@@ -1,0 +1,103 @@
+<template>
+  <!-- 07 · day (10.5 s): the whole network over the simulated day. The hours run from H00 to H19: prices, colours,
+       line widths and full lines change hour by hour; the three figures of the day count up under the map. -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s07-kicker { position: absolute; left: 128px; top: 170px; }
+    #s07-title { position: absolute; left: 128px; top: 214px; width: 540px; }
+    #s07-rule { position: absolute; left: 128px; top: 440px; margin-top: 0; }
+    #s07-hour { position: absolute; left: 122px; top: 500px; font-size: 120px; font-weight: 500; line-height: 1; color: var(--amber); }
+    #s07-strip { position: absolute; left: 128px; top: 650px; width: 504px; height: 64px; display: flex; align-items: flex-end; gap: 6px; }
+    .s07-bar { display: block; width: 15px; border-radius: 3px; background: var(--mint); opacity: 0.45; transform-origin: 50% 100%; }
+    #s07-mapbox { position: absolute; left: 640px; top: 60px; width: 1250px; height: 759px; }
+    #s07-map { display: block; width: 1250px; height: 759px; overflow: visible; }
+    #s07-side { position: absolute; right: 128px; top: 112px; text-align: right; }
+    #s07-legend { display: flex; justify-content: flex-end; gap: 28px; margin-top: 14px; font-size: 26px; color: var(--brand-ink); }
+    .s07-key { display: inline-flex; align-items: center; gap: 12px; }
+    .s07-sw { display: inline-block; width: 40px; height: 8px; border-radius: 4px; }
+    #s07-kpis { position: absolute; left: 128px; right: 128px; top: 836px; display: flex; gap: 64px; border-top: 1px solid rgba(255, 255, 255, 0.14); padding-top: 22px; }
+    .s07-kpi { flex: 1 1 0; min-width: 0; }
+    .s07-val { display: block; font-size: 58px; font-weight: 500; line-height: 1; color: #FFFFFF; white-space: nowrap; }
+    .s07-lab { display: block; margin-top: 12px; font-size: 26px; color: var(--mint); }
+  </style>
+  <div id="root" data-composition-id="07-day" data-width="1920" data-height="1080" data-duration="10.5">
+    <div id="s07-stage" class="clip wapp-stage" data-start="0" data-duration="10.5" data-track-index="0">
+      <div id="s07-frame" class="wapp-frame wapp-bg-deep">
+        <div id="s07-mapbox"><svg id="s07-map" class="wapp-map-fade" aria-hidden="true"></svg></div>
+        <div id="s07-side">
+          <span id="s07-badge" class="wapp-badge"></span>
+          <div id="s07-legend">
+            <span class="s07-key"><span class="s07-sw" style="background:#8FD3B5"></span><span id="s07-lflow"></span></span>
+            <span class="s07-key"><span class="s07-sw" style="background:#FF6B4A"></span><span id="s07-lfull"></span></span>
+          </div>
+        </div>
+        <span id="s07-kicker" class="wapp-kicker"></span>
+        <span id="s07-title" class="wapp-h2"></span>
+        <span id="s07-rule" class="wapp-rule"></span>
+        <span id="s07-hour" class="wapp-mono"></span>
+        <div id="s07-strip"></div>
+        <div id="s07-kpis">
+          <div class="s07-kpi"><span id="s07-v1" class="s07-val wapp-mono"></span><span id="s07-t1" class="s07-lab"></span></div>
+          <div class="s07-kpi"><span id="s07-v2" class="s07-val wapp-mono"></span><span id="s07-t2" class="s07-lab"></span></div>
+          <div class="s07-kpi"><span id="s07-v3" class="s07-val wapp-mono"></span><span id="s07-t3" class="s07-lab"></span></div>
+        </div>
+      </div>
+      <div id="s07-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      const d = WAPP.data, day = d.day
+      $('s07-kicker').textContent = WAPP.t('s07.kicker')
+      $('s07-title').textContent = WAPP.t('s07.title')
+      $('s07-badge').textContent = WAPP.t('badge')
+      $('s07-lflow').textContent = WAPP.t('s07.flow')
+      $('s07-lfull').textContent = WAPP.t('s07.full')
+      $('s07-t1').textContent = WAPP.t('s07.welfare')
+      $('s07-t2').textContent = WAPP.t('s07.volume')
+      $('s07-t3').textContent = WAPP.t('s07.saturated')
+      const map = WAPP.buildMap($('s07-map'), 's07m', { hour: 0 })
+      // hour strip: mean price of each hour over the 14 countries
+      const zones = Object.keys(d.prices)
+      const means = d.hours.map(h => zones.reduce((a, z) => a + d.prices[z][String(h)], 0) / zones.length)
+      const max = Math.max(...means)
+      const bars = means.map(m => { const b = document.createElement('span'); b.className = 's07-bar'; b.style.height = `${Math.max(10, (m / max) * 64)}px`; $('s07-strip').appendChild(b); return b })
+      let shown = -1
+      const show = h => {
+        if (h === shown) return
+        shown = h
+        map.setHour(h)
+        $('s07-hour').textContent = WAPP.hh(h)
+        bars.forEach((b, i) => { b.style.background = i === h ? '#F2B134' : '#8FD3B5'; b.style.opacity = i === h ? '1' : '0.45' })
+      }
+      show(0)
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s07-frame', '#s07-sweep', 0)
+      WAPP.rise(tl, '#s07-kicker', 0.35)
+      WAPP.rise(tl, '#s07-title', 0.5)
+      WAPP.rule(tl, '#s07-rule', 0.95)
+      WAPP.rise(tl, '#s07-hour', 1.1, { y: 24 })
+      tl.fromTo(bars, { scaleY: 0 }, { scaleY: 1, duration: 0.45, ease: 'power2.out', stagger: 0.02 }, 1.2)
+      tl.fromTo('#s07-side', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'none' }, 1.4)
+      // the map, quicker than in scene 02: this is the recap
+      tl.fromTo('#s07m-land', { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power1.out' }, 0.6)
+      WAPP.draw(tl, Object.values(map.lineEls).map(L => L.base), 0.8, { duration: 0.5, stagger: 0.04, ease: 'power2.out' })
+      tl.fromTo(Object.values(map.lineEls).map(L => L.g), { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'none' }, 0.8)
+      tl.fromTo(Object.values(map.nodeEls).map(n => n.g), { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.4, ease: 'back.out(1.6)', stagger: 0.04 }, 1.0)
+      tl.fromTo('#s07m-nodes .leader', { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'none' }, 1.4)
+      map.dash(tl, 0.8, 10.5)
+      tl.fromTo('#s07-mapbox', { scale: 1, transformOrigin: '55% 50%' }, { scale: 1.03, duration: 9.8, ease: 'sine.inOut' }, 0.7)
+      // the hours run, H00 to H19
+      const o = { h: 0 }
+      tl.to(o, { h: 19, duration: 6.4, ease: 'none', onUpdate: () => show(Math.min(19, Math.floor(o.h + 1e-6))) }, 1.8)
+      // the figures of the day
+      WAPP.rise(tl, '#s07-kpis', 2.2, { y: 24 })
+      WAPP.countUp(tl, '#s07-v1', day.welfare, 2.4, { format: v => WAPP.money(v), duration: 1.6 })
+      WAPP.countUp(tl, '#s07-v2', day.volume, 3.4, { format: v => `${WAPP.num(Math.round(v))} MWh`, duration: 1.6 })
+      WAPP.countUp(tl, '#s07-v3', day.saturatedLines, 4.4, { format: v => `${Math.round(v)}/${day.lines}`, duration: 1.2 })
+      window.__timelines['07-day'] = tl
+    })()
+  </script>
+</template>

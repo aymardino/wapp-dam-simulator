@@ -1,0 +1,91 @@
+<template>
+  <!-- 06 · engine (11.5 s): the three questions the engine answers, in the order of the market rules, as the
+       website's "Le calcul" section: who is served (value), how much (energy), at what price (the middle). -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s06-cam { position: absolute; inset: 0; }
+    #s06-kicker { position: absolute; left: 128px; top: 118px; }
+    #s06-title { position: absolute; left: 128px; top: 148px; width: 1500px; }
+    #s06-rule { position: absolute; left: 128px; top: 300px; margin-top: 0; }
+    .s06-card { position: absolute; top: 380px; width: 522px; height: 520px; padding: 40px; }
+    #s06-k1 { left: 128px; } #s06-k2 { left: 699px; } #s06-k3 { left: 1270px; }
+    .s06-num { position: absolute; left: 40px; top: 30px; font-size: 104px; font-weight: 700; line-height: 1; color: var(--amber); }
+    .s06-tag { position: absolute; right: 40px; top: 44px; font-size: 26px; color: var(--mint); }
+    .s06-q { position: absolute; left: 40px; right: 40px; top: 170px; font-size: 54px; font-weight: 700; line-height: 1.1; color: #FFFFFF; }
+    .s06-a { position: absolute; left: 40px; right: 40px; top: 246px; font-size: 32px; line-height: 1.35; color: var(--brand-ink); }
+    .s06-dia { position: absolute; left: 40px; right: 40px; bottom: 40px; height: 96px; }
+    .s06-dia svg { display: block; width: 442px; height: 96px; overflow: visible; }
+    #s06-foot { position: absolute; left: 128px; top: 934px; font-size: 26px; color: var(--mint); }
+  </style>
+  <div id="root" data-composition-id="06-engine" data-width="1920" data-height="1080" data-duration="11.5">
+    <div id="s06-stage" class="clip wapp-stage" data-start="0" data-duration="11.5" data-track-index="0">
+      <div id="s06-frame" class="wapp-frame wapp-bg-brand">
+        <div id="s06-cam">
+          <span id="s06-kicker" class="wapp-kicker"></span>
+          <span id="s06-title" class="wapp-title"></span>
+          <span id="s06-rule" class="wapp-rule"></span>
+          <div id="s06-k1" class="s06-card wapp-card">
+            <span class="s06-num">1</span><span class="s06-tag wapp-mono">P1</span>
+            <span id="s06-q1" class="s06-q"></span><span id="s06-a1" class="s06-a"></span>
+            <div class="s06-dia"><svg viewBox="0 0 442 96"><rect x="0" y="56" width="442" height="20" rx="10" fill="rgba(255,255,255,0.10)" /><rect id="s06-b1" x="0" y="56" width="442" height="20" rx="10" fill="#8FD3B5" /></svg></div>
+          </div>
+          <div id="s06-k2" class="s06-card wapp-card">
+            <span class="s06-num">2</span><span class="s06-tag wapp-mono">P1bis</span>
+            <span id="s06-q2" class="s06-q"></span><span id="s06-a2" class="s06-a"></span>
+            <div class="s06-dia"><svg viewBox="0 0 442 96"><rect x="0" y="34" width="442" height="16" rx="8" fill="#8FD3B5" opacity="0.35" /><rect x="0" y="62" width="442" height="20" rx="10" fill="rgba(255,255,255,0.10)" /><rect id="s06-b2" x="0" y="62" width="442" height="20" rx="10" fill="#F2B134" /></svg></div>
+          </div>
+          <div id="s06-k3" class="s06-card wapp-card">
+            <span class="s06-num">3</span><span class="s06-tag wapp-mono">P2</span>
+            <span id="s06-q3" class="s06-q"></span><span id="s06-a3" class="s06-a"></span>
+            <div class="s06-dia"><svg viewBox="0 0 442 96">
+              <line id="s06-seg" x1="14" x2="428" y1="40" y2="40" stroke="#8FD3B5" stroke-width="4" />
+              <line class="s06-end" x1="14" x2="14" y1="26" y2="54" stroke="#8FD3B5" stroke-width="4" /><line class="s06-end" x1="428" x2="428" y1="26" y2="54" stroke="#8FD3B5" stroke-width="4" />
+              <circle id="s06-dot" cx="221" cy="40" r="13" fill="#F2B134" />
+              <text id="s06-low" x="0" y="92" font-size="26" fill="#D7E8E1" font-family="Roboto, sans-serif"></text>
+              <text id="s06-high" x="442" y="92" text-anchor="end" font-size="26" fill="#D7E8E1" font-family="Roboto, sans-serif"></text>
+              <text id="s06-mid" x="221" y="14" text-anchor="middle" font-size="26" font-weight="700" fill="#F2B134" font-family="Roboto, sans-serif"></text>
+            </svg></div>
+          </div>
+          <span id="s06-foot" class="wapp-mono"></span>
+        </div>
+      </div>
+      <div id="s06-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      $('s06-kicker').textContent = WAPP.t('s06.kicker')
+      $('s06-title').textContent = WAPP.t('s06.title')
+      for (const i of [1, 2, 3]) { $('s06-q' + i).textContent = WAPP.t('s06.q' + i); $('s06-a' + i).textContent = WAPP.t('s06.a' + i) }
+      $('s06-low').textContent = WAPP.t('s06.low')
+      $('s06-high').textContent = WAPP.t('s06.high')
+      $('s06-mid').textContent = WAPP.t('s06.mid')
+      $('s06-foot').textContent = WAPP.t('s06.foot')
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s06-frame', '#s06-sweep', 0)
+      tl.fromTo('#s06-cam', { scale: 1 }, { scale: 1.02, transformOrigin: '50% 40%', duration: 11, ease: 'sine.inOut' }, 0.5)
+      WAPP.rise(tl, '#s06-kicker', 0.35)
+      WAPP.rise(tl, '#s06-title', 0.5)
+      WAPP.rule(tl, '#s06-rule', 0.95)
+      // one card after the other
+      ;[1, 2, 3].forEach((i, k) => {
+        const at = [1.8, 4.4, 7.0][k], card = '#s06-k' + i
+        WAPP.rise(tl, card, at, { y: 44, duration: 0.8 })
+        tl.fromTo(`${card} .s06-num`, { scale: 0.6, opacity: 0, transformOrigin: '0% 100%' }, { scale: 1, opacity: 1, duration: 0.55, ease: 'back.out(1.6)' }, at + 0.2)
+        tl.fromTo(`${card} .s06-tag`, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'none' }, at + 0.35)
+        WAPP.rise(tl, '#s06-q' + i, at + 0.35, { y: 24 })
+        WAPP.rise(tl, '#s06-a' + i, at + 0.6, { y: 24 })
+        tl.fromTo(`${card} .s06-dia`, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'none' }, at + 0.8)
+      })
+      tl.fromTo('#s06-b1', { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 1.0, ease: 'power2.out' }, 2.7)
+      tl.fromTo('#s06-b2', { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 1.0, ease: 'power2.out' }, 5.3)
+      // the price interval: the dot comes from the low end and settles in the middle
+      tl.fromTo('#s06-dot', { x: -207 }, { x: 0, duration: 1.1, ease: 'power2.inOut' }, 7.9)
+      WAPP.rise(tl, '#s06-mid', 8.9, { y: 10, duration: 0.5 })
+      WAPP.rise(tl, '#s06-foot', 9.2, { y: 16 })
+      window.__timelines['06-engine'] = tl
+    })()
+  </script>
+</template>

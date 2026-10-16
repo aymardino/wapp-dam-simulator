@@ -1,0 +1,141 @@
+<template>
+  <!-- 04 · curves (12.5 s): Senegal at 19 h (WAPP.data.cross). The plants arrive one by one, cheapest first, and
+       build the supply staircase; the buyers' staircase comes down from the top left; the price is where they meet,
+       set by the last plant called. -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* text column: a flex column, so that a line that wraps pushes the next ones down */
+    #s04-col { position: absolute; left: 128px; top: 190px; width: 580px; display: flex; flex-direction: column; gap: 30px; }
+    .s04-item { display: block; }
+    .s04-sw { display: block; width: 56px; height: 8px; border-radius: 4px; margin-bottom: 16px; }
+    .s04-txt { display: block; font-size: 38px; line-height: 1.25; color: var(--ink); font-weight: 500; }
+    #s04-price { display: block; margin-top: -10px; font-size: 72px; font-weight: 500; line-height: 1; color: var(--ink); white-space: nowrap; }
+    #s04-note { display: block; margin-top: -8px; }
+    #s04-note1 { display: block; font-size: var(--fs-small); color: var(--ink-2); }
+    #s04-note2 { display: block; margin-top: 8px; font-size: var(--fs-body); font-weight: 700; color: var(--ink); line-height: 1.25; }
+    #s04-card { position: absolute; left: 760px; top: 150px; width: 1032px; height: 780px; }
+    #s04-chart { position: absolute; left: 0; top: 0; width: 1032px; height: 780px; overflow: visible; }
+    #s04-badge { position: absolute; right: 32px; top: 24px; }
+  </style>
+  <div id="root" data-composition-id="04-curves" data-width="1920" data-height="1080" data-duration="12.5">
+    <div id="s04-stage" class="clip wapp-stage" data-start="0" data-duration="12.5" data-track-index="0">
+      <div id="s04-frame" class="wapp-frame wapp-bg-light">
+        <div id="s04-col">
+        <span id="s04-kicker" class="wapp-kicker"></span>
+        <div id="s04-i1" class="s04-item"><span class="s04-sw" style="background:#0F6E56"></span><span id="s04-t1" class="s04-txt"></span></div>
+        <div id="s04-i2" class="s04-item"><span class="s04-sw" style="background:#B5443C"></span><span id="s04-t2" class="s04-txt"></span></div>
+        <div id="s04-i3" class="s04-item"><span class="s04-sw" style="background:#F2B134"></span><span id="s04-t3" class="s04-txt"></span></div>
+        <span id="s04-price" class="wapp-mono"></span>
+        <div id="s04-note"><span id="s04-note1"></span><span id="s04-note2"></span></div>
+        </div>
+        <div id="s04-card" class="wapp-card">
+          <svg id="s04-chart" viewBox="0 0 1032 780" aria-hidden="true"></svg>
+          <span id="s04-badge" class="wapp-badge"></span>
+        </div>
+      </div>
+      <div id="s04-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      const c = WAPP.data.cross
+      $('s04-kicker').textContent = WAPP.t('s04.kicker', { zone: WAPP.zoneName(c.zone), hour: WAPP.hour(c.hour) })
+      $('s04-t1').textContent = WAPP.t('s04.supply')
+      $('s04-t2').textContent = WAPP.t('s04.demand')
+      $('s04-t3').textContent = WAPP.t('s04.meet')
+      $('s04-note1').textContent = WAPP.t('s04.marginal')
+      $('s04-note2').textContent = c.marginal
+      $('s04-badge').textContent = WAPP.t('badge')
+      $('s04-price').textContent = WAPP.t('s04.price', { p: WAPP.num(c.price) })
+
+      // plot area in card coordinates; y from 0 to 500 $/MWh (the market's price bounds), x in MW
+      const X0 = 112, X1 = 990, Y0 = 92, Y1 = 690
+      const total = Math.max(c.supply.reduce((a, r) => a + r.qty, 0), c.demand.reduce((a, r) => a + r.qty, 0))
+      const step = [100, 200, 250, 500, 1000].find(s => (total * 1.08) / s <= 6) || 1000
+      const xMax = Math.ceil((total * 1.08) / step) * step
+      const X = q => X0 + (q / xMax) * (X1 - X0), Y = p => Y1 - (p / 500) * (Y1 - Y0)
+      const NS = 'http://www.w3.org/2000/svg', svg = $('s04-chart')
+      const add = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e }
+      const grid = add('g', { id: 's04-grid' })
+      for (let p = 0; p <= 500; p += 100) {
+        add('line', { x1: X0, x2: X1, y1: Y(p), y2: Y(p), stroke: p ? '#E2E0D9' : '#8C8B84', 'stroke-width': p ? 1.5 : 2 }, grid)
+        add('text', { x: X0 - 16, y: Y(p) + 9, 'text-anchor': 'end', 'font-size': 26, 'font-family': 'JetBrains Mono, monospace', fill: '#8C8B84' }, grid).textContent = WAPP.num(p)
+      }
+      for (let q = 0; q <= xMax; q += step) add('text', { x: X(q), y: Y1 + 40, 'text-anchor': 'middle', 'font-size': 26, 'font-family': 'JetBrains Mono, monospace', fill: '#8C8B84' }, grid).textContent = WAPP.num(q)
+      add('text', { x: X0 - 16, y: Y0 - 34, 'text-anchor': 'end', 'font-size': 26, fill: '#5C5B56', 'font-family': 'Roboto, sans-serif' }, grid).textContent = WAPP.t('s04.axisP')
+      add('text', { x: X1, y: Y1 + 76, 'text-anchor': 'end', 'font-size': 26, fill: '#5C5B56', 'font-family': 'Roboto, sans-serif' }, grid).textContent = WAPP.t('s04.axisQ')
+      add('line', { id: 's04-yaxis', x1: X0, x2: X0, y1: Y1, y2: Y0 - 10, stroke: '#8C8B84', 'stroke-width': 2 })
+
+      // supply: one block (light fill) and one outline (riser + tread) per plant, in price order
+      const blocks = add('g', {}), outlines = add('g', {})
+      let q = 0, prev = null
+      const sup = c.supply.map(r => {
+        const x0 = X(q), x1 = X(q + r.qty), y = Y(r.price)
+        const marg = r.actor === c.marginal && Math.abs(r.price - c.price) <= 0.5
+        const block = add('rect', { x: x0, y, width: x1 - x0, height: Y(0) - y, fill: '#0F6E56', 'fill-opacity': 0.14 }, blocks)
+        const d = prev == null ? `M${x0} ${y} H${x1}` : `M${x0} ${Y(prev)} V${y} H${x1}`
+        const line = add('path', { d, fill: 'none', stroke: '#0F6E56', 'stroke-width': 5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, outlines)
+        q += r.qty; prev = r.price
+        return { r, block, line, marg, served: r.price <= c.price + 0.5 }
+      })
+      const margRect = sup.find(s => s.marg)
+      const halo = margRect ? add('rect', { x: +margRect.block.getAttribute('x') - 3, y: +margRect.block.getAttribute('y') - 3, width: +margRect.block.getAttribute('width') + 6, height: Y(0) - +margRect.block.getAttribute('y') + 3, fill: 'none', stroke: '#F2B134', 'stroke-width': 4, rx: 3 }) : null
+
+      // demand: one staircase, descending
+      let dq = 0, dd = ''
+      const dem = c.demand.map((r, i) => { const x0 = X(dq), x1 = X(dq + r.qty); dd += i === 0 ? `M${x0} ${Y(r.price)} H${x1}` : ` V${Y(r.price)} H${x1}`; dq += r.qty; return { r, x0, x1 } })
+      const demServed = add('path', { d: dd, fill: 'none', stroke: '#B5443C', 'stroke-width': 5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' })
+      // the part of the demand below the price (not served), drawn over in the faded state later
+      const unserved = dem.filter(s => s.r.price < c.price - 0.5)
+
+      // the price: a dashed line across the plot and the dot where the curves cross
+      const py = Y(c.price), px = X(c.cons)
+      const pline = add('line', { x1: X0, x2: X1, y1: py, y2: py, stroke: '#1B1B19', 'stroke-width': 2.5, 'stroke-dasharray': '10 8' })
+      const dot = add('circle', { cx: px, cy: py, r: 14, fill: '#F2B134', stroke: '#1B1B19', 'stroke-width': 3 })
+      // the price on the axis: an ink tag between the ticks
+      const tag = add('g', { id: 's04-tag' })
+      add('rect', { x: X0 - 92, y: py - 19, width: 80, height: 38, rx: 6, fill: '#1B1B19' }, tag)
+      add('text', { x: X0 - 52, y: py + 9, 'text-anchor': 'middle', 'font-size': 26, 'font-weight': 500, 'font-family': 'JetBrains Mono, monospace', fill: '#FFFFFF' }, tag).textContent = WAPP.num(c.price)
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s04-frame', '#s04-sweep', 0)
+      tl.fromTo('#s04-card', { scale: 1 }, { scale: 1.02, transformOrigin: '60% 60%', duration: 12, ease: 'sine.inOut' }, 0.5)
+      WAPP.rise(tl, '#s04-kicker', 0.35)
+      WAPP.rise(tl, '#s04-card', 0.45, { y: 40, duration: 0.9 })
+      tl.fromTo(grid, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'none' }, 0.7)
+      WAPP.draw(tl, '#s04-yaxis', 0.6, { duration: 0.7 })
+      tl.fromTo('#s04-badge', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'none' }, 1.0)
+
+      // supply, plant by plant
+      WAPP.rise(tl, '#s04-i1', 1.4)
+      const per = 2.9 / sup.length
+      sup.forEach((s, i) => {
+        const at = 1.7 + i * per
+        tl.fromTo(s.block, { scaleY: 0, transformOrigin: '50% 100%' }, { scaleY: 1, duration: 0.45, ease: 'power3.out' }, at)
+        WAPP.draw(tl, s.line, at, { duration: 0.4, ease: 'power2.out' })
+      })
+      // demand
+      WAPP.rise(tl, '#s04-i2', 5.0)
+      WAPP.draw(tl, demServed, 5.2, { duration: 1.4, ease: 'power2.inOut' })
+      // the price
+      WAPP.rise(tl, '#s04-i3', 7.0)
+      tl.fromTo(dot, { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.5, ease: 'back.out(1.6)' }, 7.2)
+      WAPP.draw(tl, pline, 7.35, { duration: 0.8, ease: 'power2.inOut' })
+      WAPP.rise(tl, '#s04-price', 7.5, { y: 24 })
+      tl.fromTo(tag, { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out' }, 7.9)
+      // set by the last plant called
+      WAPP.rise(tl, '#s04-note', 8.4, { y: 24 })
+      if (halo) WAPP.draw(tl, halo, 8.5, { duration: 0.8 })
+      // what is not served fades
+      sup.filter(s => !s.served).forEach(s => tl.to([s.block, s.line], { opacity: 0.3, duration: 0.6, ease: 'power1.out' }, 9.2))
+      if (unserved.length) {
+        const d = unserved.map(s => `M${s.x0} ${Y(s.r.price)} H${s.x1}`).join(' ')
+        const ghost = add('path', { d, fill: 'none', stroke: '#FFFFFF', 'stroke-width': 9, 'stroke-linecap': 'round', opacity: 0 })
+        svg.insertBefore(ghost, pline)
+        tl.to(ghost, { opacity: 0.7, duration: 0.6, ease: 'power1.out' }, 9.2)
+      }
+      window.__timelines['04-curves'] = tl
+    })()
+  </script>
+</template>

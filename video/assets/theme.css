@@ -1,0 +1,99 @@
+/* Design system of the video: the website's tokens (web/tailwind.config.js), rescaled for a 1920 × 1080 frame.
+   Linked once by index.html; every scene uses these classes and variables instead of its own fonts or colours. */
+
+/* Fonts ship as files with the project (npm packages @fontsource/roboto and @fontsource/jetbrains-mono). The latin
+   subset covers French; it has no arrows (→), no ≈ or ≤: draw arrows in SVG. */
+@font-face { font-family: "Roboto"; font-weight: 400; font-style: normal; src: url("../node_modules/@fontsource/roboto/files/roboto-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Roboto"; font-weight: 400; font-style: italic; src: url("../node_modules/@fontsource/roboto/files/roboto-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "Roboto"; font-weight: 500; font-style: normal; src: url("../node_modules/@fontsource/roboto/files/roboto-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Roboto"; font-weight: 700; font-style: normal; src: url("../node_modules/@fontsource/roboto/files/roboto-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-style: normal; src: url("../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-style: normal; src: url("../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
+
+:root {
+  /* colours (website) */
+  --deep: #07241C;        /* darkest ground, sea on the map */
+  --brand: #0B3D30;       /* brand green: header, "Le calcul" section */
+  --brand-2: #0F4A3A;
+  --land: #10493A;        /* member countries on the dark map */
+  --land-other: #0C352A;  /* other countries on the dark map */
+  --brand-ink: #D7E8E1;   /* body text on dark grounds */
+  --mint: #8FD3B5;        /* kickers, flows and secondary text on dark grounds */
+  --amber: #F2B134;       /* accent: rules, the price, the current hour */
+  --coral: #FF6B4A;       /* full (saturated) lines on dark grounds */
+  --accent: #0F6E56;      /* accent on light grounds, supply curve */
+  --demand: #B5443C;      /* demand curve */
+  --sat-light: #A32D2D;   /* full lines on light grounds */
+  --page: #F4F4F0;        /* light ground */
+  --surface: #FFFFFF;
+  --ink: #1B1B19;         /* text on light grounds */
+  --ink-2: #5C5B56;
+  --ink-3: #8C8B84;
+  --line: #E2E0D9;
+  --line-strong: #C8C6BE;
+
+  /* type ramp, px at 1920 × 1080 (the video is often watched at half size: nothing under 26 px) */
+  --fs-display: 112px;    /* wordmark, one big statement */
+  --fs-h1: 88px;          /* scene title */
+  --fs-h2: 64px;          /* secondary title, big figure label */
+  --fs-lead: 40px;        /* one sentence under a title */
+  --fs-body: 32px;
+  --fs-small: 26px;       /* minimum size */
+  --fs-kicker: 26px;
+  --fs-figure: 120px;     /* key figure (mono) */
+
+  /* layout */
+  --safe-x: 128px;        /* side margins */
+  --safe-y: 96px;         /* top / bottom margins; keep content above y = 980 (the player's controls) */
+  --font: "Roboto", sans-serif;
+  --mono: "JetBrains Mono", monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Scene skeleton ─────────────────────────────────────────────────────────
+   <div class="clip wapp-stage">            the scene's timed layer (never animated)
+     <div class="wapp-frame wapp-bg-…">     everything visible; WAPP.wipeIn reveals it
+       <div class="wapp-safe">…</div>        content inside the margins
+     </div>
+     <div class="wapp-sweep"></div>         the amber line that leads the wipe
+   </div> */
+.wapp-stage { position: absolute; inset: 0; overflow: hidden; }
+.wapp-frame { position: absolute; inset: 0; overflow: hidden; font-family: var(--font); color: #FFFFFF; }
+.wapp-safe { position: absolute; left: var(--safe-x); right: var(--safe-x); top: var(--safe-y); bottom: var(--safe-y); }
+.wapp-sweep { position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: var(--amber); box-shadow: 0 0 24px rgba(242, 177, 52, 0.55); opacity: 0; }
+
+/* Grounds. Dark: the website's map section (radial gradient + topographic lines). Brand: its "Le calcul" section
+   (brand green + mesh). Light: its white sections (page colour + light mesh). */
+.wapp-bg-deep { background: url("site/patterns/topo-dark.svg") center / cover no-repeat, radial-gradient(1400px 900px at 72% 18%, #10493A 0%, #0B3D30 48%, #07241C 100%); }
+.wapp-bg-brand { background: url("site/patterns/mesh-dark.svg") center / cover no-repeat, #0B3D30; }
+.wapp-bg-light { background: url("site/patterns/mesh-light.svg") center / cover no-repeat, #F4F4F0; color: var(--ink); }
+.wapp-bg-white { background: #FFFFFF; color: var(--ink); }
+
+/* ── Type ─────────────────────────────────────────────────────────────────── */
+.wapp-kicker { display: block; font-size: var(--fs-kicker); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mint); }
+.wapp-bg-light .wapp-kicker, .wapp-bg-white .wapp-kicker { color: var(--accent); }
+.wapp-title { display: block; font-size: var(--fs-h1); font-weight: 700; line-height: 1.04; letter-spacing: -0.02em; margin-top: 22px; }
+.wapp-display { display: block; font-size: var(--fs-display); font-weight: 700; line-height: 1.0; letter-spacing: -0.025em; }
+.wapp-h2 { display: block; font-size: var(--fs-h2); font-weight: 700; line-height: 1.08; letter-spacing: -0.015em; }
+/* the short rule under a title (website signature); WAPP.rule draws it from the left */
+.wapp-rule { display: block; width: 120px; height: 10px; border-radius: 5px; background: var(--amber); margin-top: 30px; transform-origin: left center; }
+.wapp-bg-light .wapp-rule, .wapp-bg-white .wapp-rule { background: var(--accent); }
+.wapp-lead { display: block; font-size: var(--fs-lead); line-height: 1.35; color: var(--brand-ink); margin-top: 30px; max-width: 26em; }
+.wapp-bg-light .wapp-lead, .wapp-bg-white .wapp-lead { color: var(--ink-2); }
+.wapp-body { font-size: var(--fs-body); line-height: 1.4; color: var(--brand-ink); }
+.wapp-bg-light .wapp-body, .wapp-bg-white .wapp-body { color: var(--ink-2); }
+.wapp-mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wapp-figure { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: var(--fs-figure); font-weight: 500; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
+.wapp-label { font-size: var(--fs-small); font-weight: 500; color: var(--mint); }
+.wapp-bg-light .wapp-label, .wapp-bg-white .wapp-label { color: var(--ink-2); }
+/* "Simulation · reconstructed 2024 data": on every scene that shows prices or flows */
+.wapp-badge { font-size: var(--fs-small); font-style: italic; color: rgba(143, 211, 181, 0.85); white-space: nowrap; }
+.wapp-bg-light .wapp-badge, .wapp-bg-white .wapp-badge { color: var(--ink-3); }
+
+/* ── Cards and pills ──────────────────────────────────────────────────────── */
+.wapp-card { background: rgba(7, 36, 28, 0.55); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 18px; }
+.wapp-bg-light .wapp-card, .wapp-bg-white .wapp-card { background: #FFFFFF; border: 1px solid var(--line); box-shadow: 0 2px 6px rgba(27, 27, 25, 0.05); }
+.wapp-pill { display: inline-flex; align-items: center; gap: 12px; height: 56px; padding: 0 24px; border-radius: 28px; font-size: var(--fs-small); font-weight: 500; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16); color: #FFFFFF; white-space: nowrap; }
+
+/* The map's geography is cut by a rectangle: fade its edges into the ground. */
+.wapp-map-fade { -webkit-mask-image: radial-gradient(ellipse 62% 66% at 50% 52%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 62% 66% at 50% 52%, #000 62%, transparent 100%); }

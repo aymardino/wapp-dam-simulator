@@ -1,0 +1,78 @@
+<template>
+  <!-- 02 · region (9.0 s): the map of West Africa draws itself; 14 countries pop in while a figure counts them, then
+       the 15 interconnection lines draw while a second figure counts them; the 2027 market comes last. -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s02-kicker { position: absolute; left: 128px; top: 214px; }
+    .s02-fig { position: absolute; top: 262px; }
+    #s02-f1 { left: 128px; width: 230px; }
+    #s02-f2 { left: 380px; width: 330px; }
+    .s02-num { display: block; color: #FFFFFF; }
+    .s02-lab { display: block; margin-top: 14px; font-size: var(--fs-body); line-height: 1.25; color: var(--brand-ink); }
+    #s02-title { position: absolute; left: 128px; top: 560px; width: 600px; margin-top: 0; }
+    #s02-rule { position: absolute; left: 128px; top: 800px; margin-top: 0; }
+    #s02-mapbox { position: absolute; left: 640px; top: 100px; width: 1300px; height: 789px; }
+    #s02-map { display: block; width: 1300px; height: 789px; overflow: visible; }
+  </style>
+  <div id="root" data-composition-id="02-region" data-width="1920" data-height="1080" data-duration="9">
+    <div id="s02-stage" class="clip wapp-stage" data-start="0" data-duration="9" data-track-index="0">
+      <div id="s02-frame" class="wapp-frame wapp-bg-deep">
+        <div id="s02-mapbox"><svg id="s02-map" class="wapp-map-fade" aria-hidden="true"></svg></div>
+        <span id="s02-kicker" class="wapp-kicker"></span>
+        <div id="s02-f1" class="s02-fig"><span id="s02-n1" class="s02-num wapp-figure">0</span><span id="s02-l1" class="s02-lab"></span></div>
+        <div id="s02-f2" class="s02-fig"><span id="s02-n2" class="s02-num wapp-figure">0</span><span id="s02-l2" class="s02-lab"></span></div>
+        <span id="s02-title" class="wapp-h2"></span>
+        <span id="s02-rule" class="wapp-rule"></span>
+      </div>
+      <div id="s02-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      $('s02-kicker').textContent = WAPP.t('s02.kicker')
+      $('s02-l1').textContent = WAPP.t('s02.countries')
+      $('s02-l2').textContent = WAPP.t('s02.lines')
+      $('s02-title').textContent = WAPP.t('s02.title')
+      const map = WAPP.buildMap($('s02-map'), 's02m', { neutral: true })
+      const members = Array.from(document.querySelectorAll('#s02m-land path.member'))
+      const others = Array.from(document.querySelectorAll('#s02m-land path.other'))
+      const nodes = Object.keys(map.nodeEls).sort((a, b) => map.nodeEls[a].x - map.nodeEls[b].x).map(z => map.nodeEls[z].g)   // west to east
+      const leaders = Array.from(document.querySelectorAll('#s02m-nodes .leader'))
+      const bases = Object.values(map.lineEls).map(L => L.base)
+      const flows = Object.values(map.lineEls).map(L => L.flow)
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s02-frame', '#s02-sweep', 0)
+      WAPP.rise(tl, '#s02-kicker', 0.35)
+
+      // the land: member borders draw while their fill comes in; the other countries stay faint
+      tl.fromTo(others, { opacity: 0 }, { opacity: 1, duration: 1.2, ease: 'power1.out' }, 0.5)
+      tl.fromTo(members, { fillOpacity: 0 }, { fillOpacity: 1, duration: 1.4, ease: 'power1.out', stagger: 0.04 }, 0.8)
+      WAPP.draw(tl, members, 0.6, { duration: 1.6, stagger: 0.05 })
+
+      // 14 countries
+      WAPP.rise(tl, '#s02-f1', 1.5, { y: 24 })
+      WAPP.countUp(tl, '#s02-n1', 14, 1.6, { duration: 1.5, format: v => String(Math.round(v)), ease: 'power1.inOut' })
+      tl.fromTo(nodes, { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.45, ease: 'back.out(1.6)', stagger: 0.1 }, 1.7)
+      tl.fromTo(leaders, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'none' }, 2.2)
+
+      // 15 lines
+      WAPP.rise(tl, '#s02-f2', 3.3, { y: 24 })
+      WAPP.countUp(tl, '#s02-n2', 15, 3.4, { duration: 1.6, format: v => String(Math.round(v)), ease: 'power1.inOut' })
+      tl.fromTo(flows, { opacity: 0 }, { opacity: 0, duration: 0.01 }, 0)
+      WAPP.draw(tl, bases, 3.4, { duration: 0.5, stagger: 0.075, ease: 'power2.out' })
+
+      // the 2027 market
+      WAPP.rise(tl, '#s02-title', 5.4)
+      WAPP.rule(tl, '#s02-rule', 5.9)
+
+      // life: the dashes start running along the lines; a slow push-in on the map
+      tl.to(flows, { opacity: 1, duration: 0.6, ease: 'none' }, 5.8)
+      map.dash(tl, 5.8, 9)
+      tl.fromTo('#s02-mapbox', { scale: 1, transformOrigin: '55% 55%' }, { scale: 1.05, duration: 8.4, ease: 'sine.inOut' }, 0.6)
+
+      window.__timelines['02-region'] = tl
+    })()
+  </script>
+</template>

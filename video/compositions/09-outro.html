@@ -1,0 +1,76 @@
+<template>
+  <!-- 09 · outro (8.0 s): the lockup again, the address of the website, the licence, the authors, the framework of
+       the project with its partners' logos, and the disclaimer. Holds to the end: the player keeps the last frame. -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s09-cam { position: absolute; inset: 0; }
+    .s09-c { position: absolute; left: 0; right: 0; text-align: center; white-space: nowrap; }
+    #s09-tile { position: absolute; left: 890px; top: 150px; width: 140px; height: 140px; }
+    #s09-tile svg { display: block; width: 140px; height: 140px; }
+    #s09-wordmark { top: 320px; }
+    #s09-url { top: 462px; font-size: 46px; font-weight: 500; color: var(--amber); }
+    #s09-pillrow { position: absolute; left: 0; right: 0; top: 548px; display: flex; justify-content: center; }
+    #s09-authors { top: 660px; font-size: 38px; font-weight: 700; color: #FFFFFF; }
+    #s09-frameline { top: 712px; font-size: 30px; color: var(--brand-ink); }
+    #s09-band { position: absolute; left: 510px; top: 784px; width: 900px; height: 124px; border-radius: 16px; background: #FFFFFF; display: flex; align-items: center; justify-content: space-evenly; padding: 0 40px; }
+    #s09-band img { display: block; height: 76px; width: auto; }
+    #s09-band img.s09-tall { height: 92px; }
+    #s09-disclaimer { top: 934px; font-size: 26px; color: rgba(215, 232, 225, 0.8); }
+  </style>
+  <div id="root" data-composition-id="09-outro" data-width="1920" data-height="1080" data-duration="8">
+    <div id="s09-stage" class="clip wapp-stage" data-start="0" data-duration="8" data-track-index="0">
+      <div id="s09-frame" class="wapp-frame wapp-bg-deep">
+        <div id="s09-cam">
+          <div id="s09-tile">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+              <rect width="64" height="64" rx="14" fill="#FFFFFF" />
+              <path id="s09-stair" d="M12 46 H22 V36 H32 V26 H42 V16 H52" fill="none" stroke="#0B3D30" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+              <g id="s09-dashg"><path d="M12 31 H52" stroke="#0F6E56" stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round" /></g>
+              <circle id="s09-dot" cx="37" cy="31" r="5" fill="#F2B134" stroke="#0B3D30" stroke-width="2" />
+            </svg>
+          </div>
+          <span id="s09-wordmark" class="s09-c wapp-display"></span>
+          <span id="s09-url" class="s09-c wapp-mono"></span>
+          <div id="s09-pillrow"><span id="s09-pill" class="wapp-pill"></span></div>
+          <span id="s09-authors" class="s09-c"></span>
+          <span id="s09-frameline" class="s09-c"></span>
+          <div id="s09-band">
+            <img src="assets/site/partners/mines-paris-psl.png" alt="Mines Paris – PSL" />
+            <img src="assets/site/partners/ms-ose.png" alt="Mastère OSE" />
+            <img class="s09-tall" src="assets/site/partners/senelec.png" alt="SENELEC" />
+          </div>
+          <span id="s09-disclaimer" class="s09-c"></span>
+        </div>
+      </div>
+      <div id="s09-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      for (const k of ['wordmark', 'url', 'authors', 'disclaimer']) $('s09-' + k).textContent = WAPP.t('s09.' + k)
+      $('s09-pill').textContent = WAPP.t('s09.open')
+      $('s09-frameline').textContent = WAPP.t('s09.frame')
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s09-frame', '#s09-sweep', 0)
+      tl.fromTo('#s09-cam', { scale: 1 }, { scale: 1.02, transformOrigin: '50% 40%', duration: 7.5, ease: 'sine.inOut' }, 0.5)
+      // the mark redraws in its tile
+      tl.fromTo('#s09-tile', { scale: 0.7, opacity: 0, transformOrigin: '50% 50%' }, { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.5)' }, 0.35)
+      WAPP.draw(tl, '#s09-stair', 0.55, { duration: 0.8 })
+      tl.fromTo('#s09-dashg', { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 0.5, ease: 'power2.out' }, 0.9)
+      tl.fromTo('#s09-dot', { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.45, ease: 'back.out(1.8)' }, 1.15)
+      const chars = new SplitText('#s09-wordmark', { type: 'chars' }).chars
+      tl.fromTo(chars, { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.022 }, 0.7)
+      // the address, revealed left to right; the licence
+      tl.fromTo('#s09-url', { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.9, ease: 'power2.inOut' }, 1.6)
+      WAPP.rise(tl, '#s09-pill', 2.4, { y: 20 })
+      // who made it, in which framework
+      WAPP.rise(tl, '#s09-authors', 3.2, { y: 20 })
+      WAPP.rise(tl, '#s09-frameline', 3.45, { y: 20 })
+      WAPP.rise(tl, '#s09-band', 4.0, { y: 30 })
+      tl.fromTo('#s09-disclaimer', { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'none' }, 4.8)
+      window.__timelines['09-outro'] = tl
+    })()
+  </script>
+</template>
