@@ -1,0 +1,105 @@
+<template>
+  <!-- 06a · value (13 s): question 1 in detail, on the Senegal 19 h curves of scene 04 (WAPP.data.cross). What
+       buyers gain (between their bids and the price) and what sellers gain (between the price and their offers) are
+       two areas; the engine makes their sum as large as possible, under three constraints. -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s6a-col { position: absolute; left: 128px; top: 130px; width: 600px; display: flex; flex-direction: column; gap: 28px; }
+    #s6a-title { margin-top: -8px; color: var(--ink); }
+    .s6a-sw { display: block; width: 56px; height: 8px; border-radius: 4px; margin-bottom: 14px; }
+    .s6a-txt { display: block; font-size: 34px; line-height: 1.28; font-weight: 500; color: var(--ink); }
+    #s6a-card { position: absolute; left: 790px; top: 120px; width: 1002px; height: 650px; }
+    #s6a-chart { position: absolute; left: 0; top: 0; width: 1002px; height: 650px; overflow: visible; }
+    #s6a-under { position: absolute; left: 128px; top: 818px; }
+    #s6a-chips { position: absolute; left: 128px; right: 128px; top: 864px; display: flex; gap: 24px; }
+    .s6a-chip { flex: 1 1 0; display: flex; align-items: center; gap: 16px; height: 76px; padding: 0 24px; border-radius: 14px; background: #FFFFFF; border: 1px solid var(--line); font-size: 26px; line-height: 1.2; font-weight: 500; color: var(--ink); }
+    .s6a-n { flex: none; font-size: 26px; color: var(--accent); }
+  </style>
+  <div id="root" data-composition-id="06a-value" data-width="1920" data-height="1080" data-duration="13">
+    <div id="s6a-stage" class="clip wapp-stage" data-start="0" data-duration="13" data-track-index="0">
+      <div id="s6a-frame" class="wapp-frame wapp-bg-light">
+        <div id="s6a-col">
+          <span id="s6a-kicker" class="wapp-kicker"></span>
+          <span id="s6a-title" class="wapp-h2"></span>
+          <div id="s6a-i1"><span class="s6a-sw" style="background:#B5443C"></span><span id="s6a-t1" class="s6a-txt"></span></div>
+          <div id="s6a-i2"><span class="s6a-sw" style="background:#0F6E56"></span><span id="s6a-t2" class="s6a-txt"></span></div>
+          <div id="s6a-i3"><span class="s6a-sw" style="background:#F2B134"></span><span id="s6a-t3" class="s6a-txt"></span></div>
+        </div>
+        <div id="s6a-card" class="wapp-card"><svg id="s6a-chart" viewBox="0 0 1002 650" aria-hidden="true"></svg></div>
+        <span id="s6a-under" class="wapp-kicker"></span>
+        <div id="s6a-chips">
+          <span id="s6a-c1" class="s6a-chip"><span class="s6a-n wapp-mono">01</span><span id="s6a-ct1"></span></span>
+          <span id="s6a-c2" class="s6a-chip"><span class="s6a-n wapp-mono">02</span><span id="s6a-ct2"></span></span>
+          <span id="s6a-c3" class="s6a-chip"><span class="s6a-n wapp-mono">03</span><span id="s6a-ct3"></span></span>
+        </div>
+      </div>
+      <div id="s6a-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      const c = WAPP.data.cross
+      $('s6a-kicker').textContent = WAPP.t('s6a.kicker')
+      $('s6a-title').textContent = WAPP.t('s6a.title')
+      $('s6a-t1').textContent = WAPP.t('s6a.buyers')
+      $('s6a-t2').textContent = WAPP.t('s6a.sellers')
+      $('s6a-t3').textContent = WAPP.t('s6a.sum')
+      $('s6a-under').textContent = WAPP.t('s6a.under')
+      for (const i of [1, 2, 3]) $('s6a-ct' + i).textContent = WAPP.t('s6a.c' + i)
+
+      // the chart of scene 04, in a smaller card: y from 0 to 500 $/MWh, x in MW
+      const X0 = 104, X1 = 962, Y0 = 70, Y1 = 560
+      const total = Math.max(c.supply.reduce((a, r) => a + r.qty, 0), c.demand.reduce((a, r) => a + r.qty, 0))
+      const step = [100, 200, 250, 500, 1000].find(s => (total * 1.08) / s <= 6) || 1000
+      const xMax = Math.ceil((total * 1.08) / step) * step
+      const X = q => X0 + (q / xMax) * (X1 - X0), Y = p => Y1 - (p / 500) * (Y1 - Y0)
+      const NS = 'http://www.w3.org/2000/svg', svg = $('s6a-chart')
+      const add = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e }
+      const grid = add('g', {})
+      for (let p = 0; p <= 500; p += 100) {
+        add('line', { x1: X0, x2: X1, y1: Y(p), y2: Y(p), stroke: p ? '#E2E0D9' : '#8C8B84', 'stroke-width': p ? 1.5 : 2 }, grid)
+        add('text', { x: X0 - 16, y: Y(p) + 9, 'text-anchor': 'end', 'font-size': 26, 'font-family': 'JetBrains Mono, monospace', fill: '#8C8B84' }, grid).textContent = WAPP.num(p)
+      }
+      for (let q = 0; q <= xMax; q += step) add('text', { x: X(q), y: Y1 + 40, 'text-anchor': 'middle', 'font-size': 26, 'font-family': 'JetBrains Mono, monospace', fill: '#8C8B84' }, grid).textContent = WAPP.num(q)
+      add('text', { x: X0 - 16, y: Y0 - 30, 'text-anchor': 'end', 'font-size': 26, fill: '#5C5B56', 'font-family': 'Roboto, sans-serif' }, grid).textContent = WAPP.t('s04.axisP')
+      add('text', { x: X1, y: Y1 + 76, 'text-anchor': 'end', 'font-size': 26, fill: '#5C5B56', 'font-family': 'Roboto, sans-serif' }, grid).textContent = WAPP.t('s04.axisQ')
+
+      // area between the price line and a staircase, from 0 to qMax
+      const area = (rows, qMax) => {
+        let q = 0, d = `M${X(0)} ${Y(c.price)}`
+        for (const r of rows) { if (q >= qMax) break; const q1 = Math.min(qMax, q + r.qty); d += ` L${X(q)} ${Y(r.price)} L${X(q1)} ${Y(r.price)}`; q = q1 }
+        return `${d} L${X(qMax)} ${Y(c.price)} Z`
+      }
+      const stairs = rows => { let q = 0, d = ''; rows.forEach((r, i) => { d += i ? ` V${Y(r.price)} H${X(q + r.qty)}` : `M${X(0)} ${Y(r.price)} H${X(r.qty)}`; q += r.qty }); return d }
+      const buyers = add('path', { d: area(c.demand, c.cons), fill: '#B5443C', 'fill-opacity': 0.22 })
+      const sellers = add('path', { d: area(c.supply, c.prod), fill: '#0F6E56', 'fill-opacity': 0.22 })
+      const sup = add('path', { d: stairs(c.supply), fill: 'none', stroke: '#0F6E56', 'stroke-width': 5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' })
+      const dem = add('path', { d: stairs(c.demand), fill: 'none', stroke: '#B5443C', 'stroke-width': 5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' })
+      const pline = add('line', { x1: X0, x2: X1, y1: Y(c.price), y2: Y(c.price), stroke: '#1B1B19', 'stroke-width': 2.5, 'stroke-dasharray': '10 8' })
+      const dot = add('circle', { cx: X(c.cons), cy: Y(c.price), r: 13, fill: '#F2B134', stroke: '#1B1B19', 'stroke-width': 3 })
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s6a-frame', '#s6a-sweep', 0)
+      tl.fromTo('#s6a-card', { scale: 1 }, { scale: 1.02, transformOrigin: '50% 60%', duration: 12, ease: 'sine.inOut' }, 0.8)
+      WAPP.rise(tl, ['#s6a-kicker', '#s6a-title'], 0.35, { stagger: 0.12 })
+      WAPP.rise(tl, '#s6a-card', 0.6, { y: 40, duration: 0.9 })
+      tl.fromTo(grid, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'none' }, 0.9)
+      WAPP.draw(tl, [sup, dem], 1.0, { duration: 1.0 })
+      WAPP.draw(tl, pline, 1.8, { duration: 0.6 })
+      tl.fromTo(dot, { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.45, ease: 'back.out(1.6)' }, 2.0)
+      // what buyers gain, then what sellers gain
+      WAPP.rise(tl, '#s6a-i1', 2.4)
+      tl.fromTo(buyers, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 1.0, ease: 'power2.out' }, 2.6)
+      WAPP.rise(tl, '#s6a-i2', 4.6)
+      tl.fromTo(sellers, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 1.0, ease: 'power2.out' }, 4.8)
+      // their sum, as large as possible
+      WAPP.rise(tl, '#s6a-i3', 6.8)
+      tl.to([buyers, sellers], { attr: { 'fill-opacity': 0.42 }, duration: 0.4, ease: 'power1.out', yoyo: true, repeat: 1 }, 7.1)
+      // under three constraints
+      WAPP.rise(tl, '#s6a-under', 8.6, { y: 20 })
+      WAPP.rise(tl, ['#s6a-c1', '#s6a-c2', '#s6a-c3'], 8.9, { y: 28, stagger: 0.6 })
+      window.__timelines['06a-value'] = tl
+    })()
+  </script>
+</template>

@@ -1,12 +1,13 @@
 # Video of the website
 
-The motion design video of the home page (about 78 s, 1920 × 1080, silent, French and English), written in HTML and
+The motion design video of the home page (about 110 s, 1920 × 1080, French and English), written in HTML and
 rendered with [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache 2.0): each scene is an HTML file
 animated with GSAP, which HyperFrames captures frame by frame in headless Chrome and encodes with FFmpeg.
 
 | File | Role |
 | --- | --- |
-| `STORYBOARD.md` | the direction and the nine scenes, beat by beat |
+| `STORYBOARD.md` | the direction and the twelve scenes, beat by beat |
+| `NARRATION.md` | the voice-over text, scene by scene, and how to record it |
 | `index.html` | the root: mounts the scenes back to back (`compositions/`), language variable |
 | `compositions/NN-*.html` | one scene each |
 | `assets/strings.js` | all the text, in French and English |
@@ -28,7 +29,8 @@ npm run render                   # renders FR and EN, publishes web/public/video
 
 To work on one scene: `npm run scene -- 04-curves --lang en --at 2,6,11 --check` prints stills to look at;
 `npx hyperframes preview` opens the whole video in the browser. A wording change only needs `assets/strings.js`
-and a new render.
+and a new render. A voice-over: record the lines of `NARRATION.md` into `assets/voice/fr/` and `assets/voice/en/`
+(one file per scene, named after it), then `npm run render`.
 
 ## Licences
 

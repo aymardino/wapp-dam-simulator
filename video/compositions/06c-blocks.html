@@ -1,0 +1,112 @@
+<template>
+  <!-- 06c · blocks (10 s): the market rules' special case, as an illustration (not data): an "all or nothing" block
+       accepted while the average price of its hours is below its own price is withdrawn, and the computation is run
+       again until no block is left at a loss. -->
+  <style>
+    #root { position: absolute; inset: 0; }
+    #s6c-col { position: absolute; left: 128px; top: 150px; width: 640px; display: flex; flex-direction: column; gap: 28px; }
+    #s6c-title { margin-top: -8px; }
+    #s6c-tag { align-self: flex-start; display: inline-block; padding: 6px 18px; border-radius: 20px; border: 2px solid rgba(143, 211, 181, 0.6); font-size: 26px; color: var(--mint); }
+    #s6c-done { margin-top: 26px; }
+    .s6c-sw { display: block; width: 56px; height: 8px; border-radius: 4px; margin-bottom: 14px; background: var(--amber); }
+    #s6c-donetxt { display: block; font-size: 38px; line-height: 1.25; font-weight: 700; color: #FFFFFF; }
+    #s6c-mic { display: block; font-size: 28px; line-height: 1.3; color: var(--mint); }
+    #s6c-card { position: absolute; left: 880px; top: 150px; width: 912px; height: 780px; }
+    #s6c-svg { position: absolute; left: 0; top: 0; width: 912px; height: 780px; overflow: visible; }
+  </style>
+  <div id="root" data-composition-id="06c-blocks" data-width="1920" data-height="1080" data-duration="10">
+    <div id="s6c-stage" class="clip wapp-stage" data-start="0" data-duration="10" data-track-index="0">
+      <div id="s6c-frame" class="wapp-frame wapp-bg-brand">
+        <div id="s6c-col">
+          <span id="s6c-kicker" class="wapp-kicker"></span>
+          <span id="s6c-title" class="wapp-h2"></span>
+          <span id="s6c-tag"></span>
+          <div id="s6c-done"><span class="s6c-sw"></span><span id="s6c-donetxt"></span></div>
+          <span id="s6c-mic"></span>
+        </div>
+        <div id="s6c-card" class="wapp-card"><svg id="s6c-svg" viewBox="0 0 912 780" aria-hidden="true"></svg></div>
+      </div>
+      <div id="s6c-sweep" class="wapp-sweep"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id)
+      const BLOCK = 90, P1 = [92, 84, 80, 88], P2 = [90, 86, 84, 88]   // illustration: prices of the block's 4 hours, with it and without it
+      const mean = a => Math.round(a.reduce((s, v) => s + v, 0) / a.length)
+      $('s6c-kicker').textContent = WAPP.t('s6c.kicker')
+      $('s6c-title').textContent = WAPP.t('s6c.title')
+      $('s6c-tag').textContent = WAPP.t('s6c.badge')
+      $('s6c-donetxt').textContent = WAPP.t('s6c.stable')
+      $('s6c-mic').textContent = WAPP.t('s6c.mic')
+
+      const NS = 'http://www.w3.org/2000/svg', svg = $('s6c-svg')
+      const add = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e }
+      const txt = (attrs, s, parent) => { const e = add('text', { 'font-family': 'Roboto, sans-serif', ...attrs }, parent); e.textContent = s; return e }
+      // price axis from 60 to 100 $/MWh: 12 px per $
+      const BASE = 640, K = 12, Y = p => BASE - (p - 60) * K
+      const XS = [140, 330, 520, 710], BW = 120
+      const axis = add('g', {})
+      for (let p = 60; p <= 100; p += 10) {
+        add('line', { x1: 100, x2: 860, y1: Y(p), y2: Y(p), stroke: 'rgba(215,232,225,0.14)', 'stroke-width': 1.5 }, axis)
+        txt({ x: 88, y: Y(p) + 9, 'text-anchor': 'end', 'font-size': 26, fill: '#8FA89F', 'font-family': 'JetBrains Mono, monospace' }, String(p), axis)
+      }
+      txt({ x: 88, y: Y(100) - 34, 'text-anchor': 'end', 'font-size': 26, fill: '#8FA89F' }, '$/MWh', axis)
+      const bars = XS.map((x, i) => {
+        const r = add('rect', { x, y: Y(P1[i]), width: BW, height: BASE - Y(P1[i]), rx: 6, fill: '#8FD3B5', 'fill-opacity': 0.8 })
+        const v = txt({ x: x + BW / 2, y: Y(P1[i]) - 14, 'text-anchor': 'middle', 'font-size': 30, 'font-weight': 500, fill: '#FFFFFF', 'font-family': 'JetBrains Mono, monospace' }, String(P1[i]))
+        txt({ x: x + BW / 2, y: BASE + 40, 'text-anchor': 'middle', 'font-size': 26, fill: '#8FA89F', 'font-family': 'JetBrains Mono, monospace' }, `H${i + 1}`, axis)
+        return { r, v }
+      })
+      // the block: one strip across its 4 hours at its price, accepted (mint) then at a loss (coral)
+      const blk = add('g', {})
+      const strip = add('rect', { x: XS[0] - 10, y: Y(BLOCK) - 20, width: XS[3] + BW - XS[0] + 20, height: 40, rx: 20, fill: '#07241C', stroke: '#F2B134', 'stroke-width': 4 }, blk)
+      const stripTxt = txt({ x: (XS[0] + XS[3] + BW) / 2, y: Y(BLOCK) + 9, 'text-anchor': 'middle', 'font-size': 26, 'font-weight': 700, fill: '#F2B134' }, WAPP.t('s6c.block', { p: BLOCK }), blk)
+      const avg = add('line', { x1: 100, x2: 860, y1: Y(mean(P1)), y2: Y(mean(P1)), stroke: '#FF6B4A', 'stroke-width': 3, 'stroke-dasharray': '10 8' })
+      // messages at the top of the card, one after the other: at a loss, withdrawn, compute again
+      const lossTxt = txt({ x: 120, y: 120, 'font-size': 32, 'font-weight': 700, fill: '#FF6B4A' }, WAPP.t('s6c.loss', { m: mean(P1) }))
+      const outTxt = txt({ x: 120, y: 120, 'font-size': 32, 'font-weight': 700, fill: '#FF6B4A' }, WAPP.t('s6c.out'))
+      // compute again: a circular arrow that turns once
+      const loop = add('g', { transform: 'translate(150 110)' })
+      const ring = add('g', {}, loop)
+      add('path', { d: 'M 28 0 A 28 28 0 1 1 0 -28', fill: 'none', stroke: '#F2B134', 'stroke-width': 6, 'stroke-linecap': 'round' }, ring)
+      add('polygon', { points: '-2,-40 14,-28 -2,-16', fill: '#F2B134' }, ring)
+      const againTxt = txt({ x: 196, y: 120, 'font-size': 32, 'font-weight': 700, fill: '#FFFFFF' }, WAPP.t('s6c.again'))
+      const vals = { i: 0 }
+      const repaint = () => bars.forEach((b, i) => {
+        const p = P1[i] + (P2[i] - P1[i]) * vals.i
+        b.r.setAttribute('y', Y(p)); b.r.setAttribute('height', BASE - Y(p))
+        b.v.setAttribute('y', Y(p) - 14); b.v.textContent = String(Math.round(p))
+      })
+
+      const tl = gsap.timeline({ paused: true })
+      WAPP.wipeIn(tl, '#s6c-frame', '#s6c-sweep', 0)
+      WAPP.rise(tl, ['#s6c-kicker', '#s6c-title'], 0.35, { stagger: 0.12 })
+      WAPP.rise(tl, '#s6c-tag', 0.9, { y: 16 })
+      WAPP.rise(tl, '#s6c-card', 1.0, { y: 40, duration: 0.9 })
+      tl.fromTo(axis, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'none' }, 1.2)
+      tl.fromTo(bars.map(b => b.r), { scaleY: 0, transformOrigin: '50% 100%' }, { scaleY: 1, duration: 0.6, ease: 'power3.out', stagger: 0.1 }, 1.3)
+      tl.fromTo(bars.map(b => b.v), { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'none', stagger: 0.1 }, 1.7)
+      // the block is accepted across its 4 hours
+      tl.fromTo(blk, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.7, ease: 'power3.out' }, 2.0)
+      // but the average price of those hours is below its own: it runs at a loss
+      WAPP.draw(tl, avg, 3.2, { duration: 0.7 })
+      tl.fromTo(lossTxt, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 3.5)
+      tl.to(strip, { attr: { stroke: '#FF6B4A' }, duration: 0.3, ease: 'none' }, 3.5)
+      tl.to(stripTxt, { attr: { fill: '#FF6B4A' }, duration: 0.3, ease: 'none' }, 3.5)
+      // it is withdrawn
+      tl.to(lossTxt, { opacity: 0, duration: 0.25, ease: 'none' }, 4.45)
+      tl.fromTo(outTxt, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 4.6)
+      tl.to(blk, { x: 60, opacity: 0, duration: 0.6, ease: 'power2.in' }, 4.9)
+      tl.to([avg, outTxt], { opacity: 0, duration: 0.3, ease: 'none' }, 5.1)
+      // and the computation is run again: the prices of its hours change
+      tl.fromTo([loop, againTxt], { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'none' }, 5.4)
+      tl.fromTo(ring, { rotation: 0, svgOrigin: '0 0' }, { rotation: 360, svgOrigin: '0 0', duration: 1.1, ease: 'power2.inOut' }, 5.5)
+      tl.to(vals, { i: 1, duration: 0.9, ease: 'power2.inOut', onUpdate: repaint }, 6.3)
+      // nothing at a loss any more: the result is published
+      WAPP.rise(tl, '#s6c-done', 7.3)
+      WAPP.rise(tl, '#s6c-mic', 8.0, { y: 16 })
+      window.__timelines['06c-blocks'] = tl
+    })()
+  </script>
+</template>

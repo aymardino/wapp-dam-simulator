@@ -1,9 +1,9 @@
 # WAPP DAM Simulator — motion design video
 
-A silent explainer of about 78 seconds for the home page of the website (wapp-dam-simulator.mastereose.fr), in French
-and English, 1920 × 1080, 30 fps. It tells, in nine scenes, what the simulator computes: fourteen countries, one
+A silent explainer of about 110 seconds (a voice-over can be added: NARRATION.md) for the home page of the website (wapp-dam-simulator.mastereose.fr), in French
+and English, 1920 × 1080, 30 fps. It tells, in twelve scenes, what the simulator computes: fourteen countries, one
 market, the price where supply meets demand, the lines that split prices when they are full, the three questions the
-engine answers, a whole simulated day, what the tool is for.
+engine answers and how it answers them, a whole simulated day, what the tool is for.
 
 The video is written in HTML and rendered with [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache 2.0).
 Every figure comes from the engine (`npm run data` reruns the website's demonstration day). The text lives in
@@ -185,6 +185,28 @@ cards in a row across the width, each with a large amber numeral (1, 2, 3), a mo
   `s06.low` and `s06.high`; the amber dot travels from the low end and settles in the middle, labelled `s06.mid`.
 - 9.2: `s06.foot` fades in.
 - 9.6–11.5: hold.
+
+### 06a-value · 13 s · ground light · question 1 in detail: the value created
+
+The Senegal 19 h curves of scene 04 (`WAPP.data.cross`), in a smaller card. What buyers gain (between their bids and
+the price, up to the quantity consumed) fills in red; what sellers gain (between the price and their offers, up to the
+quantity produced) fills in green; the engine makes the sum as large as possible over all countries and hours
+(`s6a.*`). Then the three constraints, as numbered chips across the bottom: each country balanced, flows within line
+capacities, blocks all or nothing.
+
+### 06b-price · 11 s · ground deep · question 3 in detail: the middle price
+
+The one case of the day where no order is partly served (`WAPP.data.midpoint`): Niger at 16 h, behind the full line
+from Nigeria. A vertical price scale (16 px per $): the cheapest offer not called (190) and its reason, the best bid not
+served (180) and its reason, the band between them (every price there respects the trades), the amber dot rising from
+180 to the middle, 185, the one the engine publishes (`s6b.*`).
+
+### 06c-blocks · 10 s · ground brand · the special case of blocks (an illustration)
+
+Not data, and labelled so (`s6c.badge`): an "all or nothing" block of 100 MW over 4 hours at 90 $/MWh, accepted while
+the average price of its hours is 86; it turns coral, is withdrawn, the computation runs again (a circular arrow), the
+prices of its hours move, and the result is published once no block is left at a loss; the same rule holds for a
+minimum income not reached (`s6c.*`).
 
 ### 07-day · 10.5 s · ground deep · a whole simulated day
 
