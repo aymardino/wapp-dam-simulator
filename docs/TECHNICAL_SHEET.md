@@ -35,7 +35,7 @@ Three uses: **train** (a three-round market session, one country per participant
 |---|---|---|
 | P1 | Who trades? | welfare maximisation under the balance of each zone, flow bounds, the α constraint and block links; linear program, mixed-integer with blocks (gap 10⁻⁶) |
 | P1bis | How to break ties? | maximum volume at the **exact** optimal welfare; then explicit sharing of equal-price orders: pro rata (default), submission order, or solver |
-| P2 | At what price? | **complete** set of admissible prices (equilibrium conditions on accepted, partial and rejected orders, equal prices across unsaturated lines, inequality in the direction of saturation, α constraint, bounds); the price closest to the midpoint of the local admissible interval is chosen |
+| P2 | At what price? | **complete** set of admissible prices (equilibrium conditions on accepted, partial and rejected orders, equal prices across unsaturated lines, inequality in the direction of saturation, α constraint, bounds); the prices closest to the midpoints of the local admissible intervals, in the sense of the sum of squared deviations, are chosen (quadratic program, unique prices) |
 | Paradoxical blocks | | block accepted at a loss: rejected and the run repeated (EUPHEMIA rule, default); rejected block that would have been profitable: tolerated and reported; alternative rules available for comparison |
 | Minimum income condition | | insufficient income: all the actor's orders withdrawn and the full sequence rerun |
 
@@ -62,7 +62,7 @@ Prices produced on these data are simulation results, not observed prices: the W
 
 | Layer | Technology |
 |---|---|
-| Engine | Python 3.10+, Pyomo models, open-source HiGHS solver included; Gurobi used automatically when installed |
+| Engine | Python 3.10+, Pyomo ≥ 6.9.3 models, open-source HiGHS solver included (linear, mixed-integer and quadratic programs); Gurobi used automatically when installed |
 | API | FastAPI, SQLAlchemy (SQLite by default, PostgreSQL possible), interactive documentation on `/docs`, real-time event stream (Server-Sent Events) |
 | Interface | React, Vite, TypeScript, Tailwind; public page, hall, trading floor, trainer desk; bilingual FR/EN; Natural Earth maps (public domain) |
 | Command line | `python -m engine.cli`: CSV in, JSON and prices CSV out |
@@ -78,7 +78,7 @@ Prices produced on these data are simulation results, not observed prices: the W
 
 ## 8. Quality and verification
 
-- 68 automated tests run on every change (continuous integration): regression values, block and condition rules, API, command line.
+- 98 automated tests run on every change (continuous integration): regression values, block and condition rules, API, command line.
 - Random-case campaign (segments, simple, linked and exclusive blocks, conditions, every rule, 24 hours or one hour, reduced capacities) checked by a solver-independent verifier: prices within bounds, flows within capacities, hourly balance, net positions summing to zero, accepted ≤ offered, block rules, conditions satisfied or withdrawn, welfare identity.
 - Reproduction in three commands (see `README.md`).
 

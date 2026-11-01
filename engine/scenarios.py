@@ -3,8 +3,8 @@ Teaching scenarios: the Reference 2024 base set and its variants.
 Each scenario returns (sell orders, buy orders, NTC) in the engine row format; it is used to fill zones
 without submission and for the demonstration.
 """
-import re
-from .clearing import default_rows, P_MAX
+from .clearing import default_rows, P_MAX, NTC
+
 
 # ── "Reference 2024" set: available capacities and peak demands from public sources ──────────────────
 # Details and sources: docs/REFERENCE_DATA.md. Values marked (est.) are estimates.
@@ -110,6 +110,46 @@ NTC_2024 = {
     ('SLE', 'GIN'): 290, ('GIN', 'GNB'): 300, ('GNB', 'GMB'): 300, ('GMB', 'SEN'): 300, ('SEN', 'MLI'): 150,
 }
 
+# English names of the actors, for the tables of the working paper (the engine and the web platform keep the
+# original names). A name absent from this table is already in English.
+ACTOR_NAMES_EN = {
+    'NIPP et autres centrales gaz': 'NIPP and other gas plants',
+    'AKSA et autres OCGT': 'AKSA and other OCGTs',
+    'Solaire Ghana': 'Ghana solar',
+    'Thermique HFO (Aggreko et autres)': 'HFO plants (Aggreko and others)',
+    "Solaire Côte d'Ivoire": "Côte d'Ivoire solar",
+    'OMVS Manantali-Félou (part Sénégal)': 'OMVS Manantali-Félou (Senegal share)',
+    'Solaire Sénégal': 'Senegal solar',
+    "Éolien Taïba N'Diaye": "Taïba N'Diaye wind farm",
+    'Charbon Sendou': 'Sendou coal',
+    'CCGT gaz (Cap des Biches, Malicounda)': 'Gas CCGT (Cap des Biches, Malicounda)',
+    'Thermique HFO (Kounoune, Tobène, Bel-Air)': 'HFO plants (Kounoune, Tobène, Bel-Air)',
+    'Solaire Burkina (Zagtouli, Nagréongo, Kodeni, Zina)': 'Burkina Faso solar (Zagtouli, Nagréongo, Kodeni, Zina)',
+    'SONABEL thermique HFO': 'SONABEL HFO plants',
+    'OMVS-Sélingué hydro (part Mali)': 'OMVS and Sélingué hydro (Mali share)',
+    'Solaire Mali (Kita, Ségou, Sikasso, Sanankoroba)': 'Mali solar (Kita, Ségou, Sikasso, Sanankoroba)',
+    'EDM-SA thermique HFO/diesel': 'EDM-SA HFO and diesel plants',
+    'Solaire Niger (Gorou Banda, Niamey, Agadez)': 'Niger solar (Gorou Banda, Niamey, Agadez)',
+    'Charbon Anou Araren': 'Anou Araren coal',
+    'NIGELEC diesel/HFO (Gorou Banda, Niamey)': 'NIGELEC diesel and HFO plants (Gorou Banda, Niamey)',
+    'Solaire Bénin (Illoulofin)': 'Benin solar (Illoulofin)',
+    'CEB Nangbéto (part Bénin)': 'CEB Nangbéto (Benin share)',
+    'Thermique de location': 'Rental thermal plants',
+    'Solaire Togo (Blitta, Dapaong)': 'Togo solar (Blitta, Dapaong)',
+    'CEB Nangbéto (part Togo)': 'CEB Nangbéto (Togo share)',
+    'EDG thermique HFO (Tombo, Kipé)': 'EDG HFO plants (Tombo, Kipé)',
+    'EDSA thermique': 'EDSA thermal plants',
+    'LEC thermique HFO (Bushrod)': 'LEC HFO plant (Bushrod)',
+    'Solaire Jambur': 'Jambur solar',
+    'NAWEC thermique HFO (Brikama, Kotu)': 'NAWEC HFO plants (Brikama, Kotu)',
+    'Karpowership Guinée-Bissau': 'Karpowership Guinea-Bissau',
+}
+
+
+def actor_name_en(name):
+    """English name of an actor of the reference case (the name itself when it is already in English)."""
+    return ACTOR_NAMES_EN.get(name, name)
+
 
 def reference_2024_rows(zones=None):
     """Engine rows for the "Reference 2024" set."""
@@ -128,8 +168,18 @@ def reference_2024_rows(zones=None):
                     dem.append(dict(zone=z, player='Référence 2024', actor=name, segment=k, quantity=q, price=p))
     return sup, dem
 
-GAS_PLANTS = {'Egbin Gas', 'Delta Gas', 'Geregu', 'Afam VI', 'Olorunsogo', 'Sunon Asogli', 'Cenpower',
-              'Karpowership GHA', 'CIPREL', 'Azito', 'Aggreko CIV', 'ContourGlobal'}
+# Gas-fired plants of the 2024 case (exact names of REFERENCE_2024), made more expensive by the "expensive gas"
+# variant. Explicit list, drawn from the cost ranges of docs/REFERENCE_DATA.md (section 3): a plant is listed when its
+# price was set within the "gas" range of its country. The search for "ccgt / gaz / gas" in the names, used before,
+# missed Egbin, Sunon Asogli, CIPREL, AKSA and Karpowership Ghana.
+# Excluded: ContourGlobal Lomé (price in the fuel oil range) and Maria-Gléta (fuel to be confirmed).
+GAS_PLANTS_2024 = {
+    'Egbin', 'Azura-Edo CCGT', 'Okpai CCGT', 'NIPP et autres centrales gaz',                # NGA
+    'CCGT TICO-Cenpower-Amandi', 'Sunon Asogli', 'AKSA et autres OCGT', 'Karpowership Ghana',  # GHA
+    'Azito CCGT', 'CIPREL', 'Atinkou CCGT',                                                  # CIV
+    'CCGT gaz (Cap des Biches, Malicounda)',                                                  # SEN
+    'Kékéli CCGT',                                                                            # TGO
+}
 
 SCENARIOS = {
     'reference_2024': {
@@ -159,7 +209,6 @@ SCENARIOS = {
     },
 }
 
-_GAS = re.compile(r'ccgt|gaz|gas', re.I)
 
 
 def scenario_rows(key='reference_2024', zones=None):
@@ -170,7 +219,7 @@ def scenario_rows(key='reference_2024', zones=None):
         raise KeyError(f"Unknown scenario: {key}")
     if key == 'reference':
         sup, dem = default_rows(zones)
-        return sup, dem, {}
+        return sup, dem, dict(NTC)     # explicit default NTC: the result does not depend on the database
     sup, dem = reference_2024_rows(zones)
     ntc = dict(NTC_2024)
     if key == 'secheresse_hydro':
@@ -181,7 +230,7 @@ def scenario_rows(key='reference_2024', zones=None):
         ntc[('NGA', 'BEN')] = 0.0
     elif key == 'gaz_cher':
         for r in sup:
-            if _GAS.search(r['actor']):
+            if r['actor'] in GAS_PLANTS_2024:
                 r['price'] = min(P_MAX, round(r['price'] * 1.4))
     elif key == 'forte_demande':
         for r in dem:
@@ -193,3 +242,40 @@ def scenario_list(lang='fr', include_hidden=False):
     """Scenarios offered to trainers, in menu order (the test set is hidden unless requested)."""
     return [{'key': k, 'name': v.get(lang, v['fr'])[0], 'description': v.get(lang, v['fr'])[1]}
             for k, v in SCENARIOS.items() if include_hidden or not v.get('hidden')]
+
+
+# ── Complex-order scenario of the working paper (R5) ──────────────
+# Hypothetical actors and first-guess values added to the 2024 reference case, to show how the market handles
+# every type of complex order together: simple sell and buy blocks, a family of linked buy blocks (the second and
+# third potlines of a smelter can only run if the first one does), an exclusive group (a desalination plant chooses
+# one of three schedules) and minimum income conditions on three existing producers. Not offered to trainers.
+COMPLEX_ORDERS_PLAYER = 'Scenario R5'
+# zone, name, side, MW, price, first hour, last hour, parent, exclusive group, kind (for the tables of the paper)
+COMPLEX_ORDERS_BLOCKS = [
+    ('GHA', 'Gas peaker', 'S', 150, 110, 18, 21, None, None, 'sell block'),
+    ('NGA', 'Evening gas plant', 'S', 200, 60, 17, 22, None, None, 'sell block'),
+    ('SEN', 'Evening engine plant (HFO)', 'S', 80, 130, 18, 22, None, None, 'sell block'),
+    ('MLI', 'Mining load', 'D', 60, 180, 6, 18, None, None, 'buy block'),
+    ('CIV', 'Data centre', 'D', 50, 200, 0, 23, None, None, 'buy block'),
+    ('NGA', 'Cement plant', 'D', 150, 90, 8, 16, None, None, 'buy block'),
+    ('GIN', 'Smelter potline 1', 'D', 150, 110, 0, 23, None, None, 'family: parent'),
+    ('GIN', 'Smelter potline 2', 'D', 100, 95, 0, 23, 'Smelter potline 1', None, 'family: child'),
+    ('GIN', 'Smelter potline 3 (night)', 'D', 100, 70, 0, 6, 'Smelter potline 1', None, 'family: child'),
+    ('SEN', 'Desalination A (all day)', 'D', 40, 140, 0, 23, None, 'Desalination', 'exclusive'),
+    ('SEN', 'Desalination B (night)', 'D', 80, 120, 0, 6, None, 'Desalination', 'exclusive'),
+    ('SEN', 'Desalination C (day)', 'D', 70, 125, 10, 16, None, 'Desalination', 'exclusive'),
+]
+# zone, actor of the 2024 case, fixed term (USD), variable term (USD/MWh)
+COMPLEX_ORDERS_MIC = [('GHA', 'Karpowership Ghana', 60000, 100),
+                      ('SEN', 'Thermique HFO (Kounoune, Tobène, Bel-Air)', 40000, 130),
+                      ('TGO', 'Kékéli CCGT', 8000, 90)]
+
+
+def complex_orders_rows():
+    """(block_rows, mic_rows) of the complex-order scenario, in the row format of run_clearing; to be added to
+    scenario_rows('reference_2024')."""
+    blocks = [dict(zone=z, player=COMPLEX_ORDERS_PLAYER, name=n, side=sd, quantity=q, price=p, h_start=h0, h_end=h1,
+                   parent_name=par, excl_group=g) for z, n, sd, q, p, h0, h1, par, g, _ in COMPLEX_ORDERS_BLOCKS]
+    mic = [dict(zone=z, player='Référence 2024', actor=a, fixed_term=f, variable_term=v)
+           for z, a, f, v in COMPLEX_ORDERS_MIC]
+    return blocks, mic

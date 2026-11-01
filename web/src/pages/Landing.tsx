@@ -57,7 +57,7 @@ const L = {
       ['Départage', 'Valeur créée, puis énergie échangée, puis prix du milieu ; à prix égal, partage au prorata'],
       ['Réseau', '14 pays, 15 lignes, capacités modifiables par salle'],
       ['Données', 'Scénario 2024 reconstitué de sources publiques, et quatre variantes : sécheresse, ligne coupée, gaz cher, forte demande'],
-      ['Vérifications', '68 tests automatiques et une campagne de cas aléatoires'],
+      ['Vérifications', '98 tests automatiques et une campagne de cas aléatoires'],
       ['Accès', 'Salles en ligne, API documentée, ligne de commande, exports CSV et JSON, français et anglais'],
       ['Solveur', 'HiGHS, libre et inclus ; Gurobi s’il est installé'],
       ['Licence', 'Apache 2.0 pour le code, CC BY 4.0 pour les données'],
@@ -147,7 +147,7 @@ const L = {
       ['Tie-break', 'Value created, then energy traded, then the middle price; equal prices shared pro rata'],
       ['Network', '14 countries, 15 lines, capacities editable per room'],
       ['Data', '2024 scenario rebuilt from public sources, and four variants: drought, line out, expensive gas, high demand'],
-      ['Checks', '68 automated tests and a campaign of random cases'],
+      ['Checks', '98 automated tests and a campaign of random cases'],
       ['Access', 'Online rooms, documented API, command line, CSV and JSON exports, French and English'],
       ['Solver', 'HiGHS, open source and included; Gurobi when installed'],
       ['Licence', 'Apache 2.0 for the code, CC BY 4.0 for the data'],
@@ -876,7 +876,7 @@ export default function Landing() {
               <pre className="bg-black/40 border border-white/10 rounded-lg p-5 font-mono text-sm leading-6 overflow-x-auto text-brand-ink"><code>
 <span className="text-amber">$</span> git clone https://{repo}.git && cd wapp-dam-simulator{'\n'}
 <span className="text-amber">$</span> pip install -r requirements.txt && pytest -q{'\n'}
-<span className="text-white">68 passed</span>{'\n'}
+<span className="text-white">98 passed</span>{'\n'}
 <span className="text-amber">$</span> python -m engine.cli --reference --out resultat.json --prices-csv prix.csv{'\n'}
 <span className="text-white">welfare=22,317,910 volume=167,900 MWh elapsed=0.5s solver=appsi_highs</span>
               </code></pre>

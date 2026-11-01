@@ -35,17 +35,25 @@ def random_case(rng):
                                    price=rng.choice([0, 30, 80, 100, 100, 150, 200, 250, 500])))
         if rng.random() < 0.6:
             player = f"B{z}"
-            names = []
+            roots = []                                              # MODIFIÉ : 'names' devient 'roots' = blocs sans parent (seuls eux peuvent être parents)
             for b in range(rng.randint(1, 4)):
                 h0 = rng.randint(0, 22); h1 = rng.randint(h0, 23)
                 side = rng.choice(['S', 'D'])
                 row = dict(zone=z, player=player, name=f"Blk{z}{b}", side=side, quantity=rng.choice([10, 50, 100, 250]),
                            price=rng.choice([5, 30, 45, 80, 120, 180, 300]), h_start=h0, h_end=h1)
-                if names and rng.random() < 0.4:
-                    row['parent_name'] = rng.choice(names)          # linked block
+                if roots and rng.random() < 0.4:                    # MODIFIÉ : 'names' -> 'roots'
+                    row['parent_name'] = rng.choice(roots)          # MODIFIÉ : le parent est choisi parmi les blocs sans parent (pas de chaînes)
+                else:                                               # AJOUTÉ : un bloc sans parent peut devenir parent d'un bloc suivant
+                    roots.append(row['name'])                       # AJOUTÉ
                 if rng.random() < 0.3:
                     row['excl_group'] = rng.choice(['G1', 'G2'])     # exclusive group
-                blocks.append(row); names.append(row['name'])
+                blocks.append(row)                                  # MODIFIÉ : '; names.append(row['name'])' supprimé (remplacé par roots.append ci-dessus)
+            # AJOUTÉ : un groupe exclusif doit contenir au moins deux blocs ; on retire l'étiquette des groupes d'un seul bloc
+            zb = [r for r in blocks if r['player'] == player]       # AJOUTÉ
+            for g in ('G1', 'G2'):                                  # AJOUTÉ
+                members = [r for r in zb if r.get('excl_group') == g]   # AJOUTÉ
+                if len(members) == 1:                               # AJOUTÉ
+                    del members[0]['excl_group']                    # AJOUTÉ
     rules = dict(pricing=rng.choice(['complete', 'complete', 'l2']), pab_rule=rng.choice(['euphemia', 'euphemia', 'l2', 'none']),
                  tie_rule=rng.choice(['prorata', 'order', 'solver']))
     hours = None if rng.random() < 0.7 else [rng.randint(0, 23)]
@@ -77,19 +85,117 @@ def test_random_case_is_consistent(seed):
 
 
 def test_edge_cases():
-    # Zero quantity, prices at the bounds, block outside the simulated hours, missing parent, single-member group, MIC without acceptance.
+    # MODIFIÉ : 'missing parent, single-member group' retirés de la liste (ces cas sont maintenant des erreurs, testés plus bas)
+    # Zero quantity, prices at the bounds, block outside the simulated hours, MIC without acceptance.
     # Reminder: an all-or-nothing block larger than an isolated zone's demand is rightly rejected (PRB status).
     sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=0, price=0, profile='solar'),
            dict(zone='NGA', player='a', actor='B', segment=0, quantity=100, price=300, profile='peaker')]
     dem = [dict(zone='NGA', player='b', actor='L', segment=0, quantity=100, price=500)]
-    blocks = [dict(zone='NGA', player='c', name='Nuit', side='S', quantity=20, price=1, h_start=0, h_end=3),
-              dict(zone='NGA', player='c', name='Orphelin', side='S', quantity=60, price=1, h_start=12, h_end=12, parent_name='Inconnu'),
-              dict(zone='NGA', player='c', name='Seul', side='D', quantity=10, price=400, h_start=12, h_end=12, excl_group='X')]
+    # MODIFIÉ : blocs 'Orphelin' (parent introuvable) et 'Seul' (groupe d'un seul bloc) supprimés ;
+    #           ils provoquent maintenant une ClearingError (voir test_invalid_block_links)
+    blocks = [dict(zone='NGA', player='c', name='Nuit', side='S', quantity=20, price=1, h_start=0, h_end=3)]
     mic = [dict(zone='NGA', player='a', actor='A', fixed_term=1e6, variable_term=0)]
     res = run_clearing(sup, dem, block_rows=blocks, mic_rows=mic, hours=[12], ntc_override={k: 0 for k in C.NTC})
     assert not verify_result(res)
     st = {b['name']: b for b in res['summary']['blocks']}
-    assert st['Nuit']['status'] == 'inactive' and st['Orphelin']['accepted'] and st['Seul']['accepted']
+    assert st['Nuit']['status'] == 'inactive'                      # MODIFIÉ : contrôles sur 'Orphelin' et 'Seul' supprimés
     assert res['summary']['mic'][0]['satisfied'] and not res['summary']['mic'][0]['withdrawn']
     with pytest.raises(ClearingError):
         run_clearing([dict(zone='NGA', player='a', actor='A', segment=0, quantity=1, price=-1)], [], horizon=1)
+
+
+# AJOUTÉ : nouveau test, les liens invalides entre blocs doivent être refusés
+def test_invalid_block_links():
+    """Parent introuvable, nom en double, bloc parent de lui-même, chaîne, cycle et groupe d'un seul bloc sont refusés."""
+    def blk(name, **kw):
+        return dict(zone='NGA', player='c', name=name, side='S', quantity=10, price=1, h_start=12, h_end=12, **kw)
+    cases = [
+        [blk('Orphelin', parent_name='Inconnu')],                                   # parent introuvable
+        [blk('A'), blk('A')],                                                       # nom en double
+        [blk('A', parent_name='A')],                                                # parent de lui-même
+        [blk('Grand-parent'), blk('Parent', parent_name='Grand-parent'),
+         blk('Enfant', parent_name='Parent')],                                      # chaîne
+        [blk('A', parent_name='B'), blk('B', parent_name='A')],                     # cycle
+        [blk('Seul', excl_group='X')],                                              # groupe d'un seul bloc
+    ]
+    for blocks in cases:
+        with pytest.raises(ClearingError):
+            run_clearing([], [dict(zone='NGA', player='b', actor='L', segment=0, quantity=100, price=500)],
+                         block_rows=blocks, hours=[12], ntc_override={k: 0 for k in C.NTC})
+
+
+# AJOUTÉ : nouveau test, un parent avec deux enfants reste autorisé
+def test_parent_with_two_children_is_allowed():
+    """Un parent peut avoir plusieurs enfants (Livrable 2, étape 5)."""
+    blocks = [dict(zone='NGA', player='c', name='P', side='S', quantity=50, price=1, h_start=12, h_end=12),
+              dict(zone='NGA', player='c', name='E1', side='S', quantity=20, price=2, h_start=12, h_end=12, parent_name='P'),
+              dict(zone='NGA', player='c', name='E2', side='S', quantity=20, price=3, h_start=12, h_end=12, parent_name='P')]
+    res = run_clearing([], [dict(zone='NGA', player='b', actor='L', segment=0, quantity=100, price=500)],
+                       block_rows=blocks, hours=[12], ntc_override={k: 0 for k in C.NTC})
+    assert not verify_result(res)
+
+
+
+# AJOUTÉ PAR ENRICO (étape 2) : au plus 4 segments par acteur et par côté
+def test_max_four_segments_per_actor():
+    """Quatre segments sont acceptés, un cinquième est refusé (vente et achat)."""
+    def seg(k):
+        return dict(zone='NGA', player='a', actor='A', segment=k, quantity=10, price=10 + k, profile='flat')
+    dem = [dict(zone='NGA', player='b', actor='L', segment=0, quantity=100, price=500)]
+    run_clearing([seg(k) for k in range(4)], dem, hours=[12], ntc_override={k: 0 for k in C.NTC})   # 4 : accepté
+    with pytest.raises(ClearingError):
+        run_clearing([seg(k) for k in range(5)], dem, hours=[12], ntc_override={k: 0 for k in C.NTC})   # 5 : refusé
+    buy = [dict(zone='NGA', player='b', actor='L', segment=k, quantity=10, price=100 - k) for k in range(5)]
+    with pytest.raises(ClearingError):
+        run_clearing([seg(0)], buy, hours=[12], ntc_override={k: 0 for k in C.NTC})                    # 5 à l'achat : refusé
+
+
+
+
+
+# AJOUTÉ PAR ENRICO (règle de famille) : un parent en perte, compensé par son enfant, reste accepté
+def test_family_rule_parent_supported_by_child():
+    """Parent à 40 en perte au prix de 30, enfant à 10 en gain : la famille est rentable, les deux restent acceptés."""
+    dem = [dict(zone='NGA', player='b', actor='L', segment=0, quantity=200, price=100)]
+    sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=150, price=30, profile='flat')]
+    blk = [dict(zone='NGA', player='c', name='P', side='S', quantity=50, price=40, h_start=12, h_end=12),
+           dict(zone='NGA', player='c', name='E', side='S', quantity=50, price=10, h_start=12, h_end=12, parent_name='P')]
+    res = run_clearing(sup, dem, block_rows=blk, hours=[12], ntc_override={k: 0 for k in C.NTC})
+    st = {b['name']: b for b in res['summary']['blocks']}
+    assert res['prices']['NGA']['12'] == 30.0
+    assert st['P']['accepted'] and st['P']['status'] == 'OK' and st['P']['surplus_if_accepted'] < 0
+    assert st['E']['accepted'] and st['E']['status'] == 'OK'
+    assert st['P']['family_surplus'] > 0
+
+
+
+# AJOUTÉ (règle de famille) : même cas sans lien, P n'est plus nécessaire et il est rejeté
+def test_same_blocks_without_link():
+    """Sans lien parent-enfant, le bloc P à 40 n'est pas retenu ; E à 10 est accepté seul."""
+    dem = [dict(zone='NGA', player='b', actor='L', segment=0, quantity=200, price=100)]
+    sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=150, price=30, profile='flat')]
+    blk = [dict(zone='NGA', player='c', name='P', side='S', quantity=50, price=40, h_start=12, h_end=12),
+           dict(zone='NGA', player='c', name='E', side='S', quantity=50, price=10, h_start=12, h_end=12)]
+    res = run_clearing(sup, dem, block_rows=blk, hours=[12], ntc_override={k: 0 for k in C.NTC})
+    st = {b['name']: b for b in res['summary']['blocks']}
+    assert res['prices']['NGA']['12'] == 30.0
+    assert not st['P']['accepted'] and st['E']['accepted']
+    assert st['P']['status'] == 'OK' and st['E']['status'] == 'OK'
+
+
+    
+
+# AJOUTÉ : le vérificateur détecte des résultats falsifiés (prix, flux)
+def test_checker_detects_corrupted_results():
+    """On fausse un résultat correct : un prix modifié et un flux de signe inversé doivent être signalés."""
+    import copy
+    sup, dem, ntc = scenario_rows('reference_2024')
+    res = run_clearing(sup, dem, ntc_override=ntc)
+    assert not verify_result(res)                                  # le résultat correct passe
+    bad = copy.deepcopy(res)
+    bad['prices']['NGA']['19'] += 30                               # prix faux au Nigeria à 19 h
+    assert any(p.startswith('prix') for p in verify_result(bad))
+    bad = copy.deepcopy(res)
+    k = next(k for k, s in bad['flows'].items() if abs(s['19']) > 10)
+    bad['flows'][k]['19'] = -bad['flows'][k]['19']                 # flux de signe inversé
+    assert any(p.startswith('balance') for p in verify_result(bad))

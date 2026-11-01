@@ -35,7 +35,7 @@ Trois usages : **former** (séance de marché en trois manches, un pays par part
 |---|---|---|
 | P1 | Qui échange ? | maximisation du welfare sous équilibre de chaque zone, bornes de flux, contrainte α, liaisons de blocs ; programme linéaire, en nombres entiers avec blocs (écart 10⁻⁶) |
 | P1bis | Comment départager ? | volume maximal à welfare optimal **exact** ; puis partage explicite des offres au même prix : prorata (défaut), ordre de soumission, ou solveur |
-| P2 | À quel prix ? | ensemble **complet** des prix admissibles (conditions d'équilibre sur les ordres acceptés, partiels et rejetés, égalité des prix sur les lignes non saturées, inégalité dans le sens de la saturation, contrainte α, bornes) ; prix retenu le plus proche du milieu de l'intervalle admissible local |
+| P2 | À quel prix ? | ensemble **complet** des prix admissibles (conditions d'équilibre sur les ordres acceptés, partiels et rejetés, égalité des prix sur les lignes non saturées, inégalité dans le sens de la saturation, contrainte α, bornes) ; prix retenus les plus proches des milieux des intervalles admissibles locaux, au sens de la somme des écarts au carré (programme quadratique, prix uniques) |
 | Blocs paradoxaux | | bloc accepté à perte : rejeté et calcul relancé (règle EUPHEMIA, défaut) ; bloc rejeté qui aurait été rentable : toléré et signalé ; règles alternatives disponibles pour comparaison |
 | Condition de revenu minimum | | recette insuffisante : retrait de toutes les offres de l'acteur et relance complète |
 
@@ -62,7 +62,7 @@ Les prix produits sont des résultats de simulation sur ces données, pas des pr
 
 | Couche | Technologie |
 |---|---|
-| Moteur | Python 3.10+, modèles Pyomo, solveur libre HiGHS inclus ; Gurobi utilisé automatiquement s'il est installé |
+| Moteur | Python 3.10+, modèles Pyomo ≥ 6.9.3, solveur libre HiGHS inclus (programmes linéaires, en nombres entiers et quadratique) ; Gurobi utilisé automatiquement s'il est installé |
 | API | FastAPI, SQLAlchemy (SQLite par défaut, PostgreSQL possible), documentation interactive sur `/docs`, flux d'événements temps réel (Server-Sent Events) |
 | Interface | React, Vite, TypeScript, Tailwind ; page publique, hall, salle de marché, poste du formateur ; bilingue FR/EN ; cartes Natural Earth (domaine public) |
 | Ligne de commande | `python -m engine.cli` : CSV en entrée, JSON et CSV des prix en sortie |
@@ -78,7 +78,7 @@ Les prix produits sont des résultats de simulation sur ces données, pas des pr
 
 ## 8. Qualité et vérification
 
-- 68 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
+- 98 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
 - Campagne de cas aléatoires (segments, blocs simples, liés, exclusifs, conditions, toutes les règles, 24 h ou une heure, capacités réduites) contrôlée par un vérificateur indépendant du solveur : prix dans les bornes, flux dans les capacités, équilibre horaire, positions nettes de somme nulle, accepté ≤ offert, règles de blocs, conditions satisfaites ou retirées, identité du welfare.
 - Reproduction en trois commandes (voir `README.md`).
 

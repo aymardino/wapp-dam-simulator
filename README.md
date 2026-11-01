@@ -30,7 +30,7 @@ cd web && npm install && npm run build && cd ..     # compiles the front end int
 uvicorn api.main:app --reload --port 8000
 ```
 
-Open `http://localhost:8000` (public page), `http://localhost:8000/app` (training rooms) and `http://localhost:8000/docs` (interactive API documentation). The HiGHS solver (`highspy`) is installed with the dependencies and handles every case, blocks included, in under a second; Gurobi is used automatically when present.
+Open `http://localhost:8000` (public page), `http://localhost:8000/app` (training rooms) and `http://localhost:8000/docs` (interactive API documentation). The HiGHS solver (`highspy`) is installed with the dependencies and handles every case, blocks included, in under a second, the quadratic pricing program through Pyomo ≥ 6.9.3; Gurobi is used automatically when present.
 
 Command line, without the API:
 
@@ -55,7 +55,7 @@ The historical Streamlit application is still available: `streamlit run app.py` 
 |------|----------|---------|------|
 | P1 | Who trades? | welfare maximisation under zonal balance, NTC, α constraint, block links | LP, MILP with blocks |
 | P1bis | How to break ties? | volume maximisation at the exact optimal welfare | LP |
-| P2 | At what price? | admissible prices (full equilibrium conditions) closest to the midpoint of the interval | LP |
+| P2 | At what price? | admissible prices (full equilibrium conditions) closest to the midpoints of the intervals, sum of squared deviations | QP |
 
 Zones: NGA, BEN, TGO, GHA, CIV, BFA, MLI, SEN, GIN, SLE, LBR, GNB, GMB, NER. Interconnections: 15 pairs, signed flows. CIV/GHA/BFA interdependence constraint with α = 0.7.
 

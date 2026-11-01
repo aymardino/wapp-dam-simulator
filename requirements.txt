@@ -1,13 +1,15 @@
 streamlit>=1.37.0
-pyomo>=6.7.0
+pyomo>=6.9.3
 highspy>=1.7.0
 plotly>=5.18.0
 pandas>=2.0.0
 numpy>=1.24.0
-# Solveur : HiGHS (highspy) est installé par défaut et suffit (LP et MILP).
-# Gurobi (licence académique gratuite) est utilisé automatiquement s'il est présent.
-# Tests : pip install pytest ; puis  pytest -q
-# API REST (uvicorn api.main:app)
+# Solver: HiGHS (highspy) is installed by default and is enough (LP, MILP, and the quadratic program of P2).
+# Pyomo >= 6.9.3 is required for its 'highs' interface, the only one that accepts the quadratic objective of P2.
+# Gurobi (free academic licence) is used automatically when installed.
+# Tests: pip install pytest ; then  pytest -q
+# Working paper scripts (scripts/results.py): pip install matplotlib
+# REST API (uvicorn api.main:app)
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 sqlalchemy>=2.0.0

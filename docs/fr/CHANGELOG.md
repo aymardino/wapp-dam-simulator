@@ -5,6 +5,60 @@ Chaque entrée renvoie au commit git correspondant (`git log`).
 
 ## [2.0.0-dev] — octobre 2026
 
+### Étape 16 — Règles de clearing relues pour le working paper
+
+Relecture du moteur par Enrico Patanè pendant la rédaction du working paper, chaque règle étant confrontée à
+l'article et à la description publique d'EUPHEMIA. Aucun prix, flux ni welfare du cas de référence 2024 ne change ;
+parmi ses variantes, seule « gaz cher » change (voir ci-dessous).
+
+- Les blocs liés suivent la règle de famille d'EUPHEMIA (section 5.4.1) : un parent à perte reste accepté si ses
+  enfants acceptés compensent sa perte ; un enfant est jugé seul, puisque son parent ne peut pas le soutenir. Un
+  bloc d'une famille accepté à perte n'est plus rejeté définitivement : une coupe exclut la configuration de la
+  famille qui l'a produit, et P1 peut essayer les autres (un bloc sans famille est rejeté comme avant). Nouveaux
+  champs `family_surplus` et `surplus_if_accepted` ; `tests/test_family_cuts.py`.
+- Les conditions de revenu minimum portent sur les segments de vente d'un acteur seulement, jamais sur des blocs,
+  comme dans EUPHEMIA ; un terme négatif ou une condition sur un acteur sans segment de vente sont refusés. Après
+  la boucle, les acteurs retirés sont réessayés par taux de couverture décroissant (la réinsertion des PRMIC
+  d'EUPHEMIA) ; une réinsertion est gardée quand toutes les conditions tiennent et que le welfare ne diminue pas.
+  Les résultats des MIC portent le taux de couverture et les valeurs au moment du retrait.
+- Entrées : au plus quatre segments par acteur et par côté, règle des règles de marché et de l'API, désormais
+  appliquée par le moteur (seule l'ancienne interface Streamlit l'appliquait) ; un lien invalide entre blocs (nom
+  en double, parent introuvable, chaîne de liens, groupe exclusif d'un seul bloc) provoque une erreur de clearing au
+  lieu d'être ignoré. L'API renvoie ces messages à la plateforme web.
+- Scénarios : la variante « gaz cher » renchérit maintenant une liste explicite des centrales au gaz du cas 2024 ;
+  la recherche par nom utilisée auparavant oubliait Egbin, Sunon Asogli, CIPREL, AKSA et Karpowership Ghana, et
+  l'effet de la variante était sous-estimé. ContourGlobal Lomé et Maria-Gléta restent hors de la liste tant que leur
+  combustible n'est pas confirmé. Le jeu de test renvoie les NTC par défaut au lieu de lire la base. Noms anglais
+  des acteurs pour les tableaux de l'article ; le scénario d'ordres complexes de l'article vit dans
+  `engine/scenarios.py`.
+- Résultats : `avg_price` d'une zone est désormais pondéré par sa consommation acceptée (`avg_price_simple` garde
+  la moyenne simple) ; `avg_flow` d'une ligne est le flux moyen en valeur absolue (`avg_net_flow` garde le signe) ;
+  `summary['segments']` donne le détail horaire de chaque segment, pour le vérificateur ; `mip_gap` et
+  `pricing_objective` dans les diagnostics. Le vérificateur (`engine/checks.py`) recalcule les conditions sur les
+  prix et l'équilibre horaire de chaque zone à partir du résultat publié.
+- P2 minimise la somme des écarts au carré aux prix de référence, au lieu de la somme des écarts absolus.
+  L'objectif est strictement convexe, donc les prix publiés sont uniques : avec les écarts absolus, le prix d'une
+  région de prix d'un nombre pair de zones sans ordre partiellement accepté pouvait être n'importe quel point d'un
+  intervalle, au choix du solveur (un cas dans le cas de référence 2024 : Côte d'Ivoire, Guinée, Liberia et Sierra
+  Leone à 7 h, tout prix entre 70 et 72 $/MWh). Aucun prix publié du cas de référence, de ses quatre scénarios ni du
+  scénario d'ordres complexes ne change. P2 est résolu par Gurobi ou par HiGHS via l'interface `highs` de Pyomo ;
+  `requirements.txt` demande désormais Pyomo ≥ 6.9.3, et sans solveur quadratique le clearing s'arrête avec un
+  message d'installation. La règle `pricing = 'l2'` garde les écarts absolus. Nouveau diagnostic `pricing_objective`.
+- Avec des blocs, le plancher de welfare W* de P1bis est l'optimum du programme linéaire à décisions de blocs fixées,
+  résolu après le MILP, au lieu du welfare de la solution du MILP, qui s'arrête à un écart relatif de 10⁻⁶ ; sa
+  solution remplace aussi celle du MILP comme repli de P1bis et de P2. Aucun résultat ne change.
+- Statut PRB jugé avec les blocs dont dépend un bloc rejeté : une famille dont le parent est rejeté est jugée en
+  entier (parent et enfants gagnants), et dans un groupe exclusif un bloc rejeté n'est PRB que s'il aurait valu plus
+  que le bloc accepté, ou, sans bloc accepté, s'il est le meilleur. Nouveau champ `prb_basis` (`block`, `family`,
+  `group`). Avec la règle `l2`, seul le parent d'une famille PRB est forcé. Dans le scénario d'ordres complexes,
+  Desalination A n'est plus signalé PRB ; la famille de la fonderie est PRB au titre de la famille.
+- Scripts du working paper : `scripts/results.py` (analyses R1 à R5, tableaux LaTeX et figures) et
+  `scripts/gen_appendix_tables.py` ; ils ont besoin de matplotlib.
+- Tests : `tests/test_indeterminacy.py` (régions de prix sans ordre marginal, P2 quadratique, P1bis exact, erreur
+  sans solveur quadratique), `tests/test_block_status.py` (PRB des familles et des groupes exclusifs) et
+  `tests/test_family_cuts.py` ; les règles ci-dessus dans `tests/test_engine.py` et `tests/test_properties.py`. La
+  suite compte 98 tests.
+
 ### Étape 15 — Site en ligne sur wapp-dam-simulator.mastereose.fr
 
 - Adresse publique : `https://wapp-dam-simulator.mastereose.fr`, sous-domaine fourni par le Mastère OSE, remplace le

@@ -16,7 +16,7 @@ Le carnet d'ordres a quatre onglets. « Enregistrer » remplace l'ensemble de vo
 
 **Blocs.** Un bloc est accepté en totalité sur toutes ses heures, ou rejeté : utile pour une centrale qui ne peut pas démarrer pour deux heures, ou une consommation industrielle continue. Un bloc *enfant* n'est accepté que si son *parent* l'est (indiquez le nom du parent). Dans un *groupe exclusif* (même étiquette de groupe), une seule option au plus est retenue.
 
-**MIC.** Condition de revenu minimum pour un vendeur : si votre recette aux prix finals est inférieure au terme fixe plus le terme variable multiplié par le volume accepté, toutes vos offres sont retirées et le marché est recalculé sans vous.
+**MIC.** Condition de revenu minimum pour un vendeur, attachée à vos offres de vente par paliers (pas à vos blocs) : si la recette de ces offres aux prix finals est inférieure au terme fixe plus le terme variable multiplié par le volume accepté, elles sont retirées et le marché est recalculé sans elles. Si plusieurs vendeurs sont retirés en même temps, le moteur réessaie ensuite chacun d'eux, en commençant par celui qui était le plus près de couvrir ses coûts.
 
 ## 3. Comprendre le résultat
 

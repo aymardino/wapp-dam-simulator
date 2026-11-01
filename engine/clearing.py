@@ -4,21 +4,65 @@ WAPP Day-Ahead Market Clearing Engine — v2 (October 2026)
 Sequential decomposition of Deliverable 2 (8 March 2026):
     P1    : welfare maximisation (LP; MILP when block orders are present)
     P1bis : volume maximisation among welfare-optimal solutions (LP, tie-break)
-    P2    : zonal prices = admissible prices closest to the midpoint of the interval (LP)
+    P2    : zonal prices = admissible prices closest to the midpoints of the intervals,
+            sum of squared deviations (QP, unique prices)
 
 Changes in v2 compared with the Deliverable 3 engine (details in CHANGELOG.md and docs/MARKET_RULES.md):
     - "Complete" P2: the set of admissible prices is described by the full KKT conditions
       (rejected orders, price equality across unsaturated lines, multiplier of the α constraint).
       Mode 'l2' keeps constraints (8)-(12) of Deliverable 2 for comparison.
     - Exact P1bis (ε = 0) instead of ε = 0.01; documented fallback if the solver cannot follow.
+      With blocks, the welfare floor W* of P1bis is the optimum of the linear program with the
+      blocks fixed, not the value of the MILP solution (which stops at a relative gap MIP_GAP).
+    - P2 minimises the sum of squared deviations from the reference prices (quadratic program,
+      unique prices); it needs Gurobi or HiGHS through Pyomo >= 6.9.3 (interface 'highs').
     - Block, linked and exclusive orders (MILP) ported from the notebook wapp_market_clearing_final1.ipynb;
-      rejection loop for paradoxically accepted blocks (EUPHEMIA rule); PRBs reported.
+      rejection loop for paradoxically accepted blocks (EUPHEMIA rule); PRBs reported, assessed for
+      the whole family of linked blocks and for the whole exclusive group.
     - Configurable NTC, configurable simulated hours, missing zones filled with reference data,
       input validation.
     - Solver status checked at every step (ClearingError) and consistency diagnostics.
     - Explicit sharing rule for equal-price orders (pro rata by default) after P1bis.
     - Minimum Income Condition (income ≥ fixed term + variable term × volume) with iterative withdrawal.
 """
+
+#===================================================================================================
+# FILE MAP
+# BLOCK 0  Imports and public interface
+# BLOCK 1  Parameters and reference data
+#          1.1 Regulatory and numerical parameters   1.2 Network: zones and lines
+#          1.3 Hourly profiles                        1.4 Reference data (Deliverable 2)
+# BLOCK 2  Data structures and helpers
+#          2.1 Actor identification and errors        2.2 Seg and Block records
+#          2.3 Profiles and loading of the reference data
+# BLOCK 3  Order preparation
+#          3.1 Input validation   3.2 Segments and blocks   3.3 Links between blocks
+# BLOCK 4  Solver
+#          4.1 Choice of the solver   4.2 Safe solving
+# BLOCK 5  The optimisation problems P1, P1bis and P2
+#          5.1 P1 and P1bis (primal model)   5.2 P2: status of the orders and reference prices
+#          5.3 P2: quadratic program of the prices
+# BLOCK 6  Checks and rules applied around the prices
+#          6.1 Paradoxical blocks (PAB / PRB, families and exclusive groups)   6.2 Consistency diagnostics
+#          6.3 Sharing of equal-price orders (pro rata)
+# BLOCK 7  Minimum income condition (MIC)
+#          7.1 Reading and validation of the MICs   7.2 Check of the MICs at final prices
+# BLOCK 8  Complete algorithm: P1 → P1bis → P2 and the paradoxical-block loop
+# BLOCK 9  Entry point run_clearing
+#          9.1 Rule checks         9.2 Simulated hours       9.3 Data: choice of the orders
+#          9.4 Validation and construction                 9.5 Line capacities (NTC)
+#          9.6 MIC loop            9.7 MIC reinsertion       9.8 Final solution and volume
+#          9.9 Prices, flows and generation   9.10 Results per actor   9.11 Results per zone and line, welfare
+#          9.12 Diagnostics        9.13 Summary and output
+#===================================================================================================
+
+#===================================================================================================
+# BLOCK 0 — IMPORTS AND PUBLIC INTERFACE
+#---------------------------------------------------------------------------------------------------
+# Libraries used (Pyomo writes the optimisation models) and the __all__ list of what the other
+# files (API, CLI, tests) may import.
+#===================================================================================================
+
 import time
 import logging
 from dataclasses import dataclass, field
@@ -39,6 +83,19 @@ __all__ = [
     'PRICING_MODES', 'PAB_RULES', 'TIE_RULES',
 ]
 
+
+#===================================================================================================
+# BLOCK 1 — PARAMETERS AND REFERENCE DATA
+#---------------------------------------------------------------------------------------------------
+# Every constant of the engine: tolerances, price bounds, network, hourly profiles and the test
+# set of Deliverable 2. No computation here.
+#===================================================================================================
+
+#---------------------------------------------------------------------------------------------------
+# 1.1  Regulatory and numerical parameters
+#   Price bounds, factor α of Burkina Faso, tolerances (ε_x, ε_f, ε_π, ε_m), available rules,
+#   segment limit and optimality gap of the MILP.
+#---------------------------------------------------------------------------------------------------
 # ── Regulatory and numerical parameters ───────────────────────────
 P_MIN, P_MAX = 0, 500      # price bounds (Deliverable 2, table 2)
 ALPHA = 0.7                # CIV/GHA/BFA interdependence factor (constraint C4)
@@ -49,7 +106,14 @@ PRICING_MODES = ('complete', 'l2')
 PAB_RULES = ('euphemia', 'l2', 'none')
 TIE_RULES = ('prorata', 'order', 'solver')   # sharing of equal-price orders
 MIC_TOL = 0.5              # currency unit: tolerance of the minimum income condition
+MAX_SEGMENTS = 4           # maximum number of segments per actor and per side (sell / buy)
+MIP_GAP = 1e-6             # relative optimality gap of the MILP, the same for every solver
 
+#---------------------------------------------------------------------------------------------------
+# 1.2  Network: zones and lines
+#   The 14 zones, the 15 lines with their default NTC (those of the test set) and the two lines
+#   of the α constraint (into Burkina Faso).
+#---------------------------------------------------------------------------------------------------
 ZONES = ['NGA','BEN','TGO','GHA','CIV','BFA','MLI','SEN','GIN','SLE','LBR','GNB','GMB','NER']
 
 LINES = [
@@ -63,6 +127,11 @@ NTC   = {(u, v): c for u, v, c in LINES}
 PAIRS = list(NTC.keys())
 ALPHA_LINES = (('GHA', 'BFA'), ('CIV', 'BFA'))
 
+#---------------------------------------------------------------------------------------------------
+# 1.3  Hourly profiles
+#   Availability profiles of the supply (solar, hydro, baseload, peaker, flat) and the common
+#   load profile LOAD_WA.
+#---------------------------------------------------------------------------------------------------
 # ── Hourly profiles (Deliverable 2, tables 12 and 13) ─────────────
 _HYDRO = [0.7,0.65,0.6,0.6,0.6,0.65,0.75,0.85,0.9,0.95,1.0,1.0,
           1.0,0.95,0.9,0.85,0.9,0.95,1.0,0.95,0.9,0.85,0.8,0.75]
@@ -80,6 +149,11 @@ PROF = {
 LOAD_WA = [0.55,0.50,0.48,0.47,0.48,0.52,0.62,0.75,0.85,0.90,0.92,0.90,
            0.88,0.85,0.82,0.80,0.82,0.88,0.95,1.00,0.98,0.90,0.78,0.65]
 
+#---------------------------------------------------------------------------------------------------
+# 1.4  Reference data (Deliverable 2, step 3)
+#   Synthetic test set: 28 sellers (64 segments) and 15 buyers (44 segments). This is the case
+#   run by "cli --reference".
+#---------------------------------------------------------------------------------------------------
 # ── Reference data (notebook / Deliverable 2, step 3) ─────────────
 DEFAULT_SUPPLY_24 = [
     ("Mainstream Solar",  'NGA', [(400,18),(400,25)],                   _SOLAR),
@@ -130,8 +204,18 @@ DEFAULT_DEMAND_24 = [
     ("EAGB Demand",      'GNB', [(25,205),(15,165),(10,125)]),
 ]
 
-REFERENCE_PLAYER = 'Référence'
 
+#===================================================================================================
+# BLOCK 2 — DATA STRUCTURES AND HELPERS
+#---------------------------------------------------------------------------------------------------
+# The records that describe the orders inside the engine, and a few small helpers.
+#===================================================================================================
+
+#---------------------------------------------------------------------------------------------------
+# 2.1  Actor identification and errors
+#   Label of the reference orders, normalisation of actor names and the ClearingError type.
+#---------------------------------------------------------------------------------------------------
+REFERENCE_PLAYER = 'Référence'
 
 def _name_key(name):
     """Normalised form of an actor or organisation name for matching (lower case, no accents or
@@ -142,24 +226,26 @@ def _name_key(name):
     words = [w for w in s.split() if w not in ('demand', 'gen', 'reseau', 'network', 'distribution', 'thermal', 'hydro', 'solar')]
     return ' '.join(words) or s.strip()
 
-
 class ClearingError(Exception):
     """Clearing error with a message readable by the administrator."""
 
-
+#---------------------------------------------------------------------------------------------------
+# 2.2  Seg and Block records
+#   Seg: a segment of a simple order (sell or buy) with its effective hourly quantities.
+#   Block: a block order with its hours, its parent and its exclusive group.
+#---------------------------------------------------------------------------------------------------
 # ── Internal structures ───────────────────────────────────────────
 @dataclass
 class Seg:
     actor: str
     zone: str
-    k: int
-    q: float
-    p: float
-    profile: str
+    k: int                    # segment index
+    q: float                  # power (MW)
+    p: float                  # price
+    profile: str              # profile name
     qty: dict                 # {hour: effective quantity}
-    player: str = ''
-    side: str = 'S'
-
+    player: str = ''          # participant who submitted it
+    side: str = 'S'           # 'S' sell, 'D' buy
 
 @dataclass
 class Block:
@@ -174,7 +260,11 @@ class Block:
     player: str = ''
     active_hours: list = field(default_factory=list)
 
-
+#---------------------------------------------------------------------------------------------------
+# 2.3  Profiles and loading of the reference data
+#   Conversion profile name ↔ vector of 24 values, and the test set as order rows
+#   (default_rows).
+#---------------------------------------------------------------------------------------------------
 def _profile_name(arr):
     """Profile name for a 24-value vector (peaker takes precedence over flat, which are identical)."""
     t = tuple(arr)
@@ -182,7 +272,6 @@ def _profile_name(arr):
         if tuple(PROF[name]) == t:
             return name
     return 'custom'
-
 
 def _profile_array(prof):
     """Accepts a profile name or a 24-value vector. Returns (vector, name)."""
@@ -196,7 +285,6 @@ def _profile_array(prof):
     if len(arr) != 24:
         raise ClearingError("A custom hourly profile must contain 24 values.")
     return arr, _profile_name(arr)
-
 
 def default_rows(zones=None):
     """Reference data in the database row format (sell and buy orders)."""
@@ -216,6 +304,18 @@ def default_rows(zones=None):
     return sup, dem
 
 
+#===================================================================================================
+# BLOCK 3 — ORDER PREPARATION
+#---------------------------------------------------------------------------------------------------
+# Before any optimisation: check of the submitted orders, hourly quantities and resolution of
+# the links between blocks.
+#===================================================================================================
+
+#---------------------------------------------------------------------------------------------------
+# 3.1  Input validation
+#   Zones, quantities, price bounds, block hours and the limit of 4 segments per actor and per
+#   side.
+#---------------------------------------------------------------------------------------------------
 # ── Input validation ──────────────────────────────────────────────
 def validate_inputs(supply_rows, demand_rows, block_rows):
     """Raises ClearingError with a precise message when an input is out of specification."""
@@ -229,6 +329,14 @@ def validate_inputs(supply_rows, demand_rows, block_rows):
                 raise ClearingError(f"{kind.capitalize()} order {who}: negative quantity.")
             if not (P_MIN <= p <= P_MAX):
                 raise ClearingError(f"{kind.capitalize()} order {who}: price {p:g} outside the bounds [{P_MIN}, {P_MAX}].")
+        # At most MAX_SEGMENTS segments per actor (same zone, participant and actor name) and per side
+        n_seg = {}
+        for r in rows:
+            key = (r.get('zone'), r.get('player', ''), r.get('actor', '?'))
+            n_seg[key] = n_seg.get(key, 0) + 1
+            if n_seg[key] > MAX_SEGMENTS:
+                raise ClearingError(f"{kind.capitalize()} order {r.get('actor', '?')} ({r.get('zone', '?')}): "
+                                    f"more than {MAX_SEGMENTS} segments; an actor submits at most {MAX_SEGMENTS} segments per side.")
     for r in block_rows:
         who = f"{r.get('name', '?')} ({r.get('zone', '?')})"
         if r.get('zone') not in ZONES:
@@ -245,6 +353,11 @@ def validate_inputs(supply_rows, demand_rows, block_rows):
             raise ClearingError(f"Block {who}: invalid hour range ({h0}-{h1}).")
 
 
+#---------------------------------------------------------------------------------------------------
+# 3.2  Segments and blocks
+#   Hourly quantity = power × profile (supply) or × load profile (demand); active hours of
+#   each block within the horizon.
+#---------------------------------------------------------------------------------------------------
 # ── Segment and block construction ────────────────────────────────
 def _build_segments(supply_rows, demand_rows, hours):
     seg_s, seg_d = [], []
@@ -259,7 +372,6 @@ def _build_segments(supply_rows, demand_rows, hours):
                          {h: round(q * LOAD_WA[h]) for h in hours}, r.get('player', ''), 'D'))
     return seg_s, seg_d
 
-
 def _build_blocks(block_rows, hours):
     hours_set = set(hours)
     blocks = []
@@ -272,27 +384,72 @@ def _build_blocks(block_rows, hours):
                             player=r.get('player', ''), active_hours=[h for h in hb if h in hours_set]))
     return blocks
 
-
+#---------------------------------------------------------------------------------------------------
+# 3.3  Links between blocks
+#   Parent-child pairs (one level, several children allowed) and exclusive groups; invalid
+#   links raise an error.
+#---------------------------------------------------------------------------------------------------
 def _resolve_links(blocks, notes):
-    """Parent looked up by name within the same (zone, trader); exclusive groups likewise."""
+    """Links the blocks of one actor in one zone: parent-child pairs and exclusive groups.
+
+    Rules (a ClearingError is raised otherwise):
+      - two blocks of the same actor in the same zone cannot have the same name;
+      - the parent of a block must exist among the blocks of the same actor in the same zone;
+      - a block cannot be its own parent;
+      - a parent may have several children, but a child cannot itself be a parent
+        (no grandparent -> parent -> child chains, hence no cycles);
+      - an exclusive group must contain at least two blocks.
+    """
+    # 1. Directory of the blocks; duplicate names are refused
     index = {}
     for i, b in enumerate(blocks):
-        index.setdefault((b.zone, b.player, b.name), i)
+        key = (b.zone, b.player, b.name)
+        if key in index:
+            raise ClearingError(f"Block '{b.name}' ({b.zone}): two blocks of the same trader have this name; "
+                                "give each block a distinct name.")
+        index[key] = i
+
+    # 2. Child -> parent links: the parent must exist and cannot be the block itself
     parent_of = {}
     for i, b in enumerate(blocks):
         if b.parent:
             j = index.get((b.zone, b.player, b.parent))
-            if j is None or j == i:
-                notes.append(f"Block '{b.name}': parent '{b.parent}' not found, link ignored.")
-            else:
-                parent_of[i] = j
+            if j is None:
+                raise ClearingError(f"Block '{b.name}' ({b.zone}): parent '{b.parent}' not found among the blocks "
+                                    "of the same trader in the same zone.")
+            if j == i:
+                raise ClearingError(f"Block '{b.name}' ({b.zone}): a block cannot be its own parent.")
+            parent_of[i] = j
+
+    # 3. No chains: the parent of a block cannot itself be a child (which also excludes cycles)
+    for i, j in parent_of.items():
+        if j in parent_of:
+            raise ClearingError(f"Block '{blocks[i].name}' ({blocks[i].zone}): its parent '{blocks[j].name}' is itself "
+                                "the child of another block; only one level of links is allowed (no chains).")
+
+    # 4. Exclusive groups: at least two blocks
     groups = {}
     for i, b in enumerate(blocks):
         if b.group:
             groups.setdefault((b.zone, b.player, b.group), []).append(i)
-    return parent_of, [g for g in groups.values() if len(g) > 1]
+    for (z, _, g), members in groups.items():
+        if len(members) < 2:
+            raise ClearingError(f"Exclusive group '{g}' ({z}): an exclusive group must contain at least two blocks.")
+    return parent_of, list(groups.values())
 
 
+#===================================================================================================
+# BLOCK 4 — SOLVER
+#---------------------------------------------------------------------------------------------------
+# Choice of an available solver and safe solving of the models: a failure is detected and
+# reported instead of producing meaningless values.
+#===================================================================================================
+
+#---------------------------------------------------------------------------------------------------
+# 4.1  Choice of the solver
+#   Gurobi, then HiGHS, GLPK, CBC; the first one available is used, with the same optimality
+#   gap MIP_GAP.
+#---------------------------------------------------------------------------------------------------
 # ── Solver ────────────────────────────────────────────────────────
 def _get_solver():
     """Gurobi → HiGHS (appsi) → GLPK → CBC. Returns (solver, name)."""
@@ -306,11 +463,16 @@ def _get_solver():
         try:
             s = factory()
             if s.available():
+                # The same optimality gap MIP_GAP for every solver (each has its own option name)
                 try:
                     if name == 'gurobi':
-                        s.options['MIPGap'] = 1e-6
+                        s.options['MIPGap'] = MIP_GAP
                     elif name == 'appsi_highs':
-                        s.options['mip_rel_gap'] = 1e-6
+                        s.options['mip_rel_gap'] = MIP_GAP
+                    elif name == 'glpk':
+                        s.options['mipgap'] = MIP_GAP
+                    elif name == 'cbc':
+                        s.options['ratio'] = MIP_GAP
                 except Exception:
                     pass
                 return s, name
@@ -319,6 +481,25 @@ def _get_solver():
     raise ClearingError("No solver available. Install HiGHS: pip install highspy")
 
 
+def _get_qp_solver():
+    """Solver of the quadratic P2: Gurobi, else HiGHS through the 'highs' interface of Pyomo (>= 6.9.3).
+    The 'appsi_highs' interface used for P1 and P1bis does not accept a quadratic objective, nor do
+    GLPK and CBC. Returns (solver, name), or (None, None) when none is suitable."""
+    for name in ('gurobi', 'highs'):
+        try:
+            s = SolverFactory(name)
+            if s.available():
+                return s, name
+        except Exception:
+            pass
+    return None, None
+
+
+#---------------------------------------------------------------------------------------------------
+# 4.2  Safe solving
+#   _try_solve: returns success / failure without stopping the computation (for the steps that
+#   have a fallback). _solve: stops with an error on failure.
+#---------------------------------------------------------------------------------------------------
 _OK = (_TC.optimal, _TC.globallyOptimal, _TC.locallyOptimal)
 
 
@@ -342,9 +523,23 @@ def _solve(solver, model, label):
     return status
 
 
+#===================================================================================================
+# BLOCK 5 — THE OPTIMISATION PROBLEMS P1, P1bis AND P2
+#---------------------------------------------------------------------------------------------------
+# The mathematical core of the working paper (Section 2.7). P1 maximises the welfare, P1bis
+# maximises the volume without losing welfare, P2 chooses the admissible prices closest to the
+# reference prices.
+#===================================================================================================
+
+#---------------------------------------------------------------------------------------------------
+# 5.1  P1 and P1bis (primal model)
+#   Variables (acceptance ratios, flows, block binaries), welfare, balance of each zone,
+#   α constraint, links and exclusive groups; objective welfare (P1) or volume with W ≥ W*
+#   (P1bis). _extract reads the solution.
+#---------------------------------------------------------------------------------------------------
 # ── Primal model (P1 / P1bis) ─────────────────────────────────────
 def _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
-                  objective='welfare', welfare_floor=None, fixed_y=None):
+                  objective='welfare', welfare_floor=None, fixed_y=None, cuts=None):
     S, D, B = range(len(seg_s)), range(len(seg_d)), range(len(blocks))
     m = ConcreteModel()
     m.xs = Var(S, hours, bounds=(0, 1))
@@ -396,6 +591,12 @@ def _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
         m.excl = ConstraintList()
         for g in groups:
             m.excl.add(sum(m.yb[b] for b in g) <= 1)
+        # Family cuts (rule 'euphemia'): each cut forbids the one configuration (parent + children)
+        # that produced a PAB; every other configuration remains possible.
+        m.cuts = ConstraintList()
+        for config in (cuts or []):
+            m.cuts.add(sum(1 - m.yb[k] for k, v in config if v == 1)
+                       + sum(m.yb[k] for k, v in config if v == 0) >= 1)
 
     if objective == 'welfare':
         m.obj = Objective(expr=m.welfare, sense=maximize)
@@ -417,6 +618,11 @@ def _extract(m, seg_s, seg_d, blocks, hours, pairs):
     return xs, xd, fl, y
 
 
+#---------------------------------------------------------------------------------------------------
+# 5.2  P2: status of the orders and reference prices
+#   Accepted / partial / rejected classification with ε_x, and the price interval allowed by the
+#   orders of each zone; its midpoint is the reference price (eq. 13 of the paper).
+#---------------------------------------------------------------------------------------------------
 # ── P2: zonal prices ──────────────────────────────────────────────
 def _classify(x):
     if x > 1 - X_TOL:
@@ -425,7 +631,6 @@ def _classify(x):
         return 'rej'
     return 'part'
 
-
 def _reference_prices(seg_s, seg_d, xs, xd, hours, mode):
     """Reference price = midpoint of the local admissible interval (Deliverable 2 §2.4).
     'l2': bounds given by accepted orders only; 'complete': rejected orders also tighten
@@ -433,9 +638,6 @@ def _reference_prices(seg_s, seg_d, xs, xd, hours, mode):
     ref, bounds = {}, {}
     for z in ZONES:
         for h in hours:
-            lo, hi = P_MIN, P_MAX
-            for s in seg_s:
-                pass
             lo_c, hi_c = [], []
             for i, s in enumerate(seg_s):
                 if s.zone != z or s.qty[h] <= 0:
@@ -470,17 +672,32 @@ def _reference_prices(seg_s, seg_d, xs, xd, hours, mode):
     return ref, bounds
 
 
-def _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, mode):
+#---------------------------------------------------------------------------------------------------
+# 5.3  P2: quadratic program of the prices
+#   Mode 'complete': conditions (1), (2) and (14) of the paper, multiplier ν of Burkina Faso;
+#   objective: sum of the squared deviations from the reference prices (eq. 15 of the paper),
+#   hence unique prices. Mode 'l2': the restricted rule of Deliverable 2, kept for comparison,
+#   with the total distance to the reference prices (absolute deviations, linearised).
+#---------------------------------------------------------------------------------------------------
+def _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, mode, quadratic=False):
     ref, _ = _reference_prices(seg_s, seg_d, xs, xd, hours, mode)
     mp = ConcreteModel()
     mp.pi = Var(ZONES, hours, bounds=(P_MIN, P_MAX))
-    mp.ep = Var(ZONES, hours, domain=NonNegativeReals)
-    mp.en = Var(ZONES, hours, domain=NonNegativeReals)
-    mp.obj = Objective(expr=sum(mp.ep[z, h] + mp.en[z, h] for z in ZONES for h in hours), sense=minimize)
-    mp.refc = ConstraintList()
-    for z in ZONES:
-        for h in hours:
-            mp.refc.add(mp.pi[z, h] - ref[z, h] == mp.ep[z, h] - mp.en[z, h])
+    if quadratic and mode == 'complete':
+        # Objective (15) of the paper: sum of the squared deviations. Strictly convex in P, so the
+        # published price vector is unique (Section 2.7).
+        mp.obj = Objective(expr=sum((mp.pi[z, h] - ref[z, h]) ** 2 for z in ZONES for h in hours),
+                           sense=minimize)
+    else:
+        # Sum of the absolute deviations, linearised with e+ and e-: kept for mode 'l2' (prices not
+        # always unique).
+        mp.ep = Var(ZONES, hours, domain=NonNegativeReals)
+        mp.en = Var(ZONES, hours, domain=NonNegativeReals)
+        mp.obj = Objective(expr=sum(mp.ep[z, h] + mp.en[z, h] for z in ZONES for h in hours), sense=minimize)
+        mp.refc = ConstraintList()
+        for z in ZONES:
+            for h in hours:
+                mp.refc.add(mp.pi[z, h] - ref[z, h] == mp.ep[z, h] - mp.en[z, h])
     mp.sc = ConstraintList()
     if mode == 'l2':
         # Constraints (8)-(12) of Deliverable 2, as implemented in the notebook
@@ -554,8 +771,133 @@ def _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, mo
     return mp
 
 
-def _price_blocks(blocks, y, prices):
-    """Status of each block at the given prices: OK, PAB, PRB, inactive."""
+#===================================================================================================
+# BLOCK 6 — CHECKS AND RULES APPLIED AROUND THE PRICES
+#---------------------------------------------------------------------------------------------------
+# Functions called by the algorithm (BLOCK 8) after P1bis or after P2: status of the blocks,
+# check of the published prices, sharing of equal-price orders.
+#===================================================================================================
+
+#---------------------------------------------------------------------------------------------------
+# 6.1  Paradoxical blocks (PAB / PRB, families and exclusive groups)
+#   Surplus of each block at the published prices. PAB: an accepted parent is assessed with its
+#   accepted children (family rule of EUPHEMIA), a child alone. PRB: a rejected block is assessed
+#   with the blocks its acceptance depends on, that is, its family and its exclusive group.
+#---------------------------------------------------------------------------------------------------
+def _price_blocks(blocks, y, prices, parent_of=None, groups=None):
+    """Status of each block at the given prices: OK, PAB, PRB, inactive.
+
+    PAB (block accepted at a loss). Family rule of EUPHEMIA: an accepted parent is assessed with its
+    accepted children, and a parent at a loss remains accepted if its children compensate its loss; a
+    child is assessed alone, since its parent cannot support it. An accepted block is a PAB if
+    F_k < -PRICE_TOL * Q_k (F_k: surplus of the family, Q_k: its energy).
+
+    PRB (rejected block that would have gained at the published prices). A rejected block is paradoxical
+    only if its owner would have preferred an outcome that the links between its blocks allowed:
+      - family whose parent is rejected: the children are not assessed alone, since they could not be
+        accepted without their parent. The family is assessed: the parent and those of its children that
+        gain at the published prices. If its surplus exceeds PRICE_TOL per MWh, the parent and these
+        children are PRB (prb_basis = 'family');
+      - exclusive group with an accepted block k: a rejected block j of the group is PRB only if its
+        owner would have preferred it to k, that is, if its surplus exceeds that of k by more than
+        PRICE_TOL per MWh of j (prb_basis = 'group');
+      - exclusive group without accepted block: only the best block of the group can be PRB, since only
+        one could be accepted (prb_basis = 'group');
+      - other rejected blocks, including the rejected child of an accepted parent: surplus > PRICE_TOL
+        per MWh (prb_basis = 'block').
+    A parent that belongs to an exclusive group is assessed there with its family, and a child that
+    belongs to a group whose parent is rejected follows its family. A child whose group already has an
+    accepted block is not counted in the family of its parent, since it could not be accepted at the
+    same time."""
+    parent_of = parent_of or {}
+    groups = groups or []
+    children = {}                                   # parent -> list of its children
+    for c, p in parent_of.items():
+        children.setdefault(p, []).append(c)
+    group_of = {b: g for g in groups for b in g}    # block -> list of the blocks of its exclusive group
+
+    def accepted(b):
+        return bool(y.get(b, 0))
+
+    # 1. Surplus and energy of each block, taken alone
+    surplus, energy = {}, {}
+    for b, blk in enumerate(blocks):
+        hb = blk.active_hours
+        if not hb:
+            continue
+        surplus[b] = sum((prices[blk.zone, h] - blk.p) * blk.q for h in hb) if blk.side == 'S' \
+            else sum((blk.p - prices[blk.zone, h]) * blk.q for h in hb)
+        energy[b] = blk.q * len(hb)
+
+    def blocked_by_group(b):
+        """Another block of the exclusive group of b is accepted: b could not be."""
+        return any(accepted(k) for k in group_of.get(b, []) if k != b)
+
+    def option(b):
+        """What the owner would have obtained by having b (a rejected block) accepted: b and, if it is a
+        parent, those of its children that gain at the published prices and that their group does not
+        exclude. Returns (surplus, energy, blocks concerned)."""
+        fam = [b] + [c for c in children.get(b, [])
+                     if c in surplus and surplus[c] > 0 and not blocked_by_group(c)]
+        return sum(surplus[k] for k in fam), sum(energy[k] for k in fam), fam
+
+    def actual(k):
+        """Surplus and energy obtained by the accepted block k and its accepted children."""
+        fam = [k] + [c for c in children.get(k, []) if accepted(c) and c in surplus]
+        return sum(surplus[i] for i in fam), sum(energy[i] for i in fam)
+
+    def child_of_rejected_parent(b):
+        p = parent_of.get(b)
+        return p is not None and not accepted(p)
+
+    # 2. PRB status of the rejected blocks: (status, basis) per block; OK by default
+    prb = {}
+
+    def set_family(b, is_prb, fam):
+        """Status of a rejected parent assessed with its family, and of its children."""
+        basis = 'family' if children.get(b) else 'block'
+        prb[b] = ('PRB' if is_prb else 'OK', basis)
+        for c in children.get(b, []):
+            if c in surplus and not accepted(c):
+                prb[c] = ('PRB' if (is_prb and c in fam) else 'OK', 'family')
+
+    # 2a. Exclusive groups
+    for g in groups:
+        members = [b for b in g if b in surplus and not child_of_rejected_parent(b)]
+        acc = [k for k in members if accepted(k)]
+        rejected = [j for j in members if not accepted(j)]
+        if acc:
+            v_acc, _ = actual(acc[0])
+            for j in rejected:
+                v, e, fam = option(j)
+                is_prb = v - v_acc > PRICE_TOL * e
+                if children.get(j):
+                    set_family(j, is_prb, fam)
+                prb[j] = ('PRB' if is_prb else 'OK', 'group')
+        elif rejected:
+            best = max(rejected, key=lambda j: option(j)[0])
+            for j in rejected:
+                v, e, fam = option(j)
+                is_prb = (j == best) and v > PRICE_TOL * e
+                if children.get(j):
+                    set_family(j, is_prb, fam)
+                prb[j] = ('PRB' if is_prb else 'OK', 'group')
+
+    # 2b. Rejected parents outside any group: assessed with their family
+    for b in children:
+        if b in surplus and not accepted(b) and b not in group_of:
+            v, e, fam = option(b)
+            set_family(b, v > PRICE_TOL * e, fam)
+
+    # 2c. Other rejected blocks: assessed alone
+    for b in surplus:
+        if not accepted(b) and b not in prb:
+            if child_of_rejected_parent(b):
+                prb[b] = ('OK', 'family')      # parent without active hour: the child could not pass
+            else:
+                prb[b] = ('PRB' if surplus[b] > PRICE_TOL * energy[b] else 'OK', 'block')
+
+    # 3. Status of each block
     out = []
     for b, blk in enumerate(blocks):
         hb = blk.active_hours
@@ -565,23 +907,28 @@ def _price_blocks(blocks, y, prices):
                             avg_price=None, surplus=0.0, status='inactive'))
             continue
         avg = sum(prices[blk.zone, h] for h in hb) / len(hb)
-        surplus = sum((prices[blk.zone, h] - blk.p) * blk.q for h in hb) if blk.side == 'S' \
-            else sum((blk.p - prices[blk.zone, h]) * blk.q for h in hb)
-        acc = bool(y.get(b, 0))
-        if acc and surplus < -PRICE_TOL * blk.q * len(hb):
-            status = 'PAB'
-        elif (not acc) and surplus > PRICE_TOL * blk.q * len(hb):
-            status = 'PRB'
+        acc = accepted(b)
+        F, Q = actual(b) if acc else (0.0, 0.0)
+        if acc:
+            # Family of an accepted block: itself and its accepted children (a child has no children)
+            status = 'PAB' if F < -PRICE_TOL * Q else 'OK'
+            basis = 'family' if any(accepted(c) for c in children.get(b, [])) else 'block'
         else:
-            status = 'OK'
+            status, basis = prb[b]
         out.append(dict(name=blk.name, zone=blk.zone, player=blk.player, side=blk.side,
                         quantity=blk.q, price=blk.p, hours=blk.hours, parent=blk.parent, group=blk.group,
                         accepted=acc, avg_price=round(avg, 2),
-                        surplus=round(surplus if acc else 0.0, 1),
-                        surplus_if_accepted=round(surplus, 1), status=status))
+                        surplus=round(surplus[b] if acc else 0.0, 1),
+                        surplus_if_accepted=round(surplus[b], 1),
+                        family_surplus=round(F, 1), status=status, prb_basis=basis))
     return out
 
 
+#---------------------------------------------------------------------------------------------------
+# 6.2  Consistency diagnostics
+#   Counts, per hour, the paradoxically rejected or accepted orders and the price gaps across
+#   unsaturated lines (figures of Section 4.2 of the paper).
+#---------------------------------------------------------------------------------------------------
 # ── Consistency diagnostics ───────────────────────────────────────
 def _diagnostics(seg_s, seg_d, xs, xd, fl, prices, hours, ntc, pairs, alpha_active):
     pro = pao = 0
@@ -618,7 +965,11 @@ def _diagnostics(seg_s, seg_d, xs, xd, fl, prices, hours, ntc, pairs, alpha_acti
                     gaps += 1; max_viol = max(max_viol, dp)
     return dict(pro=pro, pao=pao, unsaturated_price_gaps=gaps, max_violation=round(max_viol, 3))
 
-
+#---------------------------------------------------------------------------------------------------
+# 6.3  Sharing of equal-price orders (pro rata)
+#   Applied after P1bis: shares the accepted quantity of a group of orders of the same zone,
+#   side, hour and price (pro rata, submission order or solver).
+#---------------------------------------------------------------------------------------------------
 # ── Sharing rule for equal-price orders ───────────────────────────
 def _apply_tie_rule(seg_s, seg_d, xs, xd, hours, rule):
     """Shares, among orders of the same zone, side, hour and price, the quantity the solver accepted for
@@ -658,6 +1009,16 @@ def _apply_tie_rule(seg_s, seg_d, xs, xd, hours, rule):
     return adjusted
 
 
+#===================================================================================================
+# BLOCK 7 — MINIMUM INCOME CONDITION (MIC)
+#---------------------------------------------------------------------------------------------------
+# As in EUPHEMIA, a MIC applies to the sell segments of an actor, never to blocks.
+#===================================================================================================
+
+#---------------------------------------------------------------------------------------------------
+# 7.1  Reading and validation of the MICs
+#   Mic record; a MIC without sell segment or with a negative term is refused.
+#---------------------------------------------------------------------------------------------------
 # ── Minimum Income Condition ──────────────────────────────────────
 @dataclass
 class Mic:
@@ -667,18 +1028,32 @@ class Mic:
     fixed_term: float
     variable_term: float
 
-
-def _build_mic(mic_rows):
+def _build_mic(mic_rows, seg_s):
+    """Reads the minimum income conditions. As in EUPHEMIA, a MIC applies to the sell segments (stepwise
+    orders) of an actor, never to blocks: the actor must therefore have at least one sell segment in the
+    zone, and both terms must be non-negative."""
+    sellers = {(s.zone, s.player, s.actor) for s in seg_s}
     out = []
     for r in mic_rows:
+        who = f"{r.get('actor', '?')} ({r.get('zone', '?')})"
         if r.get('zone') not in ZONES:
-            raise ClearingError(f"Minimum income condition of {r.get('actor', '?')}: unknown zone.")
-        out.append(Mic(r['zone'], r.get('player', ''), r['actor'],
-                       float(r.get('fixed_term') or 0.0), float(r.get('variable_term') or 0.0)))
+            raise ClearingError(f"Minimum income condition of {who}: unknown zone.")
+        ft, vt = float(r.get('fixed_term') or 0.0), float(r.get('variable_term') or 0.0)
+        if ft < 0 or vt < 0:
+            raise ClearingError(f"Minimum income condition of {who}: the fixed and variable terms must be non-negative.")
+        if (r['zone'], r.get('player', ''), r['actor']) not in sellers:
+            raise ClearingError(f"Minimum income condition of {who}: the actor has no sell segment in this zone "
+                                "(a minimum income condition applies to stepwise sell orders, not to blocks).")
+        out.append(Mic(r['zone'], r.get('player', ''), r['actor'], ft, vt))
     return out
 
 
-def _mic_check(mics, seg_s, blocks, xs, y, prices, hours, withdrawn):
+#---------------------------------------------------------------------------------------------------
+# 7.2  Check of the MICs at final prices
+#   Income and accepted energy of each actor, compared with fixed term + variable term ×
+#   energy (tolerance ε_m); list of the actors to withdraw.
+#---------------------------------------------------------------------------------------------------
+def _mic_check(mics, seg_s, xs, prices, hours, withdrawn):
     """Income of each actor under a MIC at final prices, compared with fixed term + variable term × volume.
     An actor with nothing accepted trivially satisfies its condition (inactive order)."""
     results, to_withdraw = [], []
@@ -696,11 +1071,7 @@ def _mic_check(mics, seg_s, blocks, xs, y, prices, hours, withdrawn):
                         q = s.qty[h] * xs[i, h]
                         acc += q
                         inc += prices[s.zone, h] * q
-        for b, blk in enumerate(blocks):
-            if blk.side == 'S' and (blk.zone, blk.player, blk.name) == key and y.get(b, 0):
-                for h in blk.active_hours:
-                    acc += blk.q
-                    inc += prices[blk.zone, h] * blk.q
+        # Blocks are not counted: a MIC applies to the sell segments only (as in EUPHEMIA)
         req = m.fixed_term + m.variable_term * acc
         sat = acc <= 1e-6 or inc >= req - MIC_TOL
         results.append(dict(base, accepted_mwh=round(acc, 1), income=round(inc, 1), required=round(req, 1), satisfied=sat, withdrawn=False))
@@ -709,14 +1080,39 @@ def _mic_check(mics, seg_s, blocks, xs, y, prices, hours, withdrawn):
     return results, to_withdraw
 
 
+#===================================================================================================
+# BLOCK 8 — COMPLETE ALGORITHM: P1 → P1bis → P2 AND THE PARADOXICAL-BLOCK LOOP
+#---------------------------------------------------------------------------------------------------
+# The procedure of Section 2.7 of the paper: P1, P1bis (with a fallback on P1), pro rata sharing,
+# P2 (with a fallback), check of the blocks; a PAB is rejected, or the configuration of its family
+# is excluded by a cut, and the sequence is run again until none remains.
+#===================================================================================================
+
 # ── P1 → P1bis → P2 sequence with the PAB loop ────────────────────
 def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, alpha_active,
                     solver, pricing, pab_rule, max_pab_iter, tie_rule, notes):
     fixed_y, iterations, unforceable = {}, 0, set()
+    cuts = []                                       # family cuts already added to P1
+    children = {}                                   # parent -> list of its children
+    for c, p in parent_of.items():
+        children.setdefault(p, []).append(c)
+    # A family with n children has at most 2^n configurations with its parent accepted: the number
+    # of cuts is finite, and it is added to the iteration limit.
+    max_iter = max_pab_iter + sum(2 ** len(ch) for ch in children.values())
+    # Solver of P2. Rule 'complete' requires a quadratic solver: without it, the clearing stops with an
+    # installation message rather than publishing prices computed with another rule.
+    # Rule 'l2' (comparison) keeps the linear objective and the solver of P1.
+    qp_solver, qp_name = _get_qp_solver() if pricing == 'complete' else (None, None)
+    if pricing == 'complete' and qp_solver is None:
+        raise ClearingError(
+            "P2 needs a quadratic programming solver: Gurobi, or HiGHS through Pyomo >= 6.9.3. "
+            "Install or upgrade them with:  pip install --upgrade \"pyomo>=6.9.3\" highspy")
+    quad = qp_solver is not None
+    p2_solver = qp_solver if quad else solver
     while True:
         iterations += 1
         m1 = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
-                           objective='welfare', fixed_y=fixed_y)
+                           objective='welfare', fixed_y=fixed_y, cuts=cuts)
         ok, status = _try_solve(solver, m1)
         if not ok:
             forced = [b for b, v in fixed_y.items() if v == 1]
@@ -729,6 +1125,22 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
             continue
         W_star = float(value(m1.welfare))
         xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
+        # With blocks, P1 is a MILP stopped at the relative gap MIP_GAP: the welfare of the returned
+        # solution is not necessarily the optimum of the linear program with the blocks fixed at u*.
+        # If P1bis took that value as W*, it could keep a dispatch that is not optimal for this linear
+        # program, and that no price supports any more. This linear program is therefore solved: its
+        # optimum is the W* of P1bis, and its solution replaces that of the MILP (fallback of P1bis and P2).
+        if blocks:
+            m1_lp = _build_primal(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs,
+                                  objective='welfare', fixed_y=dict(y))
+            ok_lp, status_lp = _try_solve(solver, m1_lp)
+            if ok_lp:
+                m1 = m1_lp
+                W_star = float(value(m1.welfare))
+                xs, xd, fl, _ = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
+            else:
+                notes.append(f"P1 with the blocks fixed: no optimal solution ({status_lp}); "
+                             "the welfare of the MILP solution is used as W*.")
         tie_break = 'none'
 
         # P1bis: maximum volume among welfare-optimal solutions (ε = 0)
@@ -744,15 +1156,15 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
         tie_groups = _apply_tie_rule(seg_s, seg_d, xs, xd, hours, tie_rule)
 
         # P2
-        mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing)
-        ok, status = _try_solve(solver, mp)
+        mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing, quadratic=quad)
+        ok, status = _try_solve(p2_solver, mp)
         pricing_feasible = ok
         if not ok and tie_break == 'exact':
             xs, xd, fl, y = _extract(m1, seg_s, seg_d, blocks, hours, pairs)
             tie_break = 'fallback_p1'
             tie_groups = _apply_tie_rule(seg_s, seg_d, xs, xd, hours, tie_rule)
-            mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing)
-            ok, status = _try_solve(solver, mp)
+            mp = _build_pricing(seg_s, seg_d, xs, xd, fl, hours, ntc, pairs, alpha_active, pricing, quadratic=quad)
+            ok, status = _try_solve(p2_solver, mp)
             pricing_feasible = ok
             notes.append("P2: the P1bis solution admitted no admissible price; prices computed on the P1 solution.")
         if not ok:
@@ -760,26 +1172,51 @@ def _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, 
         prices = {(z, h): float(value(mp.pi[z, h])) for z in ZONES for h in hours}
 
         # Paradoxical blocks
-        block_results = _price_blocks(blocks, y, prices) if blocks else []
-        to_fix = {}
+        block_results = _price_blocks(blocks, y, prices, parent_of, groups) if blocks else []
+        to_fix, new_cuts = {}, []
         for b, br in enumerate(block_results):
-            # A PAB is always rejected, even if rule 'l2' had forced it to acceptance (at most two changes
-            # per block, hence guaranteed termination); a PRB is forced only once.
-            if br['status'] == 'PAB' and pab_rule in ('euphemia', 'l2') and fixed_y.get(b) != 0:
+            if br['status'] == 'PAB' and pab_rule == 'euphemia' and (b in children or b in parent_of):
+                # Block of a family: as with the cuts of EUPHEMIA, only the current configuration of the
+                # family (parent + children) is forbidden; P1 will choose the best among the others.
+                p = parent_of.get(b, b)
+                config = tuple((k, y[k]) for k in [p] + children[p])
+                if config not in cuts and config not in new_cuts:
+                    new_cuts.append(config)
+            elif br['status'] == 'PAB' and pab_rule in ('euphemia', 'l2') and fixed_y.get(b) != 0:
+                # Block without family: rejecting it forbids its only accepted configuration.
                 to_fix[b] = 0
             elif br['status'] == 'PRB' and pab_rule == 'l2' and b not in fixed_y and b not in unforceable:
-                to_fix[b] = 1
-        if not to_fix or iterations > max_pab_iter:
-            if to_fix:
+                # In a PRB family, only the parent is forced: its children are left to P1.
+                if not (b in parent_of and br.get('prb_basis') == 'family'):
+                    to_fix[b] = 1
+        # Rule 'l2' only: when a parent and one of its children are both PAB, the child is rejected
+        # first. With 'euphemia', the blocks of a family go through the cuts.
+        for c, p in parent_of.items():
+            if to_fix.get(c) == 0 and to_fix.get(p) == 0:
+                del to_fix[p]
+        if (not to_fix and not new_cuts) or iterations > max_iter:
+            if to_fix or new_cuts:
                 notes.append("PAB/PRB loop stopped at the maximum number of iterations.")
             break
         fixed_y.update(to_fix)
-        notes.append("Iteration %d: blocks fixed %s" % (iterations, {blocks[b].name: v for b, v in to_fix.items()}))
+        cuts.extend(new_cuts)
+        if to_fix:
+            notes.append("Iteration %d: blocks fixed %s" % (iterations, {blocks[b].name: v for b, v in to_fix.items()}))
+        for config in new_cuts:
+            notes.append("Iteration %d: family configuration excluded %s"
+                         % (iterations, {blocks[k].name: v for k, v in config}))
     return dict(xs=xs, xd=xd, fl=fl, y=y, prices=prices, block_results=block_results, W_star=W_star,
                 iterations=iterations, fixed_y=fixed_y, tie_break=tie_break,
-                pricing_feasible=pricing_feasible, tie_groups=tie_groups)
+                pricing_feasible=pricing_feasible, tie_groups=tie_groups,
+                pricing_objective=('quadratic' if quad else 'absolute'))
 
-
+#===================================================================================================
+# BLOCK 9 — ENTRY POINT run_clearing
+#---------------------------------------------------------------------------------------------------
+# The function called by every user of the engine (scripts, CLI, tests, website). It prepares the
+# orders, runs the MIC loop around the algorithm of BLOCK 8, then computes and formats every result.
+# All the results of the working paper are produced by this function.
+#===================================================================================================
 # ── Main engine ───────────────────────────────────────────────────
 def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=None, *,
                  block_rows=None, mic_rows=None, hours=None, fill_missing_zones=False, fill_mode=None,
@@ -807,6 +1244,10 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                    (teaching scenarios), for the demonstration and for filling zones.
     Returns a dict: prices, flows, dispatch, welfare, volume, summary.
     """
+    #-----------------------------------------------------------------------------------------------
+    # 9.1  Rule checks
+    #   Start of the timer and check of the names of the pricing, block and sharing rules.
+    #-----------------------------------------------------------------------------------------------
     t_total = time.time()
     if pricing not in PRICING_MODES:
         raise ClearingError(f"Unknown pricing mode: {pricing}")
@@ -816,6 +1257,10 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         raise ClearingError(f"Unknown sharing rule: {tie_rule}")
     notes = []
 
+    #-----------------------------------------------------------------------------------------------
+    # 9.2  Simulated hours
+    #   The 24 hours by default; a list of hours can be given (one-hour examples).
+    #-----------------------------------------------------------------------------------------------
     # ── Simulated hours ───────────────────────────────────────────
     if hours is None:
         hours = list(range(int(horizon)))
@@ -823,6 +1268,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     if not hours or any(h < 0 or h > 23 for h in hours):
         raise ClearingError("Simulated hours must be between 0 and 23.")
 
+    #-----------------------------------------------------------------------------------------------
+    # 9.3  Data: choice of the orders
+    #   Orders given or reference data; fill modes 'zones' and 'actors' used by the training
+    #   website.
+    #-----------------------------------------------------------------------------------------------
     # ── Data ──────────────────────────────────────────────────────
     reference_zones = []
     def _ref(zones=None):
@@ -871,17 +1321,26 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
             reference_zones = sorted({r['zone'] for r in kept_s + kept_d}, key=ZONES.index)
             notes.append(f"Background actors: {len(kept_s) + len(kept_d)} reference segments kept"
                          + (f"; actors replaced by participants: {', '.join(gone)}." if gone else "."))
+    #-----------------------------------------------------------------------------------------------
+    # 9.4  Validation and construction
+    #   Calls to the functions of BLOCK 3 and BLOCK 7, and default iteration limits.
+    #-----------------------------------------------------------------------------------------------
     block_rows = list(block_rows or [])
     validate_inputs(supply_rows, demand_rows, block_rows)
 
     seg_s_all, seg_d = _build_segments(supply_rows, demand_rows, hours)
     blocks_all = _build_blocks(block_rows, hours)
-    mics = _build_mic(mic_rows or [])
+    mics = _build_mic(mic_rows or [], seg_s_all)
     if max_mic_iter is None:
         max_mic_iter = len(mics) + 1
     if max_pab_iter is None:
         max_pab_iter = 2 * len(blocks_all) + 1
 
+    #-----------------------------------------------------------------------------------------------
+    # 9.5  Line capacities (NTC)
+    #   Values passed by the caller, else those modified in the database of the website, else the
+    #   defaults; choice of the solver.
+    #-----------------------------------------------------------------------------------------------
     # ── NTC: override > database > defaults ───────────────────────
     ntc = dict(NTC)
     if ntc_override:
@@ -904,38 +1363,95 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     logger.info("Solver %s | %d sell segments, %d buy segments, %d blocks, %d MIC, %d hours",
                 solver_name, len(seg_s_all), len(seg_d), len(blocks_all), len(mics), len(hours))
 
+    #-----------------------------------------------------------------------------------------------
+    # 9.6  MIC loop
+    #   At each round, the complete algorithm (BLOCK 8) then the check of the MICs; the actors
+    #   whose MIC fails are withdrawn and the round is run again.
+    #-----------------------------------------------------------------------------------------------
     # ── MIC loop around the P1 → P1bis → P2 sequence ──────────────
     withdrawn = set()
+    coverage = {}        # coverage ratio (income / required income) of each actor when it was withdrawn
+    at_withdrawal = {}   # energy, income and required income of each actor when it was withdrawn
     mic_iter = 0
     while True:
         mic_iter += 1
         seg_s = [s for s in seg_s_all if (s.zone, s.player, s.actor) not in withdrawn]
-        # Withdrawn blocks: those of the withdrawn actor, then their children (a child without parent cannot be accepted)
-        gone = {(b.zone, b.player, b.name) for b in blocks_all if b.side == 'S' and (b.zone, b.player, b.name) in withdrawn}
-        changed = True
-        while changed:
-            changed = False
-            for b in blocks_all:
-                if (b.zone, b.player, b.name) not in gone and b.parent and (b.zone, b.player, b.parent) in gone:
-                    gone.add((b.zone, b.player, b.name)); changed = True
-        blocks = [b for b in blocks_all if (b.zone, b.player, b.name) not in gone]
+        blocks = blocks_all          # a MIC withdraws sell segments only, never blocks
         parent_of, groups = _resolve_links(blocks, notes if mic_iter == 1 else [])
         sol = _solve_sequence(seg_s, seg_d, blocks, parent_of, groups, hours, ntc, pairs, alpha_active,
                               solver, pricing, pab_rule, max_pab_iter, tie_rule, notes)
-        mic_results, to_withdraw = _mic_check(mics, seg_s, blocks, sol['xs'], sol['y'], sol['prices'], hours, withdrawn)
+        mic_results, to_withdraw = _mic_check(mics, seg_s, sol['xs'], sol['prices'], hours, withdrawn)
         if not to_withdraw or mic_iter > max_mic_iter:
             if to_withdraw:
                 notes.append("MIC loop stopped at the maximum number of iterations.")
             break
+        for r in mic_results:
+            k = (r['zone'], r['player'], r['actor'])
+            if k in to_withdraw:
+                coverage[k] = r['income'] / r['required'] if r['required'] > 0 else float('inf')
+                at_withdrawal[k] = dict(accepted_mwh=r['accepted_mwh'], income=r['income'],
+                                        required=r['required'], coverage=round(coverage[k], 3))
         withdrawn |= set(to_withdraw)
         notes.append("MIC not satisfied, orders withdrawn: " + ", ".join(f"{a} ({z})" for z, _, a in to_withdraw) + ".")
 
+
+    #-----------------------------------------------------------------------------------------------
+    # 9.7  MIC reinsertion
+    #   As the "PRMIC reinsertion" of EUPHEMIA (section 7.7): each withdrawn actor is tried again,
+    #   from the highest coverage ratio to the lowest.
+    #-----------------------------------------------------------------------------------------------
+    # Several actors may have been withdrawn together; once the others have left, the price may have risen
+    # and one of them would now cover its costs. Each withdrawn actor is tried again, starting with the
+    # highest coverage ratio (the closest to meeting its condition; a public rule that depends only on the
+    # orders and the prices). A reinsertion is kept if every MIC remains satisfied and the welfare does not
+    # decrease; after a successful reinsertion, the list of candidates is restarted.
+    reinserted = []
+    if withdrawn and not to_withdraw:
+        improved = True
+        while improved and withdrawn:
+            improved = False
+            for key in sorted(withdrawn, key=lambda k: (-coverage.get(k, 0.0), k)):
+                trial = withdrawn - {key}
+                seg_t = [s for s in seg_s_all if (s.zone, s.player, s.actor) not in trial]
+                try:
+                    sol_t = _solve_sequence(seg_t, seg_d, blocks, parent_of, groups, hours, ntc, pairs, alpha_active,
+                                            solver, pricing, pab_rule, max_pab_iter, tie_rule, [])
+                except ClearingError:
+                    continue
+                res_t, fail_t = _mic_check(mics, seg_t, sol_t['xs'], sol_t['prices'], hours, trial)
+                if not fail_t and sol_t['W_star'] >= sol['W_star'] - 1e-6 * max(1.0, abs(sol['W_star'])):
+                    withdrawn, seg_s, sol, mic_results = trial, seg_t, sol_t, res_t
+                    reinserted.append(key)
+                    improved = True
+                    break
+    if reinserted:
+        notes.append("MIC reinsertion: orders reinstated for " + ", ".join(f"{a} ({z})" for z, _, a in reinserted) + ".")
+
+    # After a withdrawal, energy and income are zero and do not say why the actor was withdrawn: its values
+    # at the time of the withdrawal are published too, with the coverage ratio of every actor.
+    for r in mic_results:
+        k = (r['zone'], r['player'], r['actor'])
+        if r['withdrawn']:
+            r['at_withdrawal'] = at_withdrawal.get(k)
+        else:
+            r['coverage'] = round(r['income'] / r['required'], 3) if r['required'] > 0 else None
+
+    #-----------------------------------------------------------------------------------------------
+    # 9.8  Final solution and volume
+    #   Solution of the last round and traded volume (energy sold, blocks included).
+    #-----------------------------------------------------------------------------------------------
     xs, xd, fl, y, prices = sol['xs'], sol['xd'], sol['fl'], sol['y'], sol['prices']
     block_results = sol['block_results']
     S, D, B = range(len(seg_s)), range(len(seg_d)), range(len(blocks))
     vol = sum(seg_s[s].qty[h] * xs[s, h] for s in S for h in hours if seg_s[s].qty[h] > 0) \
         + sum(blocks[b].q * len(blocks[b].active_hours) * y.get(b, 0) for b in B if blocks[b].side == 'S')
 
+
+    #-----------------------------------------------------------------------------------------------
+    # 9.9  Prices, flows and generation
+    #   Published prices (to the cent), flows per line and energy generated per profile type,
+    #   hour by hour.
+    #-----------------------------------------------------------------------------------------------
     # ── Results ───────────────────────────────────────────────────
     prices_out = {z: {str(h): round(prices[z, h], 2) for h in hours} for z in ZONES}
     flows_out = {f"{u}->{v}": {str(h): round(fl[u, v, h], 1) for h in hours} for u, v in pairs}
@@ -961,6 +1477,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                     demand_accepted[idx[h]] += blocks[b].q
     dispatch['demand'] = demand_accepted
 
+    #-----------------------------------------------------------------------------------------------
+    # 9.10  Results per actor
+    #   Energy offered and accepted, income or spending, surplus, average price and rejected
+    #   orders of each actor.
+    #-----------------------------------------------------------------------------------------------
     # Results per actor (trader view)
     actors = {}
     def _acc(key, **kw):
@@ -1011,10 +1532,6 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                  value=blk.p * blk.q * nh)
         else:
             _acc(key, rejected=dict(segment='bloc', quantity=blk.q, price=blk.p))
-    for blk in blocks_all:
-        if (blk.zone, blk.player, blk.name) in gone and blk.side == 'S':
-            _acc((blk.zone, blk.player, blk.name, 'S'), offered_mwh=blk.q * len(blk.active_hours),
-                 status='withdrawn_mic', rejected=dict(segment='bloc', quantity=blk.q, price=blk.p))
     actor_list = []
     for a in actors.values():
         a['surplus'] = (a['money'] - a['value']) if a['side'] == 'S' else (a['value'] - a['money'])
@@ -1027,6 +1544,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
         actor_list.append(a)
     actor_list.sort(key=lambda a: (a['zone'], a['player'], a['side'], a['actor']))
 
+    #-----------------------------------------------------------------------------------------------
+    # 9.11  Results per zone and per line, welfare
+    #   Generation, consumption, surplus and weighted average price per zone; congestion rent
+    #   and average flow per line; hourly and total welfare.
+    #-----------------------------------------------------------------------------------------------
     # Breakdown per zone and congestion rent
     zones_out = {}
     for z in ZONES:
@@ -1038,9 +1560,18 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
            + sum(sum(prices[z, h] - blocks[b].p for h in blocks[b].active_hours) * blocks[b].q * y.get(b, 0) for b in B if blocks[b].zone == z and blocks[b].side == 'S')
         cs = sum((seg_d[d].p - prices[z, h]) * seg_d[d].qty[h] * xd[d, h] for d in D for h in hours if seg_d[d].zone == z and seg_d[d].qty[h] > 0) \
            + sum(sum(blocks[b].p - prices[z, h] for h in blocks[b].active_hours) * blocks[b].q * y.get(b, 0) for b in B if blocks[b].zone == z and blocks[b].side == 'D')
+        # Average price weighted by the consumption of the zone (the average price paid by a consumer);
+        # simple average of the hours when the zone has no accepted consumption.
+        load_h = {h: sum(seg_d[d].qty[h] * xd[d, h] for d in D if seg_d[d].zone == z and seg_d[d].qty[h] > 0)
+                     + sum(blocks[b].q * y.get(b, 0) for b in B
+                           if blocks[b].zone == z and blocks[b].side == 'D' and h in blocks[b].active_hours)
+                  for h in hours}
+        tot_load = sum(load_h.values())
+        avg_simple = sum(prices[z, h] for h in hours) / n
+        avg_weighted = (sum(prices[z, h] * load_h[h] for h in hours) / tot_load) if tot_load > 1e-9 else avg_simple
         zones_out[z] = dict(generation_mwh=round(gen, 1), load_mwh=round(load, 1), net_position=round(gen - load, 1),
                             producer_surplus=round(ps, 1), consumer_surplus=round(cs, 1),
-                            avg_price=round(sum(prices[z, h] for h in hours) / n, 2),
+                            avg_price=round(avg_weighted, 2), avg_price_simple=round(avg_simple, 2),
                             no_trade_hours=[h for h in hours if
                                             all(seg_s[s].zone != z or seg_s[s].qty[h] <= 0 or xs[s, h] < X_TOL for s in S) and
                                             all(seg_d[d].zone != z or seg_d[d].qty[h] <= 0 or xd[d, h] < X_TOL for d in D) and
@@ -1049,8 +1580,11 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     for u, v in pairs:
         rent = sum(fl[u, v, h] * (prices[v, h] - prices[u, h]) for h in hours)
         sat = sum(1 for h in hours if abs(fl[u, v, h]) >= ntc[(u, v)] - F_TOL)
+        # avg_flow: average of the absolute values (use of the line, whichever the direction);
+        # avg_net_flow: signed average (dominant direction: > 0 from u to v)
         lines_out[f"{u}->{v}"] = dict(ntc=ntc[(u, v)], congestion_rent=round(rent, 1), saturated_hours=sat,
-                                      avg_flow=round(sum(fl[u, v, h] for h in hours) / n, 1))
+                                      avg_flow=round(sum(abs(fl[u, v, h]) for h in hours) / n, 1),
+                                      avg_net_flow=round(sum(fl[u, v, h] for h in hours) / n, 1))
     welfare_hourly = [
         sum(seg_d[d].p * seg_d[d].qty[h] * xd[d, h] for d in D if seg_d[d].qty[h] > 0)
         - sum(seg_s[s].p * seg_s[s].qty[h] * xs[s, h] for s in S if seg_s[s].qty[h] > 0)
@@ -1063,8 +1597,14 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
     ps_tot = sum(zz['producer_surplus'] for zz in zones_out.values())
     cr_tot = sum(l['congestion_rent'] for l in lines_out.values())
 
+    #-----------------------------------------------------------------------------------------------
+    # 9.12  Diagnostics
+    #   Consistency diagnostics (BLOCK 6.2), rules used, iterations, fixed blocks, withdrawn
+    #   MICs, check of the identity welfare = CS + PS + rent, notes.
+    #-----------------------------------------------------------------------------------------------
     diag = _diagnostics(seg_s, seg_d, xs, xd, fl, prices, hours, ntc, pairs, alpha_active)
-    diag.update(dict(pricing_mode=pricing, pricing_feasible=sol['pricing_feasible'], tie_break=sol['tie_break'],
+    diag.update(dict(pricing_mode=pricing, pricing_objective=sol['pricing_objective'],
+                     pricing_feasible=sol['pricing_feasible'], tie_break=sol['tie_break'],
                      tie_rule=tie_rule, tie_groups_adjusted=sol['tie_groups'],
                      pab_iterations=sol['iterations'], blocks_fixed={blocks[b].name: v for b, v in sol['fixed_y'].items()},
                      prb=[br['name'] for br in block_results if br['status'] == 'PRB'],
@@ -1073,11 +1613,25 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                      welfare_identity_gap=round(W_final - (cs_tot + ps_tot + cr_tot), 1),
                      notes=notes))
 
+
+    #-----------------------------------------------------------------------------------------------
+    # 9.13  Summary and output
+    #   The summary and the returned dictionary: prices, flows, generation, welfare, volume,
+    #   summary.
+    #-----------------------------------------------------------------------------------------------
+    # Detail of each segment, hour by hour, for the independent check of the prices (engine/checks.py)
+
+    segments_out = [dict(zone=g.zone, player=g.player, actor=g.actor, segment=g.k, side=side, price=g.p,
+                         offered={str(h): g.qty[h] for h in hours if g.qty[h] > 0},
+                         accepted={str(h): round(g.qty[h] * x[i, h], 4) for h in hours if g.qty[h] > 0})
+                    for segs, x, side in ((seg_s, xs, 'S'), (seg_d, xd, 'D')) for i, g in enumerate(segs)]
+
     summary = {
         'welfare':         round(W_final, 0),
         'volume':          round(vol, 0),
         'elapsed':         round(time.time() - t_total, 2),
         'solver':          solver_name,
+        'mip_gap':         MIP_GAP,
         'horizon':         len(hours),
         'hours':           hours,
         'n_supply':        len(seg_s_all),
@@ -1102,6 +1656,7 @@ def run_clearing(supply_rows=None, demand_rows=None, horizon=24, ntc_override=No
                                 price_bounds=[P_MIN, P_MAX], alpha=ALPHA,
                                 ntc=dict((f"{u}->{v}", ntc[(u, v)]) for u, v in pairs)),
         'diagnostics':     diag,
+        'segments':        segments_out,
     }
     logger.info("Clearing finished in %.2fs | W=%.0f | Vol=%.0f MWh | %s",
                 summary['elapsed'], W_final, vol, diag)
