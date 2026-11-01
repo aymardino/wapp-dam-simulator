@@ -232,20 +232,32 @@ def test_mic_satisfied_keeps_actor():
     assert m['satisfied'] is True and not m['withdrawn'] and res['summary']['diagnostics']['mic_iterations'] == 1
     assert abs(m['income'] - 2220) < 1
 
-
-def test_mic_withdrawal_removes_child_blocks():
-    """The child block of an actor withdrawn by the MIC is withdrawn too."""
-    sup = [dict(zone='NGA', player='a', actor='Base', segment=0, quantity=100, price=30, profile='baseload')]
+#nouveau, ajouté par ENRICO parce que les MIC sont seulement sur les segments
+def test_mic_does_not_apply_to_blocks():
+    """MODIFIÉ : comme dans EUPHEMIA, une MIC porte sur les segments de vente ; les blocs du même
+    participant ne sont ni comptés ni retirés."""
+    sup = [dict(zone='NGA', player='b', actor='Peaker', segment=0, quantity=50, price=60, profile='baseload')]
     dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=400, price=100)]
     blocks = [dict(zone='NGA', player='b', name='Parent', side='S', quantity=50, price=60, h_start=12, h_end=12),
               dict(zone='NGA', player='b', name='Enfant', side='S', quantity=50, price=61, h_start=12, h_end=12, parent_name='Parent')]
-    mic = [dict(zone='NGA', player='b', actor='Parent', fixed_term=100000, variable_term=0)]
+    mic = [dict(zone='NGA', player='b', actor='Peaker', fixed_term=100000, variable_term=0)]
     res = run_clearing(sup, dem, hours=[12], ntc_override=NTC_ZERO, block_rows=blocks, mic_rows=mic)
-    assert res['summary']['diagnostics']['mic_withdrawn'] == ['Parent (NGA)']
-    names = {b['name'] for b in res['summary']['blocks']}
-    assert names == set(), names                                  # parent and child withdrawn from the clearing
-    withdrawn = {a['actor'] for a in res['summary']['actors'] if a['status'] == 'withdrawn_mic'}
-    assert withdrawn == {'Parent', 'Enfant'}
+    assert res['summary']['diagnostics']['mic_withdrawn'] == ['Peaker (NGA)']   # le segment est retiré
+    st = {b['name']: b for b in res['summary']['blocks']}
+    assert st['Parent']['accepted'] and st['Enfant']['accepted']               # les blocs restent sur le marché
+
+#nouveau, ajouté par ENRICO parce que les MIC sont seulement sur les segments
+def test_invalid_mic_refused():
+    """AJOUTÉ : MIC sans segment de vente (par exemple portée par un bloc) ou avec un terme négatif : refusée."""
+    sup = [dict(zone='NGA', player='a', actor='Base', segment=0, quantity=100, price=30, profile='baseload')]
+    dem = [dict(zone='NGA', player='c', actor='TCN', segment=0, quantity=150, price=100)]
+    blocks = [dict(zone='NGA', player='b', name='Bloc', side='S', quantity=50, price=60, h_start=12, h_end=12)]
+    for mic in ([dict(zone='NGA', player='b', actor='Bloc', fixed_term=1000, variable_term=0)],     # bloc
+                [dict(zone='NGA', player='a', actor='Base', fixed_term=-1, variable_term=0)],      # terme négatif
+                [dict(zone='NGA', player='a', actor='Base', fixed_term=0, variable_term=-5)]):     # terme négatif
+        with pytest.raises(ClearingError):
+            run_clearing(sup, dem, hours=[12], ntc_override=NTC_ZERO, block_rows=blocks, mic_rows=mic)
+
 
 
 def test_reference_zones_reported(ref):
@@ -314,3 +326,62 @@ def test_fill_mode_actors_keeps_background_and_replaces_matching_actors():
     assert ('NGA', 'Egbin Gas') in {(a['zone'], a['actor']) for a in r3['summary']['actors']}
     assert r3['summary']['n_supply'] == 64 - 4 + 1
     assert run_clearing(sup, dem, horizon=1, fill_mode='none')['summary']['n_supply'] == 1
+
+
+#nouveau ajoutè par enrico
+def test_mic_reinsertion():
+    """AJOUTÉ : A et B ne couvrent pas leurs coûts au même tour et sont retirés ensemble. Une fois retirés,
+    le prix monte à 40 : B, dont le taux de couverture était le plus élevé, est réinséré et couvre ses coûts ;
+    A, réessayé ensuite, ferait retomber le prix et reste retiré."""
+    sup = [dict(zone='NGA', player='a', actor='A', segment=0, quantity=50, price=10, profile='flat'),
+           dict(zone='NGA', player='b', actor='B', segment=0, quantity=50, price=10, profile='flat'),
+           dict(zone='NGA', player='c', actor='C', segment=0, quantity=100, price=40, profile='flat')]
+    dem = [dict(zone='NGA', player='d', actor='L', segment=0, quantity=100, price=500)]
+    mic = [dict(zone='NGA', player='a', actor='A', fixed_term=1000, variable_term=0),
+           dict(zone='NGA', player='b', actor='B', fixed_term=900, variable_term=0)]
+    res = run_clearing(sup, dem, hours=[12], ntc_override=NTC_ZERO, mic_rows=mic)
+    st = {m['actor']: m for m in res['summary']['mic']}
+    assert st['B']['satisfied'] and not st['B']['withdrawn']          # B réinséré
+    assert st['A']['withdrawn']                                        # A reste retiré
+    assert res['prices']['NGA']['12'] == 40.0
+    assert res['summary']['diagnostics']['mic_withdrawn'] == ['A (NGA)']
+
+
+    
+#nouveau par ENRICO
+def test_gas_scenario_raises_all_gas_plants():
+    """AJOUTÉ : la variante « gaz cher » renchérit de 40 % chaque centrale de GAS_PLANTS_2024, et elles seules.
+    Chaque nom de la liste doit exister dans le cas 2024 (protection contre une faute de frappe ou un renommage)."""
+    from engine.scenarios import scenario_rows, REFERENCE_2024, GAS_PLANTS_2024
+    names = {it[1] for items in REFERENCE_2024.values() for it in items if it[0] == 'S'}
+    assert GAS_PLANTS_2024 <= names, GAS_PLANTS_2024 - names
+    base, _, _ = scenario_rows('reference_2024')
+    gas, _, _ = scenario_rows('gaz_cher')
+    for r0, r1 in zip(base, gas):
+        if r0['actor'] in GAS_PLANTS_2024:
+            assert r1['price'] == min(C.P_MAX, round(r0['price'] * 1.4))
+        else:
+            assert r1['price'] == r0['price']
+
+
+# pour le cas d'example de la section 2 du rapport
+def test_two_zone_example_of_section_2():
+    """AJOUTÉ : le moteur retrouve les solutions calculées à la main de l'exemple à deux zones du paper
+    (section 2) : A = Nigeria, B = Bénin, ligne de 80 MW, heure 19 (profil de charge égal à 1)."""
+    ntc = {k: 0.0 for k in C.NTC}; ntc[('NGA', 'BEN')] = 80.0
+    def case(q_sb, p_d):
+        sup = [dict(zone='NGA', player='x', actor='S_A', segment=0, quantity=100, price=20, profile='flat'),
+               dict(zone='BEN', player='x', actor='S_B', segment=0, quantity=q_sb, price=50, profile='flat')]
+        dem = [dict(zone='BEN', player='y', actor='D', segment=0, quantity=150, price=p_d)]
+        r = run_clearing(sup, dem, hours=[19], ntc_override=ntc)
+        acc = {g['actor']: g['accepted']['19'] for g in r['summary']['segments']}
+        return r['welfare'], r['prices']['NGA']['19'], r['prices']['BEN']['19'], acc
+    # Cas de base : W* = 9 900, y = (80, 70), prix 20 et 50
+    W, pa, pb, acc = case(100, 100)
+    assert W == 9900 and (acc['S_A'], acc['S_B']) == (80, 70) and (pa, pb) == (20, 50)
+    # Cas dégénéré (q_SB = 70) : prix de B indéterminé dans [50, 100], P2 choisit le centre, 75
+    W, pa, pb, acc = case(70, 100)
+    assert W == 9900 and (pa, pb) == (20, 75)
+    # Indétermination des volumes (prix de D = 50) : W* = 2 400, P1bis choisit le sommet (80, 70)
+    W, pa, pb, acc = case(100, 50)
+    assert W == 2400 and (acc['S_A'], acc['S_B']) == (80, 70) and (pa, pb) == (20, 50)
