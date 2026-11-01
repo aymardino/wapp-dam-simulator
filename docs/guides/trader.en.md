@@ -16,7 +16,7 @@ The order book has four tabs. "Save" replaces all your orders with what is on sc
 
 **Blocks.** A block is accepted in full over all its hours, or rejected: useful for a plant that cannot start for two hours, or a continuous industrial load. A *child* block is accepted only if its *parent* is (give the parent's name). In an *exclusive group* (same group label), at most one option is selected.
 
-**MIC.** Minimum income condition for a seller: if your revenue at final prices is below the fixed term plus the variable term times the accepted volume, all your orders are withdrawn and the market is recomputed without you.
+**MIC.** Minimum income condition for a seller, attached to your stepwise sell orders (not to your blocks): if the revenue of these orders at final prices is below the fixed term plus the variable term times the accepted volume, they are withdrawn and the market is recomputed without them. When several sellers are withdrawn together, the engine then tries each of them again, starting with the one that came closest to covering its costs.
 
 ## 3. Understanding the result
 

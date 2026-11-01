@@ -30,7 +30,7 @@ Prérequis : Python 3.10 ou plus récent.
 pip install -r requirements.txt
 ```
 
-Le solveur HiGHS (paquet `highspy`) est installé avec les dépendances et suffit pour tous les cas, blocs compris, en moins d'une seconde. Gurobi est utilisé automatiquement s'il est présent.
+Le solveur HiGHS (paquet `highspy`) est installé avec les dépendances et suffit pour tous les cas, blocs compris, en moins d'une seconde, le programme quadratique des prix passant par Pyomo ≥ 6.9.3. Gurobi est utilisé automatiquement s'il est présent.
 
 ## Lancement
 

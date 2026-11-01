@@ -62,7 +62,7 @@ Les prix produits sont des résultats de simulation sur ces données, pas des pr
 
 | Couche | Technologie |
 |---|---|
-| Moteur | Python 3.10+, modèles Pyomo, solveur libre HiGHS inclus ; Gurobi utilisé automatiquement s'il est installé |
+| Moteur | Python 3.10+, modèles Pyomo ≥ 6.9.3, solveur libre HiGHS inclus (programmes linéaires, en nombres entiers et quadratique) ; Gurobi utilisé automatiquement s'il est installé |
 | API | FastAPI, SQLAlchemy (SQLite par défaut, PostgreSQL possible), documentation interactive sur `/docs`, flux d'événements temps réel (Server-Sent Events) |
 | Interface | React, Vite, TypeScript, Tailwind ; page publique, hall, salle de marché, poste du formateur ; bilingue FR/EN ; cartes Natural Earth (domaine public) |
 | Ligne de commande | `python -m engine.cli` : CSV en entrée, JSON et CSV des prix en sortie |
@@ -78,7 +78,7 @@ Les prix produits sont des résultats de simulation sur ces données, pas des pr
 
 ## 8. Qualité et vérification
 
-- 68 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
+- 98 tests automatiques exécutés à chaque modification (intégration continue) : valeurs de non-régression, règles de blocs et de conditions, API, ligne de commande.
 - Campagne de cas aléatoires (segments, blocs simples, liés, exclusifs, conditions, toutes les règles, 24 h ou une heure, capacités réduites) contrôlée par un vérificateur indépendant du solveur : prix dans les bornes, flux dans les capacités, équilibre horaire, positions nettes de somme nulle, accepté ≤ offert, règles de blocs, conditions satisfaites ou retirées, identité du welfare.
 - Reproduction en trois commandes (voir `README.md`).
 
