@@ -35,7 +35,7 @@ Three uses: **train** (a three-round market session, one country per participant
 |---|---|---|
 | P1 | Who trades? | welfare maximisation under the balance of each zone, flow bounds, the α constraint and block links; linear program, mixed-integer with blocks (gap 10⁻⁶) |
 | P1bis | How to break ties? | maximum volume at the **exact** optimal welfare; then explicit sharing of equal-price orders: pro rata (default), submission order, or solver |
-| P2 | At what price? | **complete** set of admissible prices (equilibrium conditions on accepted, partial and rejected orders, equal prices across unsaturated lines, inequality in the direction of saturation, α constraint, bounds); the price closest to the midpoint of the local admissible interval is chosen |
+| P2 | At what price? | **complete** set of admissible prices (equilibrium conditions on accepted, partial and rejected orders, equal prices across unsaturated lines, inequality in the direction of saturation, α constraint, bounds); the prices closest to the midpoints of the local admissible intervals, in the sense of the sum of squared deviations, are chosen (quadratic program, unique prices) |
 | Paradoxical blocks | | block accepted at a loss: rejected and the run repeated (EUPHEMIA rule, default); rejected block that would have been profitable: tolerated and reported; alternative rules available for comparison |
 | Minimum income condition | | insufficient income: all the actor's orders withdrawn and the full sequence rerun |
 

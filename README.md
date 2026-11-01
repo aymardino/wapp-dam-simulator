@@ -55,7 +55,7 @@ The historical Streamlit application is still available: `streamlit run app.py` 
 |------|----------|---------|------|
 | P1 | Who trades? | welfare maximisation under zonal balance, NTC, α constraint, block links | LP, MILP with blocks |
 | P1bis | How to break ties? | volume maximisation at the exact optimal welfare | LP |
-| P2 | At what price? | admissible prices (full equilibrium conditions) closest to the midpoint of the interval | LP |
+| P2 | At what price? | admissible prices (full equilibrium conditions) closest to the midpoints of the intervals, sum of squared deviations | QP |
 
 Zones: NGA, BEN, TGO, GHA, CIV, BFA, MLI, SEN, GIN, SLE, LBR, GNB, GMB, NER. Interconnections: 15 pairs, signed flows. CIV/GHA/BFA interdependence constraint with α = 0.7.
 

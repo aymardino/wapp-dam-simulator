@@ -35,7 +35,7 @@ Trois usages : **former** (séance de marché en trois manches, un pays par part
 |---|---|---|
 | P1 | Qui échange ? | maximisation du welfare sous équilibre de chaque zone, bornes de flux, contrainte α, liaisons de blocs ; programme linéaire, en nombres entiers avec blocs (écart 10⁻⁶) |
 | P1bis | Comment départager ? | volume maximal à welfare optimal **exact** ; puis partage explicite des offres au même prix : prorata (défaut), ordre de soumission, ou solveur |
-| P2 | À quel prix ? | ensemble **complet** des prix admissibles (conditions d'équilibre sur les ordres acceptés, partiels et rejetés, égalité des prix sur les lignes non saturées, inégalité dans le sens de la saturation, contrainte α, bornes) ; prix retenu le plus proche du milieu de l'intervalle admissible local |
+| P2 | À quel prix ? | ensemble **complet** des prix admissibles (conditions d'équilibre sur les ordres acceptés, partiels et rejetés, égalité des prix sur les lignes non saturées, inégalité dans le sens de la saturation, contrainte α, bornes) ; prix retenus les plus proches des milieux des intervalles admissibles locaux, au sens de la somme des écarts au carré (programme quadratique, prix uniques) |
 | Blocs paradoxaux | | bloc accepté à perte : rejeté et calcul relancé (règle EUPHEMIA, défaut) ; bloc rejeté qui aurait été rentable : toléré et signalé ; règles alternatives disponibles pour comparaison |
 | Condition de revenu minimum | | recette insuffisante : retrait de toutes les offres de l'acteur et relance complète |
 

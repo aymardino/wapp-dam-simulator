@@ -4,6 +4,13 @@ All notable changes to the simulator are recorded here, most recent first. Each 
 
 ## [2.0.0-dev] — October 2026
 
+### Step 16 — Clearing rules reviewed for the working paper
+
+- P2 minimises the sum of the squared deviations from the reference prices instead of the sum of the absolute deviations. The objective is strictly convex, so the published prices are unique: with absolute deviations, the price of a price region of an even number of zones without any partially accepted order could be any point of an interval, chosen by the solver (one case in the 2024 reference case: Côte d'Ivoire, Guinea, Liberia and Sierra Leone at 07:00, any price between 70 and 72 $/MWh). No published price of the reference case, of its four scenarios or of the complex-order scenario changes. P2 is solved by Gurobi or by HiGHS through the `highs` interface of Pyomo; `requirements.txt` now asks for Pyomo ≥ 6.9.3, and without a quadratic solver the clearing stops with an installation message. Rule `pricing = 'l2'` keeps the absolute deviations. New diagnostic `pricing_objective`.
+- With blocks, the welfare floor W* of P1bis is the optimum of the linear program with the block decisions fixed, solved after the MILP, instead of the welfare of the MILP solution, which stops at a relative gap of 10⁻⁶; its solution also replaces that of the MILP as the fallback of P1bis and P2. No result changes (the two values coincide in every iteration of the complex-order scenario).
+- PRB status assessed with the blocks a rejected block depends on: a family whose parent is rejected is assessed as a whole (parent and profitable children), and in an exclusive group a rejected block is PRB only if it would have been worth more than the accepted block, or, when no block is accepted, if it is the best one. New field `prb_basis` (`block`, `family`, `group`). With rule `l2`, only the parent of a PRB family is forced. In the complex-order scenario, Desalination A is no longer reported as PRB; the smelter family is PRB as a family.
+- Tests: `tests/test_indeterminacy.py` (price regions without marginal order, quadratic P2, exact P1bis, error without quadratic solver) and `tests/test_block_status.py` (PRB of families and exclusive groups).
+
 ### Step 15 — Site online at wapp-dam-simulator.mastereose.fr
 
 - Public address: `https://wapp-dam-simulator.mastereose.fr`, a subdomain provided by the Mastère OSE, replaces the domain name planned in step 13 (`wapp-dam-simulator.org`) in the site links, the technical sheets, the READMEs, the deployment guides, the Caddyfile, `docker-compose.yml`, `render.yaml` and `.env.example`. The `www.` redirect of the Caddyfile, meant for an apex domain, is removed.

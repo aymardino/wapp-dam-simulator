@@ -108,7 +108,7 @@ wapp_simulator/
 |-------|----------|----------|------|
 | P1 | Qui échange ? | maximisation du welfare sous équilibre zonal, NTC, contrainte α, liaisons de blocs | LP, MILP avec blocs |
 | P1bis | Comment départager ? | maximisation du volume à welfare optimal exact | LP |
-| P2 | À quel prix ? | prix admissibles (conditions d'équilibre complètes) les plus proches du milieu de l'intervalle | LP |
+| P2 | À quel prix ? | prix admissibles (conditions d'équilibre complètes) les plus proches des milieux des intervalles, somme des écarts au carré | QP |
 
 Zones : NGA, BEN, TGO, GHA, CIV, BFA, MLI, SEN, GIN, SLE, LBR, GNB, GMB, NER. Interconnexions : 15 paires, flux signés. Contrainte d'interdépendance CIV/GHA/BFA avec α = 0,7.
 
